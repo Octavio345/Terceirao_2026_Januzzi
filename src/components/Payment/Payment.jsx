@@ -47,13 +47,12 @@ const Payment = () => {
 
     document.addEventListener('keydown', handleEscKey);
     return () => document.removeEventListener('keydown', handleEscKey);
-  }, [showPayment, handleCloseModal]); // Adicionado handleCloseModal nas dependências
+  }, [showPayment, handleCloseModal]);
 
   // Focar no modal quando abrir
   useEffect(() => {
     if (showPayment && modalRef.current) {
       modalRef.current.focus();
-      // Previne scroll do body quando modal está aberto
       document.body.style.overflow = 'hidden';
     }
     
@@ -63,7 +62,6 @@ const Payment = () => {
   }, [showPayment]);
 
   const handleOverlayClick = (e) => {
-    // Fecha apenas se clicar diretamente no overlay (não nos filhos)
     if (e.target === e.currentTarget || e.target.classList.contains('payment-overlay')) {
       console.log('Clicou no overlay - fechando');
       handleCloseModal();
@@ -106,34 +104,35 @@ const Payment = () => {
     const deliveryAddress = currentOrder.deliveryAddress || null;
     const deliveryDate = currentOrder.deliveryDate || null;
     
-    let message = `📋 *ENVIAR COMPROVANTE PIX*\n\n`;
+    // CORREÇÃO: Usar emojis compatíveis com WhatsApp
+    let message = `*📋 ENVIAR COMPROVANTE PIX*\n\n`;
     
     // Informações básicas
-    message += `🧾 *PEDIDO:* ${currentOrder.id}\n`;
-    message += `👤 *CLIENTE:* ${currentOrder.customer?.name || 'Não informado'}\n`;
-    message += `💰 *VALOR PAGO:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
+    message += `*🧾 PEDIDO:* ${currentOrder.id}\n`;
+    message += `*👤 CLIENTE:* ${currentOrder.customer?.name || 'Não informado'}\n`;
+    message += `*💰 VALOR PAGO:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
     
     // Informações de entrega/retirada
-    message += `📦 *INFORMAÇÕES DE ENTREGA*\n`;
+    message += `*📦 INFORMAÇÕES DE ENTREGA*\n`;
     
     if (deliveryOption === 'retirada') {
-      message += `🏫 *TIPO:* Retirada na Escola\n`;
-      message += `📍 *LOCAL:* Escola Estadual\n`;
-      message += `⏰ *HORÁRIO:* Combinar via WhatsApp\n\n`;
+      message += `*🏫 TIPO:* Retirada na Escola\n`;
+      message += `*📍 LOCAL:* Escola Estadual\n`;
+      message += `*⏰ HORÁRIO:* Combinar via WhatsApp\n\n`;
     } else {
-      message += `🚚 *TIPO:* Entrega a Domicílio\n`;
-      message += `💰 *TAXA DE ENTREGA:* R$ 3,00 (já incluída no valor)\n`;
+      message += `*🚚 TIPO:* Entrega a Domicílio\n`;
+      message += `*💰 TAXA DE ENTREGA:* R$ 3,00 (já incluída no valor)\n`;
       
       // Aviso importante sobre prazo de entrega
-      message += `⚠️ *IMPORTANTE:* Pedidos com entrega devem ser feitos com pelo menos 1 dia de antecedência.\n`;
-      message += `📅 *ENTREGA:* A entrega será realizada no dia seguinte ao pagamento confirmado.\n`;
+      message += `*⚠️ IMPORTANTE:* Pedidos com entrega devem ser feitos com pelo menos 1 dia de antecedência.\n`;
+      message += `*📅 ENTREGA:* A entrega será realizada no dia seguinte ao pagamento confirmado.\n`;
       
       if (deliveryDate) {
-        message += `📅 *PREVISÃO DE ENTREGA:* ${deliveryDate}\n`;
+        message += `*📅 PREVISÃO DE ENTREGA:* ${deliveryDate}\n`;
       }
       
       if (deliveryAddress) {
-        message += `📍 *ENDEREÇO:*\n`;
+        message += `*📍 ENDEREÇO:*\n`;
         message += `• ${deliveryAddress.street || ''}, ${deliveryAddress.number || ''}\n`;
         if (deliveryAddress.complement) {
           message += `• Complemento: ${deliveryAddress.complement}\n`;
@@ -144,13 +143,13 @@ const Payment = () => {
         }
         message += `• São Paulo/SP\n`;
       } else {
-        message += `📍 *ENDEREÇO:* Informado durante o pedido\n`;
+        message += `*📍 ENDEREÇO:* Informado durante o pedido\n`;
       }
       message += `\n`;
     }
     
     // Itens do pedido
-    message += `🛒 *ITENS DO PEDIDO:*\n`;
+    message += `*🛒 ITENS DO PEDIDO:*\n`;
     if (currentOrder.items && currentOrder.items.length > 0) {
       currentOrder.items.forEach((item, index) => {
         if (index < 5) {
@@ -174,7 +173,7 @@ const Payment = () => {
     message += totalText;
     
     // Instrução para anexar comprovante
-    message += `📎 *ANEXE A FOTO DO COMPROVANTE PIX*`;
+    message += `*📎 ANEXE A FOTO DO COMPROVANTE PIX*`;
 
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
@@ -280,7 +279,7 @@ Guarde este comprovante para referência.
   // Formatar data para exibição
   const formatDeliveryDate = (dateString) => {
     if (!dateString) return null;
-    return dateString; // Já vem formatada do contexto
+    return dateString;
   };
 
   return (
@@ -304,7 +303,6 @@ Guarde este comprovante para referência.
               )}
             </p>
           </div>
-          {/* ✅ BOTÃO X FUNCIONANDO - COM STOP PROPAGATION */}
           <button 
             className="close-btn" 
             onClick={(e) => {
