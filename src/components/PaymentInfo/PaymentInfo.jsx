@@ -17,7 +17,6 @@ const PaymentInfo = ({ vendorInfo }) => {
   const pixKey = vendorInfo.pixKey || '';
   const pixName = vendorInfo.pixName || '';
   const bankName = vendorInfo.bankName || '';
-  const pixType = vendorInfo.pixType || 'E-mail';
 
   const message = `Olá! Quero enviar o comprovante do meu pagamento via PIX.`;
   const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
