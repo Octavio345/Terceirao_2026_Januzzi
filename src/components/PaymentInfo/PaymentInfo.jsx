@@ -47,6 +47,7 @@ const PaymentInfo = ({ vendorInfo }) => {
     }
   };
 
+  // CORREÇÃO: Variável usada no JSX - não remova!
   const currentPixType = vendorInfo.pixType || determinePixType(pixKey);
 
   return (
@@ -116,9 +117,8 @@ const PaymentInfo = ({ vendorInfo }) => {
                 <div className="qr-code-container">
                   <div className="qr-code-image-wrapper">
                     <div className="qr-code-image-container">
-                      {/* Coloque sua imagem aqui */}
                       <img 
-                        src="/qrcode-pix.png" // Caminho da sua imagem
+                        src="/qrcode-pix.png"
                         alt="QR Code PIX" 
                         className="qr-code-image"
                         onError={(e) => {
