@@ -164,7 +164,8 @@ const Cart = () => {
       total: totalWithDelivery
     };
     
-    const order = createOrder(orderData);
+    // REMOVIDA a variável não utilizada 'order'
+    createOrder(orderData);
   };
 
   const handleCopyOrderWithInfo = () => {

@@ -1,5 +1,4 @@
-// src/components/Payment/Payment.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Copy, Check, QrCode, Smartphone, Banknote, Shield, Clock, Download, X } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import QRCodeGenerator from '../QRCodeGenerator/QRCodeGenerator';
@@ -10,13 +9,32 @@ const Payment = () => {
     vendorInfo, 
     showPayment,
     setShowPayment,
-    closePaymentOnly // ✅ Função específica para fechar apenas pagamento
+    closePaymentOnly
   } = useCart();
   
   const [copied, setCopied] = useState(false);
   const [showProofForm, setShowProofForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const modalRef = useRef(null);
+
+  // Função para fechar o modal usando useCallback para evitar dependências cíclicas
+  const handleCloseModal = useCallback(() => {
+    console.log('Fechando modal de pagamento...');
+    
+    if (typeof closePaymentOnly === 'function') {
+      closePaymentOnly();
+    } else if (typeof setShowPayment === 'function') {
+      setShowPayment(false);
+    }
+    
+    setTimeout(() => {
+      const modal = document.querySelector('.payment-overlay');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+      document.body.style.overflow = 'auto';
+    }, 10);
+  }, [closePaymentOnly, setShowPayment]);
 
   // Fechar modal ao pressionar ESC
   useEffect(() => {
@@ -29,7 +47,7 @@ const Payment = () => {
 
     document.addEventListener('keydown', handleEscKey);
     return () => document.removeEventListener('keydown', handleEscKey);
-  }, [showPayment]);
+  }, [showPayment, handleCloseModal]); // Adicionado handleCloseModal nas dependências
 
   // Focar no modal quando abrir
   useEffect(() => {
@@ -43,26 +61,6 @@ const Payment = () => {
       document.body.style.overflow = 'auto';
     };
   }, [showPayment]);
-
-  const handleCloseModal = () => {
-    console.log('Fechando modal de pagamento...');
-    
-    // Usa a função específica do contexto
-    if (typeof closePaymentOnly === 'function') {
-      closePaymentOnly();
-    } else if (typeof setShowPayment === 'function') {
-      setShowPayment(false);
-    }
-    
-    // Solução de fallback direta
-    setTimeout(() => {
-      const modal = document.querySelector('.payment-overlay');
-      if (modal) {
-        modal.style.display = 'none';
-      }
-      document.body.style.overflow = 'auto';
-    }, 10);
-  };
 
   const handleOverlayClick = (e) => {
     // Fecha apenas se clicar diretamente no overlay (não nos filhos)
@@ -891,9 +889,6 @@ Guarde este comprovante para referência.
           padding: 24px;
         }
 
-        /* Estilos do resto do componente permanecem iguais... */
-        /* (Mantive os mesmos estilos CSS que você já tinha, apenas corrigi o botão X) */
-        
         /* Etapas */
         .steps-container {
           display: flex;

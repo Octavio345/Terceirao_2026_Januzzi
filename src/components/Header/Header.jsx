@@ -25,7 +25,7 @@ const Header = () => {
           <div className="logo-sala-wrapper">
             <div className="logo-sala-frame">
               <img 
-                src="/logo-sala.png" 
+                src="/imagens/logo.jpg" 
                 alt="Logo da Sala" 
                 className="logo-sala-img"
                 onError={(e) => {
@@ -216,6 +216,7 @@ const Header = () => {
           display: flex;
           align-items: center;
           justify-content: center;
+          padding: 0; 
         }
 
         .logo-sala-frame:hover {
@@ -227,8 +228,8 @@ const Header = () => {
         .logo-sala-img {
           width: 100%;
           height: 100%;
-          object-fit: contain;
-          padding: 12px;
+          object-fit: cover;
+          padding: 0px;
         }
 
         .logo-sala-fallback {

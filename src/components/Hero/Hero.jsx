@@ -1,156 +1,363 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Target, Zap } from 'lucide-react';
+import { ArrowRight, Target, Zap, Sparkles } from 'lucide-react';
 
 const Hero = () => {
   return (
     <>
       {/* Seção do Banner */}
-      <section className="banner-section">
-        <div className="banner-container">
-          <div className="banner-overlay"></div>
+      <section className="hero-section">
+        <div className="hero-background">
+          {/* Overlays gradientes */}
+          <div className="gradient-overlay-top"></div>
+          <div className="gradient-overlay-bottom"></div>
           
-          <div className="banner-content">
-            <div className="banner-icon">🎓</div>
-            <h1 className="banner-title">Terceirão 2026</h1>
-            <p className="banner-subtitle">LOJA OFICIAL</p>
+          {/* Elementos decorativos */}
+          <div className="floating-element el-1"></div>
+          <div className="floating-element el-2"></div>
+          <div className="floating-element el-3"></div>
+          
+          {/* Conteúdo principal */}
+          <div className="hero-content">
+            <div className="hero-badge">
+              <Sparkles size={20} />
+              <span>Loja Oficial</span>
+            </div>
+            
+            <h1 className="hero-title">
+              <span className="title-gradient">Terceirão</span>
+              <span className="title-accent">2026</span>
+            </h1>
+            
+            <p className="hero-subtitle">
+              Celebre conosco esta conquista através de produtos exclusivos
+            </p>
+            
           </div>
           
-          {/* 
-          PARA USAR SEU BANNER REAL:
-          <img 
-            src="/seu-banner.jpg" 
-            alt="Terceirão 2026" 
-            className="banner-image"
-          />
-          */}
+          {/* Banner image com efeito de parallax */}
+          <div className="banner-image-container">
+            <img 
+              src="/imagens/banner.jpg" 
+              alt="Terceirão 2026 - Celebrando a formatura" 
+              className="banner-image"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+              }}
+            />
+          </div>
         </div>
       </section>
 
-      {/* Seção do Conteúdo */}
-      <section className="content-section">
+      {/* Seção de Destaques */}
+      <section className="highlights-section">
         <div className="container">
-          <div className="content-wrapper">
-            {/* Texto principal */}
-            <div className="text-header">
-              <h2 className="main-title">
-                Apoie nossa formatura
-                <span className="highlight">Cada compra faz a diferença!</span>
+          <div className="highlights-grid">
+            {/* Card de Missão */}
+            <div className="highlight-card">
+              <div className="card-decoration"></div>
+              <div className="card-icon">
+                <Target size={32} />
+              </div>
+              <div className="card-content">
+                <h3 className="card-title">
+                  <span className="card-number">01</span>
+                  Produtos Exclusivos
+                </h3>
+                <p className="card-description">
+                  Itens personalizados com nossa identidade visual, criados especialmente para celebrar esta conquista única.
+                </p>
+                <ul className="card-features">
+                  <li>• Camisetas personalizadas</li>
+                  <li>• Canecas comemorativas</li>
+                  <li>• Acessórios exclusivos</li>
+                </ul>
+              </div>
+            </div>
+            
+            {/* Card de Velocidade */}
+            <div className="highlight-card">
+              <div className="card-decoration"></div>
+              <div className="card-icon">
+                <Zap size={32} />
+              </div>
+              <div className="card-content">
+                <h3 className="card-title">
+                  <span className="card-number">02</span>
+                  Entrega Ágil
+                </h3>
+                <p className="card-description">
+                  Processo simplificado com retirada na escola ou entrega rápida para toda a comunidade escolar.
+                </p>
+                <ul className="card-features">
+                  <li>• Retirada na escola</li>
+                  <li>• Entrega combinada</li>
+                  <li>• Suporte dedicado</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          {/* Seção de Call-to-Action */}
+          <div className="cta-section">
+            <div className="cta-content">
+              <h2 className="cta-title">
+                Cada compra nos aproxima da nossa
+                <span className="cta-highlight"> formatura inesquecível</span>
               </h2>
               
-              <p className="main-description">
-                Nossa loja oficial tem produtos exclusivos para arrecadar fundos 
-                para a festa de formatura. Faça parte dessa conquista!
+              <p className="cta-description">
+                Adquira produtos exclusivos e faça parte desta jornada. 
+                Todo o valor arrecadado é investido na nossa festa de formatura.
               </p>
-            </div>
-
-            {/* Cards de destaque */}
-            <div className="features-grid">
-              <div className="feature-card">
-                <div className="feature-icon-wrapper">
-                  <Target size={28} />
-                </div>
-                <div className="feature-text">
-                  <h3>Produtos</h3>
-                  <h4>Exclusivos</h4>
-                  <p>Itens personalizados da turma</p>
-                </div>
-              </div>
               
-              <div className="feature-card">
-                <div className="feature-icon-wrapper">
-                  <Zap size={28} />
-                </div>
-                <div className="feature-text">
-                  <h3>Entrega</h3>
-                  <h4>Rápida</h4>
-                  <p>Retirada na escola combinada</p>
-                </div>
+              <div className="cta-buttons">
+                <Link to="/produtos" className="cta-button primary">
+                  <span>Explorar Coleção</span>
+                  <ArrowRight size={20} />
+                </Link>
+                
+                <Link to="/sobre" className="cta-button secondary">
+                  <span>Conheça o Projeto</span>
+                </Link>
               </div>
-            </div>
-
-            {/* Botão de ação */}
-            <div className="action-container">
-              <Link to="/produtos" className="action-button">
-                <span>Explorar Produtos</span>
-                <ArrowRight size={20} />
-              </Link>
             </div>
           </div>
         </div>
       </section>
 
       <style jsx>{`
-        /* Estilos do Banner */
-        .banner-section {
+        /* Seção Hero */
+        .hero-section {
           position: relative;
-          height: 60vh;
-          min-height: 500px;
+          height: 85vh;
+          min-height: 700px;
+          max-height: 900px;
           overflow: hidden;
         }
 
-        .banner-container {
+        .hero-background {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        }
+
+        .gradient-overlay-top {
           position: absolute;
           top: 0;
           left: 0;
           right: 0;
-          bottom: 0;
-          background: linear-gradient(135deg, #2D3047 0%, #1A1A2E 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          height: 40%;
+          background: linear-gradient(to bottom, rgba(15, 12, 41, 0.9), transparent);
+          z-index: 1;
         }
 
-        .banner-overlay {
+        .gradient-overlay-bottom {
           position: absolute;
-          top: 0;
+          bottom: 0;
           left: 0;
           right: 0;
-          bottom: 0;
-          background: linear-gradient(to bottom, 
-            rgba(26, 26, 46, 0.9) 0%,
-            rgba(26, 26, 46, 0.95) 100%);
+          height: 40%;
+          background: linear-gradient(to top, rgba(15, 12, 41, 0.9), transparent);
+          z-index: 1;
         }
 
-        .banner-content {
-          position: relative;
-          z-index: 2;
-          text-align: center;
-          color: white;
-          padding: 2rem;
+        .floating-element {
+          position: absolute;
+          background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+          border-radius: 50%;
+          filter: blur(40px);
+          z-index: 0;
         }
 
-        .banner-icon {
-          font-size: 4rem;
-          margin-bottom: 1.5rem;
-          animation: float 3s ease-in-out infinite;
+        .floating-element.el-1 {
+          width: 300px;
+          height: 300px;
+          top: 10%;
+          left: 10%;
+          animation: float 20s ease-in-out infinite;
+        }
+
+        .floating-element.el-2 {
+          width: 200px;
+          height: 200px;
+          bottom: 20%;
+          right: 10%;
+          animation: float 25s ease-in-out infinite reverse;
+        }
+
+        .floating-element.el-3 {
+          width: 150px;
+          height: 150px;
+          top: 50%;
+          left: 80%;
+          animation: float 30s ease-in-out infinite;
         }
 
         @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(180deg); }
         }
 
-        .banner-title {
-          font-size: clamp(3rem, 6vw, 5rem);
-          font-weight: 900;
-          margin-bottom: 0.5rem;
-          line-height: 1;
-          letter-spacing: -0.5px;
+        .hero-content {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          padding: 2rem;
+          text-align: center;
+          max-width: 1200px;
+          margin: 0 auto;
         }
 
-        .banner-subtitle {
-          font-size: clamp(1.25rem, 2.5vw, 2rem);
-          font-weight: 600;
-          opacity: 0.9;
+        .hero-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: rgba(255, 215, 0, 0.1);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 215, 0, 0.2);
           color: #FFD700;
-          letter-spacing: 2px;
+          padding: 0.5rem 1.25rem;
+          border-radius: 50px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          margin-bottom: 3rem;
+          animation: pulse 2s infinite;
         }
 
-        /* Estilos do Conteúdo */
-        .content-section {
-          padding: 4rem 2rem;
-          background: #f8f9fa;
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+
+        .hero-icon-wrapper {
+          position: relative;
+          margin-bottom: 2rem;
+        }
+
+        .hero-icon-glow {
+          position: absolute;
+          inset: -20px;
+          background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+          animation: glow 3s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        .hero-icon {
+          font-size: 5rem;
+          position: relative;
+          z-index: 2;
+          animation: float-icon 6s ease-in-out infinite;
+        }
+
+        @keyframes float-icon {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-15px) rotate(5deg); }
+        }
+
+        .hero-title {
+          font-size: clamp(3.5rem, 8vw, 6rem);
+          font-weight: 900;
+          line-height: 1.1;
+          margin-bottom: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .title-gradient {
+          background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .title-accent {
+          color: white;
+          text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        }
+
+        .hero-subtitle {
+          font-size: clamp(1.125rem, 2vw, 1.5rem);
+          color: rgba(255, 255, 255, 0.9);
+          max-width: 600px;
+          margin-bottom: 3rem;
+          line-height: 1.6;
+          font-weight: 400;
+        }
+
+        .hero-stats {
+          display: flex;
+          gap: 2rem;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 20px;
+          padding: 1.5rem 2rem;
+          margin-top: 2rem;
+        }
+
+        .stat-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.25rem;
+        }
+
+        .stat-number {
+          font-size: 2rem;
+          font-weight: 800;
+          color: #FFD700;
+          line-height: 1;
+        }
+
+        .stat-label {
+          font-size: 0.875rem;
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .stat-divider {
+          width: 1px;
+          height: 40px;
+          background: rgba(255, 255, 255, 0.1);
+        }
+
+        .banner-image-container {
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          overflow: hidden;
+        }
+
+        .banner-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          opacity: 0.3;
+          filter: blur(0px);
+          transition: transform 0.5s ease;
+        }
+
+        .hero-section:hover .banner-image {
+          transform: scale(1.02);
+        }
+
+        /* Seção de Destaques */
+        .highlights-section {
+          padding: 6rem 2rem;
+          background: linear-gradient(to bottom, #f8f9fa, #ffffff);
+          position: relative;
+          z-index: 3;
         }
 
         .container {
@@ -158,197 +365,381 @@ const Hero = () => {
           margin: 0 auto;
         }
 
-        .content-wrapper {
-          max-width: 800px;
-          margin: 0 auto;
-        }
-
-        .text-header {
-          text-align: center;
-          margin-bottom: 3rem;
-        }
-
-        .main-title {
-          font-size: clamp(2rem, 4vw, 2.5rem);
-          color: #1A1A2E;
-          margin-bottom: 1rem;
-          line-height: 1.3;
-        }
-
-        .main-title .highlight {
-          display: block;
-          color: #FF6B6B;
-          font-weight: 700;
-          margin-top: 0.5rem;
-          font-size: clamp(1.5rem, 3vw, 2rem);
-        }
-
-        .main-description {
-          font-size: clamp(1rem, 1.5vw, 1.125rem);
-          color: #666;
-          line-height: 1.6;
-          max-width: 600px;
-          margin: 0 auto;
-        }
-
-        /* Cards de destaque */
-        .features-grid {
+        .highlights-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 2rem;
-          margin-bottom: 3rem;
+          grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+          gap: 3rem;
+          margin-bottom: 6rem;
         }
 
-        .feature-card {
+        .highlight-card {
+          position: relative;
           background: white;
-          border-radius: 16px;
-          padding: 2rem;
-          text-align: center;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-          transition: all 0.3s ease;
-          border: 2px solid transparent;
+          border-radius: 24px;
+          padding: 3rem 2.5rem;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+          transition: all 0.4s ease;
+          overflow: hidden;
+          border: 1px solid transparent;
         }
 
-        .feature-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-          border-color: #FFD700;
+        .highlight-card:hover {
+          transform: translateY(-10px);
+          box-shadow: 0 40px 80px rgba(0, 0, 0, 0.12);
+          border-color: rgba(255, 215, 0, 0.3);
         }
 
-        .feature-icon-wrapper {
-          width: 70px;
-          height: 70px;
+        .card-decoration {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 100px;
+          height: 100px;
           background: linear-gradient(135deg, #FFD700, #FFA500);
-          border-radius: 50%;
+          border-radius: 0 24px 0 100px;
+          opacity: 0.1;
+        }
+
+        .highlight-card:hover .card-decoration {
+          opacity: 0.2;
+        }
+
+        .card-icon {
+          width: 80px;
+          height: 80px;
+          background: linear-gradient(135deg, #FFD700, #FFA500);
+          border-radius: 20px;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin: 0 auto 1.5rem;
-          color: #1A1A2E;
+          margin-bottom: 2rem;
+          color: white;
+          box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
         }
 
-        .feature-text h3 {
+        .card-title {
           font-size: 1.75rem;
-          color: #1A1A2E;
-          margin-bottom: 0.25rem;
-          font-weight: 700;
+          color: #1a1a2e;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
         }
 
-        .feature-text h4 {
-          font-size: 2rem;
-          color: #FF6B6B;
-          margin-bottom: 0.5rem;
+        .card-number {
+          color: #FFD700;
           font-weight: 800;
+          font-size: 1.5rem;
         }
 
-        .feature-text p {
+        .card-description {
           color: #666;
-          font-size: 1rem;
-          margin: 0;
-          line-height: 1.5;
+          line-height: 1.6;
+          margin-bottom: 1.5rem;
+          font-size: 1.125rem;
         }
 
-        /* Botão de ação */
-        .action-container {
+        .card-features {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+
+        .card-features li {
+          color: #444;
+          padding: 0.5rem 0;
+          border-bottom: 1px solid #f0f0f0;
+        }
+
+        .card-features li:last-child {
+          border-bottom: none;
+        }
+
+        /* Seção CTA */
+        .cta-section {
+          background: linear-gradient(135deg, #1a1a2e 0%, #2d3047 100%);
+          border-radius: 32px;
+          padding: 4rem;
+          box-shadow: 0 40px 80px rgba(26, 26, 46, 0.15);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .cta-section::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 1px;
+          background: linear-gradient(to right, transparent, #FFD700, transparent);
+        }
+
+        .cta-content {
+          position: relative;
+          z-index: 2;
           text-align: center;
         }
 
-        .action-button {
+        .cta-title {
+          font-size: clamp(2rem, 4vw, 3rem);
+          color: white;
+          line-height: 1.2;
+          margin-bottom: 1.5rem;
+          font-weight: 700;
+        }
+
+        .cta-highlight {
+          display: block;
+          background: linear-gradient(135deg, #FFD700, #FFA500);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin-top: 0.5rem;
+        }
+
+        .cta-description {
+          font-size: 1.125rem;
+          color: rgba(255, 255, 255, 0.9);
+          max-width: 600px;
+          margin: 0 auto 3rem;
+          line-height: 1.6;
+        }
+
+        .cta-buttons {
+          display: flex;
+          gap: 1rem;
+          justify-content: center;
+          margin-bottom: 3rem;
+          flex-wrap: wrap;
+        }
+
+        .cta-button {
           display: inline-flex;
           align-items: center;
           gap: 0.75rem;
-          background: linear-gradient(135deg, #1A1A2E, #2D3047);
-          color: white;
           padding: 1rem 2.5rem;
           font-size: 1.125rem;
           font-weight: 600;
           border-radius: 50px;
           text-decoration: none;
           transition: all 0.3s ease;
-          box-shadow: 0 5px 15px rgba(26, 26, 46, 0.2);
         }
 
-        .action-button:hover {
+        .cta-button.primary {
+          background: linear-gradient(135deg, #FFD700, #FFA500);
+          color: #1a1a2e;
+          box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .cta-button.primary:hover {
           transform: translateY(-3px);
-          box-shadow: 0 10px 25px rgba(26, 26, 46, 0.3);
+          box-shadow: 0 15px 40px rgba(255, 215, 0, 0.4);
           gap: 1rem;
         }
 
-        .action-button svg {
-          transition: transform 0.3s ease;
+        .cta-button.secondary {
+          background: transparent;
+          color: white;
+          border: 2px solid rgba(255, 255, 255, 0.2);
         }
 
-        .action-button:hover svg {
-          transform: translateX(5px);
+        .cta-button.secondary:hover {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.3);
+          transform: translateY(-3px);
         }
 
-        /* Responsivo */
+        .cta-stats {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          padding: 2rem;
+          max-width: 500px;
+          margin: 0 auto;
+        }
+
+        .cta-stat {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .cta-stat-icon {
+          font-size: 1.5rem;
+        }
+
+        .cta-stat-text {
+          text-align: left;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .cta-stat-text strong {
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        .cta-stat-text span {
+          color: #FFD700;
+          font-size: 1.5rem;
+          font-weight: 800;
+        }
+
+        .progress-bar {
+          height: 10px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 5px;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #FFD700, #FFA500);
+          border-radius: 5px;
+          position: relative;
+          transition: width 1s ease-in-out;
+        }
+
+        .progress-glow {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+          animation: progress-glow 2s infinite;
+        }
+
+        @keyframes progress-glow {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+
+        /* Responsividade */
+        @media (max-width: 1024px) {
+          .hero-section {
+            height: 80vh;
+            min-height: 600px;
+          }
+          
+          .highlights-grid {
+            gap: 2rem;
+          }
+          
+          .cta-section {
+            padding: 3rem 2rem;
+          }
+        }
+
         @media (max-width: 768px) {
-          .banner-section {
-            height: 50vh;
-            min-height: 400px;
+          .hero-section {
+            height: 70vh;
+            min-height: 500px;
           }
           
-          .content-section {
-            padding: 3rem 1.5rem;
+          .hero-title {
+            font-size: 3rem;
           }
           
-          .features-grid {
+          .hero-stats {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+          }
+          
+          .stat-divider {
+            width: 100px;
+            height: 1px;
+          }
+          
+          .highlights-grid {
             grid-template-columns: 1fr;
-            gap: 1.5rem;
           }
           
-          .feature-card {
-            padding: 1.5rem;
+          .highlight-card {
+            padding: 2rem;
           }
           
-          .banner-title {
-            font-size: 2.5rem;
+          .cta-buttons {
+            flex-direction: column;
+            align-items: center;
           }
           
-          .banner-subtitle {
-            font-size: 1.5rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .banner-section {
-            height: 40vh;
-            min-height: 350px;
-          }
-          
-          .content-section {
-            padding: 2rem 1rem;
-          }
-          
-          .main-title {
-            font-size: 1.75rem;
-          }
-          
-          .main-title .highlight {
-            font-size: 1.5rem;
-          }
-          
-          .feature-text h3 {
-            font-size: 1.5rem;
-          }
-          
-          .feature-text h4 {
-            font-size: 1.75rem;
-          }
-          
-          .action-button {
+          .cta-button {
             width: 100%;
             max-width: 300px;
             justify-content: center;
           }
         }
 
-        /* Para telas muito altas */
-        @media (min-height: 1000px) {
-          .banner-section {
-            height: 50vh;
+        @media (max-width: 480px) {
+          .hero-section {
+            height: 65vh;
+            min-height: 450px;
           }
+          
+          .hero-content {
+            padding: 1rem;
+          }
+          
+          .hero-title {
+            font-size: 2.5rem;
+          }
+          
+          .hero-subtitle {
+            font-size: 1rem;
+          }
+          
+          .hero-icon {
+            font-size: 4rem;
+          }
+          
+          .cta-section {
+            padding: 2rem 1.5rem;
+            border-radius: 24px;
+          }
+          
+          .cta-title {
+            font-size: 1.75rem;
+          }
+        }
+
+        /* Animações de entrada */
+        .hero-content > * {
+          animation: slideUp 0.8s ease-out forwards;
+          opacity: 0;
+          transform: translateY(30px);
+        }
+
+        .hero-badge { animation-delay: 0.1s; }
+        .hero-icon-wrapper { animation-delay: 0.2s; }
+        .hero-title { animation-delay: 0.3s; }
+        .hero-subtitle { animation-delay: 0.4s; }
+        .hero-stats { animation-delay: 0.5s; }
+
+        @keyframes slideUp {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* Efeito de cursor glow */
+        .hero-section::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+            rgba(255, 215, 0, 0.1) 0%, transparent 50%);
+          pointer-events: none;
+          z-index: 1;
         }
       `}</style>
     </>
