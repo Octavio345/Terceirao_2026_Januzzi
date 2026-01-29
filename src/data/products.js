@@ -1,3 +1,4 @@
+// src/data/productsData.js
 export const productsData = [
   // ========== DOCES ==========
   {
@@ -120,41 +121,34 @@ export const productsData = [
     tags: ['gelado', 'sobremesa', 'refrescante']
   },
 
-  // ========== RIFAS ==========
-  {
+  // ========== RIFA ÚNICA E ESPECIAL ==========
+{
     id: 12,
-    name: 'Rifa Smartphone',
-    price: 10.00,
+    name: '🎟️ RIFA DA FORMATURA 2026',
+    price: 15.00, // Preço normal: R$ 15,00
     category: 'rifas',
-    description: 'Rifa para concorrer a um smartphone novo da última geração',
-    emoji: '📱',
-    stock: 200,
-    tags: ['rifa', 'premiação', 'eletrônico']
-  },
-  {
-    id: 13,
-    name: 'Rifa Cesta de Doces',
-    price: 5.00,
-    category: 'rifas',
-    description: 'Rifa para cesta recheada com diversos doces e chocolates finos',
-    emoji: '🎁',
-    stock: 150,
-    tags: ['rifa', 'doce', 'presente']
-  },
-  {
-    id: 14,
-    name: 'Rifa Jantar Romântico',
-    price: 15.00,
-    category: 'rifas',
-    description: 'Rifa para jantar a dois em restaurante renomado da cidade',
-    emoji: '🍽️',
-    stock: 100,
-    tags: ['rifa', 'experiência', 'jantar']
+    description: 'RIFA OFICIAL DO TERCEIRÃO 2026! Concorra a 1 ingresso no Hot Planet Araçatuba + 2 acompanhantes. TODA renda será investida na nossa formatura inesquecível!',
+    emoji: '🏆',
+    badge: 'limited',
+    stock: 299, // Total de números disponíveis
+    tags: ['rifa', 'hotplanet', 'premiação', 'formatura2026', 'especial'],
+    shippingInfo: '🏆 SORTEIO: 15/03/2026 às 18h na escola',
+    originalPrice: 20.00,
+    discount: 25, // 25% de desconto no preço normal
+    isRaffle: true,
+    rafflePrize: '1 ingresso Hot Planet + 2 acompanhantes',
+    raffleDate: '15 de Março de 2026',
+    raffleLocation: 'Escola Estadual - Buritama/SP',
+    // NOVO: Informações de desconto para compra em quantidade
+    bulkDiscount: {
+      5: 10.00, // 5 números por R$ 10 cada (total R$ 50)
+      minForDiscount: 5 // Mínimo para desconto
+    }
   },
 
   // ========== COMBOS ==========
   {
-    id: 15,
+    id: 13,
     name: 'Combo Lanche + Refri',
     price: 20.00,
     category: 'combos',
@@ -166,7 +160,7 @@ export const productsData = [
     tags: ['combo', 'econômico', 'lanche']
   },
   {
-    id: 16,
+    id: 14,
     name: 'Combo Doce + Suco',
     price: 15.00,
     category: 'combos',
@@ -177,7 +171,7 @@ export const productsData = [
     tags: ['combo', 'doce', 'refrescante']
   },
   {
-    id: 17,
+    id: 15,
     name: 'Combo Completo',
     price: 30.00,
     category: 'combos',
@@ -217,9 +211,9 @@ export const categories = [
   },
   { 
     id: 'rifas', 
-    name: 'Rifas & Promoções', 
-    emoji: '🎫',
-    description: 'Participe e concorra a prêmios'
+    name: 'Rifa Especial', 
+    emoji: '🎟️',
+    description: 'Participe da nossa rifa da formatura!'
   },
   { 
     id: 'combos', 

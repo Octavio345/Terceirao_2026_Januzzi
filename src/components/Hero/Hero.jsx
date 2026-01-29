@@ -63,15 +63,15 @@ const Hero = () => {
               <div className="card-content">
                 <h3 className="card-title">
                   <span className="card-number">01</span>
-                  Produtos Exclusivos
+                  Produtos
                 </h3>
                 <p className="card-description">
-                  Itens personalizados com nossa identidade visual, criados especialmente para celebrar esta conquista única.
+                  Temos uma variedade de salgados e doces deliciosos, e também uma rifa especial — participando, você aproveita e ainda contribui com nossa obra.
                 </p>
                 <ul className="card-features">
-                  <li>• Camisetas personalizadas</li>
-                  <li>• Canecas comemorativas</li>
-                  <li>• Acessórios exclusivos</li>
+                  <li>• Salgados</li>
+                  <li>• Doces</li>
+                  <li>• Rifas</li>
                 </ul>
               </div>
             </div>
@@ -114,7 +114,7 @@ const Hero = () => {
               
               <div className="cta-buttons">
                 <Link to="/produtos" className="cta-button primary">
-                  <span>Explorar Coleção</span>
+                  <span>Explorar Produtos</span>
                   <ArrowRight size={20} />
                 </Link>
                 

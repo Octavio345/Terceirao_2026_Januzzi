@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ProductCard from '../ProductCard/ProductCard';
-import { Filter, Search, Package, Grid, List, ChevronDown, Tag, Star, Zap } from 'lucide-react';
+import RaffleProductCard from '../RaffleProductCard/RaffleProductCard'; // Importe o novo componente
+import { Filter, Search, Package, Grid, List, ChevronDown, Tag, Star, Zap, Ticket } from 'lucide-react';
 import { productsData, categories, categoryColors } from '../../data/products';
 
 const Products = () => {
@@ -50,6 +51,9 @@ const Products = () => {
   // Produtos em destaque (com badge)
   const featuredProducts = productsData.filter(p => p.badge).slice(0, 4);
 
+  // Verificar se há rifas nos produtos filtrados
+  const hasRaffles = sortedProducts.some(product => product.category === 'rifas');
+
   return (
     <section className="products-section">
       <div className="container">
@@ -76,17 +80,33 @@ const Products = () => {
             </div>
           </div>
 
-          {/* Banner de destaque */}
-          <div className="featured-banner">
-            <div className="banner-content">
-              <div className="banner-icon">⚡</div>
-              <div className="banner-text">
-                <h3>Produtos Exclusivos da Turma</h3>
-                <p>Todos os itens são preparados com carinho pelos alunos</p>
+          {/* Banner de destaque - Especial para rifas */}
+          {hasRaffles && (
+            <div className="raffle-featured-banner">
+              <div className="banner-content">
+                <div className="banner-icon">🎟️</div>
+                <div className="banner-text">
+                  <h3>🎁 RIFA ESPECIAL: Ingresso Hot Planet!</h3>
+                  <p>Adquira números da rifa e concorra a 1 ingresso + 2 acompanhantes</p>
+                </div>
               </div>
+              <div className="banner-decoration"></div>
             </div>
-            <div className="banner-decoration"></div>
-          </div>
+          )}
+
+          {/* Banner padrão quando não há rifas */}
+          {!hasRaffles && (
+            <div className="featured-banner">
+              <div className="banner-content">
+                <div className="banner-icon">⚡</div>
+                <div className="banner-text">
+                  <h3>Produtos Exclusivos da Turma</h3>
+                  <p>Todos os itens são preparados com carinho pelos alunos</p>
+                </div>
+              </div>
+              <div className="banner-decoration"></div>
+            </div>
+          )}
         </div>
 
         <div className="catalog-content">
@@ -201,6 +221,34 @@ const Products = () => {
               </div>
             )}
 
+            {/* Instruções especiais para rifas */}
+            {selectedCategory === 'rifas' && (
+              <div className="raffle-instructions-sidebar">
+                <div className="instructions-header">
+                  <Ticket size={16} />
+                  <h4>Como Funciona a Rifa</h4>
+                </div>
+                <div className="instructions-content">
+                  <div className="instruction-step">
+                    <div className="step-number">1</div>
+                    <p>Selecione sua turma</p>
+                  </div>
+                  <div className="instruction-step">
+                    <div className="step-number">2</div>
+                    <p>Escolha até 10 números</p>
+                  </div>
+                  <div className="instruction-step">
+                    <div className="step-number">3</div>
+                    <p>Adicione ao carrinho</p>
+                  </div>
+                  <div className="instruction-step">
+                    <div className="step-number">4</div>
+                    <p>Finalize o pedido</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Botão limpar filtros */}
             {(searchTerm || selectedCategory !== 'all' || sortBy !== 'default') && (
               <button 
@@ -279,14 +327,27 @@ const Products = () => {
             {/* Grid/Lista de produtos */}
             {sortedProducts.length > 0 ? (
               <div className={`products-container ${viewMode === 'grid' ? 'grid-view' : 'list-view'}`}>
-                {/* AQUI ESTÁ O USO CORRETO DO PRODUCTCARD */}
-                {sortedProducts.map((product, index) => (
-                  <ProductCard 
-                    key={product.id} 
-                    product={product} 
-                    index={index % 10} // Limita o delay máximo para 10 diferentes
-                  />
-                ))}
+                {sortedProducts.map((product, index) => {
+                  // Usar RaffleProductCard para produtos do tipo 'rifas'
+                  if (product.category === 'rifas') {
+                    return (
+                      <RaffleProductCard 
+                        key={product.id} 
+                        product={product} 
+                        index={index % 10}
+                      />
+                    );
+                  } else {
+                    // Usar ProductCard normal para outros produtos
+                    return (
+                      <ProductCard 
+                        key={product.id} 
+                        product={product} 
+                        index={index % 10}
+                      />
+                    );
+                  }
+                })}
               </div>
             ) : (
               <div className="empty-state">
@@ -309,6 +370,46 @@ const Products = () => {
               </div>
             )}
 
+            {/* Informações específicas para rifas */}
+            {hasRaffles && (
+              <div className="raffle-info-section">
+                <h3 className="raffle-info-title">
+                  <Ticket size={24} />
+                  Informações Importantes sobre as Rifas
+                </h3>
+                <div className="raffle-info-grid">
+                  <div className="info-card">
+                    <div className="info-icon">🏆</div>
+                    <div className="info-content">
+                      <h4>Prêmio Principal</h4>
+                      <p>1 ingresso Hot Planet Araçatuba + 2 acompanhantes</p>
+                    </div>
+                  </div>
+                  <div className="info-card">
+                    <div className="info-icon">👥</div>
+                    <div className="info-content">
+                      <h4>Divisão por Turma</h4>
+                      <p>3ºA (001-099) • 3ºB (100-199) • 3ºTech (200-299)</p>
+                    </div>
+                  </div>
+                  <div className="info-card">
+                    <div className="info-icon">📅</div>
+                    <div className="info-content">
+                      <h4>Sorteio</h4>
+                      <p>Será realizado presencialmente na escola</p>
+                    </div>
+                  </div>
+                  <div className="info-card">
+                    <div className="info-icon">🎯</div>
+                    <div className="info-content">
+                      <h4>Como Participar</h4>
+                      <p>Selecione sua turma, escolha seus números e adicione ao carrinho</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Informações de compra */}
             <div className="purchase-guide">
               <h3 className="guide-title">📦 Como Comprar</h3>
@@ -323,8 +424,8 @@ const Products = () => {
                 <div className="step">
                   <div className="step-number">2</div>
                   <div className="step-content">
-                    <h4>Anote os detalhes</h4>
-                    <p>Escreva nome completo dos produtos e quantidades</p>
+                    <h4>Adicione ao carrinho</h4>
+                    <p>Confira os itens selecionados</p>
                   </div>
                 </div>
                 <div className="step">
@@ -433,6 +534,18 @@ const Products = () => {
           margin-top: 0.25rem;
         }
 
+        /* Banner especial para rifas */
+        .raffle-featured-banner {
+          background: linear-gradient(135deg, #9d4edd 0%, #7b2cbf 100%);
+          border-radius: var(--radius-xl);
+          padding: var(--space-xl);
+          position: relative;
+          overflow: hidden;
+          color: var(--color-white);
+          margin-top: var(--space-lg);
+        }
+
+        /* Banner padrão */
         .featured-banner {
           background: linear-gradient(135deg, var(--color-dark) 0%, #2D3047 100%);
           border-radius: var(--radius-xl);
@@ -528,6 +641,52 @@ const Products = () => {
           .close-filters {
             display: none;
           }
+        }
+
+        /* Instruções para rifas na sidebar */
+        .raffle-instructions-sidebar {
+          background: linear-gradient(135deg, #fff9db 0%, #ffec99 100%);
+          border-radius: var(--radius-lg);
+          padding: var(--space-md);
+          margin-bottom: var(--space-lg);
+          border: 2px solid var(--color-yellow);
+        }
+
+        .instructions-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: var(--space-md);
+          color: var(--color-dark);
+          font-weight: 600;
+        }
+
+        .instructions-content {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-sm);
+        }
+
+        .instruction-step {
+          display: flex;
+          align-items: center;
+          gap: var(--space-sm);
+          font-size: 0.875rem;
+          color: #666;
+        }
+
+        .instruction-step .step-number {
+          width: 24px;
+          height: 24px;
+          background: var(--color-yellow);
+          color: var(--color-dark);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 0.75rem;
+          flex-shrink: 0;
         }
 
         .sidebar-header {
@@ -910,7 +1069,7 @@ const Products = () => {
         }
 
         .products-container.grid-view {
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         }
 
         .products-container.list-view {
@@ -919,7 +1078,7 @@ const Products = () => {
 
         @media (max-width: 768px) {
           .products-container.grid-view {
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: var(--space-md);
           }
         }
@@ -1013,6 +1172,65 @@ const Products = () => {
           width: 100%;
         }
 
+        /* Seção de informações das rifas */
+        .raffle-info-section {
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          border-radius: var(--radius-xl);
+          padding: var(--space-xl);
+          margin-top: var(--space-xl);
+          border: 2px solid var(--color-yellow);
+        }
+
+        .raffle-info-title {
+          text-align: center;
+          font-size: clamp(1.5rem, 3vw, 1.75rem);
+          color: var(--color-dark);
+          margin-bottom: var(--space-xl);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: var(--space-sm);
+        }
+
+        .raffle-info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: var(--space-lg);
+        }
+
+        .info-card {
+          display: flex;
+          align-items: flex-start;
+          gap: var(--space-md);
+          padding: var(--space-lg);
+          background: white;
+          border-radius: var(--radius-lg);
+          transition: all var(--transition-normal);
+        }
+
+        .info-card:hover {
+          transform: translateY(-5px);
+          box-shadow: var(--shadow-md);
+        }
+
+        .info-icon {
+          font-size: 2rem;
+          flex-shrink: 0;
+        }
+
+        .info-content h4 {
+          color: var(--color-dark);
+          margin-bottom: 0.5rem;
+          font-size: 1.125rem;
+        }
+
+        .info-content p {
+          color: #666;
+          font-size: 0.875rem;
+          line-height: 1.5;
+        }
+
+        /* Informações de compra */
         .purchase-guide {
           background: var(--color-white);
           border-radius: var(--radius-xl);

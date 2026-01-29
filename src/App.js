@@ -1,3 +1,4 @@
+// src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
@@ -45,7 +46,6 @@ function App() {
           
           {/* Cart Modal - renderizado fora das rotas */}
           <Cart />
-
           <Payment />
         </div>
       </Router>

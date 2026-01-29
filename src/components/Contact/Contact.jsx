@@ -1,30 +1,17 @@
 import React, { useState } from 'react';
-import { MessageCircle, Mail, MapPin, Clock, Send, CheckCircle, Phone, CreditCard } from 'lucide-react';
+import { MessageCircle, MapPin, Clock, Phone, CreditCard, ShoppingBag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Contact = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: '',
-    product: ''
-  });
-  
-  const [submitted, setSubmitted] = useState(false);
+  const [activeFaq, setActiveFaq] = useState(null);
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const toggleFaq = (index) => {
+    setActiveFaq(activeFaq === index ? null : index);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Dados do formulário:', formData);
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
-    setFormData({ name: '', email: '', phone: '', message: '', product: '' });
+  const handleVerProdutos = () => {
+    navigate('/produtos');
   };
 
   return (
@@ -32,9 +19,9 @@ const Contact = () => {
       <div className="container">
         {/* Cabeçalho animado */}
         <div className="contact-header animate-scale">
-          <h1 className="contact-title">Entre em Contato</h1>
+          <h1 className="contact-title">Fale Com o Terceirão!</h1>
           <p className="contact-subtitle">
-            Tire suas dúvidas, faça pedidos ou envie sugestões. Estamos aqui para ajudar!
+            Faça seu pedido de salgados, doces ou rifas! A retirada é na escola 🏫
           </p>
           <div className="header-decoration">
             <div className="decoration-line"></div>
@@ -54,77 +41,65 @@ const Contact = () => {
                 <h3 className="info-title">WhatsApp Direto</h3>
               </div>
               <div className="info-content">
-                <p className="info-text">Atendimento rápido via WhatsApp</p>
+                <p className="info-text">Faça seu pedido ou tire dúvidas</p>
                 <a 
-                  href="https://wa.me/5511987654321" 
+                  href="https://wa.me/5518987654321" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="contact-link"
                 >
                   <Phone size={18} />
-                  (11) 98765-4321
+                  (18) 98765-4321
                   <span className="link-arrow">→</span>
                 </a>
-                <p className="info-note">Respondemos em até 15 minutos</p>
+                <p className="info-note">Respondemos rapidinho! 🚀</p>
               </div>
             </div>
 
             <div className="info-card animate-in" style={{ animationDelay: '0.2s' }}>
               <div className="info-header">
-                <div className="info-icon email">
-                  <Mail size={24} />
+                <div className="info-icon location">
+                  <MapPin size={24} />
                 </div>
-                <h3 className="info-title">E-mail Oficial</h3>
+                <h3 className="info-title">Local de Retirada</h3>
               </div>
               <div className="info-content">
-                <p className="info-text">Para assuntos formais ou documentação</p>
-                <a 
-                  href="mailto:terceirao2026@escola.com" 
-                  className="contact-link"
-                >
-                  <Mail size={18} />
-                  terceirao2026@escola.com
-                  <span className="link-arrow">→</span>
-                </a>
+                <p className="info-text">E.E. Prof. Oswaldo Januzzi</p>
+                <div className="contact-detail">
+                  <MapPin size={18} />
+                  <span>Av. Frei Marcelo Manilia, 750 - Centro, Buritama - SP</span>
+                </div>
+                <p className="info-note">⚠️ Retirada SOMENTE na escola</p>
               </div>
             </div>
 
             <div className="info-card animate-in" style={{ animationDelay: '0.3s' }}>
               <div className="info-header">
-                <div className="info-icon location">
-                  <MapPin size={24} />
-                </div>
-                <h3 className="info-title">Localização</h3>
-              </div>
-              <div className="info-content">
-                <p className="info-text">Colégio [Nome da Escola]</p>
-                <div className="contact-detail">
-                  <MapPin size={18} />
-                  <span>Rua da Escola, 123 - São Paulo, SP</span>
-                </div>
-                <p className="info-note">Retirada de pedidos combinada</p>
-              </div>
-            </div>
-
-            <div className="info-card animate-in" style={{ animationDelay: '0.4s' }}>
-              <div className="info-header">
                 <div className="info-icon schedule">
                   <Clock size={24} />
                 </div>
-                <h3 className="info-title">Horário</h3>
+                <h3 className="info-title">Horários de Retirada</h3>
               </div>
               <div className="info-content">
-                <p className="info-text">Segunda a Sexta-feira</p>
-                <div className="contact-detail">
-                  <Clock size={18} />
-                  <span>14:00 às 18:00</span>
+                <div className="horarios-list">
+                  <div className="horario-item">
+                    <div className="horario-dia">Intervalo:</div>
+                    <div className="horario-hora">Durante os intervalos das aulas</div>
+                  </div>
+                  <div className="horario-item">
+                    <div className="horario-dia">Manhã:</div>
+                    <div className="horario-hora">A partir das 10h</div>
+                  </div>
+                  <div className="horario-item">
+                    <div className="horario-dia">Observação:</div>
+                    <div className="horario-hora">Combinar previamente pelo WhatsApp</div>
+                  </div>
                 </div>
-                <p className="info-note">Sábados por agendamento</p>
               </div>
             </div>
 
             {/* Informações de pagamento */}
-            <div className="payment-card animate-in" style={{ animationDelay: '0.5s' }}>
+            <div className="payment-card animate-in" style={{ animationDelay: '0.4s' }}>
               <div className="payment-header">
                 <CreditCard size={24} />
                 <h3>💳 Pagamento via PIX</h3>
@@ -132,205 +107,176 @@ const Contact = () => {
               <div className="payment-content">
                 <div className="pix-details">
                   <div className="pix-key">
-                    <span className="key-label">Chave PIX (E-mail):</span>
+                    <span className="key-label">Chave PIX (Celular):</span>
                     <div className="key-value">
-                      <code>terceirao2026@escola.com</code>
+                      <code>(18) 98765-4321</code>
                       <button 
                         className="copy-btn"
                         onClick={() => {
-                          navigator.clipboard.writeText('terceirao2026@escola.com');
-                          alert('Chave copiada!');
+                          navigator.clipboard.writeText('(18) 98765-4321');
+                          alert('Número copiado! Envie no WhatsApp');
                         }}
                       >
                         Copiar
                       </button>
                     </div>
                   </div>
-                  <div className="payment-note">
-                    <div className="note-icon">⚠️</div>
-                    <p>Envie o comprovante pelo WhatsApp após o pagamento</p>
+                  <div className="payment-process">
+                    <h4>Como funciona:</h4>
+                    <ol className="process-steps">
+                      <li>Escolha seus produtos</li>
+                      <li>Faça o pedido pelo WhatsApp</li>
+                      <li>Passaremos o valor e chave PIX</li>
+                      <li>Envie o comprovante e combine a retirada</li>
+                    </ol>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Formulário de contato */}
-          <div className="contact-form-container animate-scale" style={{ animationDelay: '0.6s' }}>
+          {/* Área com botão para produtos */}
+          <div className="contact-form-container">
             <div className="form-header">
-              <h2 className="form-title">Formulário de Contato</h2>
-              <p className="form-subtitle">Preencha os dados abaixo que entraremos em contato</p>
+              <h2 className="form-title">🛍️ Veja Nossos Produtos!</h2>
+              <p className="form-subtitle">Confira nossa variedade de salgados, doces e rifas</p>
             </div>
             
-            {submitted ? (
-              <div className="success-message">
-                <div className="success-icon">
-                  <CheckCircle size={48} />
-                </div>
-                <h3 className="success-title">Mensagem enviada!</h3>
-                <p className="success-text">
-                  Obrigado pelo contato. Retornaremos em breve via WhatsApp ou e-mail.
-                </p>
-                <div className="success-decoration">
-                  <div className="success-dot"></div>
-                  <div className="success-dot"></div>
-                  <div className="success-dot"></div>
+            <div className="products-action">
+              <button 
+                onClick={handleVerProdutos}
+                className="products-btn"
+              >
+                <ShoppingBag size={28} />
+                <span>Ver Todos os Produtos</span>
+              </button>
+              
+              <div className="products-preview">
+                <h3>O que oferecemos:</h3>
+                <div className="categories-grid">
+                  <div className="category-card">
+                    <div className="category-icon">🥟</div>
+                    <h4>Salgados</h4>
+                    <p>Coxinhas, risoles, pastéis, esfirras e muito mais!</p>
+                  </div>
+                  <div className="category-card">
+                    <div className="category-icon">🍰</div>
+                    <h4>Doces</h4>
+                    <p>Brigadeiros, beijinhos, bolos, trufas e delicias!</p>
+                  </div>
+                  <div className="category-card">
+                    <div className="category-icon">🎫</div>
+                    <h4>Rifas</h4>
+                    <p>Prêmios incríveis para ajudar o Terceirão!</p>
+                  </div>
+                  <div className="category-card">
+                    <div className="category-icon">🎁</div>
+                    <h4>Combos</h4>
+                    <p>Pacotes especiais com desconto!</p>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <form className="contact-form" onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label htmlFor="name" className="form-label">
-                    <span className="label-text">Nome Completo *</span>
-                    <span className="label-required"></span>
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    placeholder="Digite seu nome completo"
-                    className="form-input"
-                  />
-                </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="email" className="form-label">
-                      <span className="label-text">E-mail *</span>
-                      <span className="label-required"></span>
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                      placeholder="seu@email.com"
-                      className="form-input"
-                    />
+              <div className="process-info">
+                <h3>Como funciona:</h3>
+                <div className="process-steps-horizontal">
+                  <div className="process-step">
+                    <div className="step-number">1</div>
+                    <p>Veja os produtos</p>
                   </div>
-
-                  <div className="form-group">
-                    <label htmlFor="phone" className="form-label">
-                      <span className="label-text">Telefone/WhatsApp *</span>
-                      <span className="label-required"></span>
-                    </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      required
-                      placeholder="(11) 99999-9999"
-                      className="form-input"
-                    />
+                  <div className="step-arrow">→</div>
+                  <div className="process-step">
+                    <div className="step-number">2</div>
+                    <p>Anote o que quer</p>
+                  </div>
+                  <div className="step-arrow">→</div>
+                  <div className="process-step">
+                    <div className="step-number">3</div>
+                    <p>Entre no WhatsApp</p>
+                  </div>
+                  <div className="step-arrow">→</div>
+                  <div className="process-step">
+                    <div className="step-number">4</div>
+                    <p>Faça seu pedido</p>
                   </div>
                 </div>
+              </div>
 
-                <div className="form-group">
-                  <label htmlFor="product" className="form-label">
-                    <span className="label-text">Produto de Interesse</span>
-                  </label>
-                  <select
-                    id="product"
-                    name="product"
-                    value={formData.product}
-                    onChange={handleChange}
-                    className="form-select"
-                  >
-                    <option value="">Selecione um produto...</option>
-                    <option value="doces">Doces & Sobremesas</option>
-                    <option value="salgados">Salgados & Lanches</option>
-                    <option value="bebidas">Bebidas & Refrigerantes</option>
-                    <option value="rifas">Rifas & Promoções</option>
-                    <option value="combos">Combos Especiais</option>
-                    <option value="outro">Outro/Personalizado</option>
-                  </select>
+              <div className="retirada-info">
+                <div className="retirada-icon">🏫</div>
+                <div className="retirada-text">
+                  <strong>IMPORTANTE:</strong> A retirada dos pedidos será feita <strong>SOMENTE</strong> na escola 
+                  (E.E. Prof. Oswaldo Januzzi) - Av. Frei Marcelo Manilia, 750. Horários: Intervalo das aulas ou a partir das 10h da manhã.
                 </div>
-
-                <div className="form-group">
-                  <label htmlFor="message" className="form-label">
-                    <span className="label-text">Mensagem *</span>
-                    <span className="label-required"></span>
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    required
-                    rows="6"
-                    placeholder="Descreva seu pedido, quantidade e tire suas dúvidas..."
-                    className="form-textarea"
-                  ></textarea>
-                  <div className="textarea-note">
-                    💡 <strong>Dica:</strong> Inclua nome completo dos produtos, tamanhos (se aplicável) e quantidade
-                  </div>
-                </div>
-
-                <div className="form-actions">
-                  <button type="submit" className="submit-btn">
-                    <Send size={20} />
-                    <span>Enviar Mensagem</span>
-                    <div className="btn-effect"></div>
-                  </button>
-                  
-                  <div className="form-note">
-                    <Clock size={16} />
-                    <span>Respondemos em até 24 horas úteis</span>
-                  </div>
-                </div>
-              </form>
-            )}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* FAQ Section */}
         <div className="faq-section">
-          <h2 className="faq-title">Perguntas Frequentes</h2>
+          <h2 className="faq-title">Tire suas Dúvidas</h2>
           <div className="faq-grid">
-            <div className="faq-item animate-in">
+            <div 
+              className={`faq-item animate-in ${activeFaq === 0 ? 'active' : ''}`}
+              onClick={() => toggleFaq(0)}
+            >
               <div className="faq-question">
-                <h3>Como funciona a entrega?</h3>
-                <span className="faq-icon">+</span>
+                <h3>Onde retiro meu pedido?</h3>
+                <span className="faq-icon">{activeFaq === 0 ? '−' : '+'}</span>
               </div>
               <div className="faq-answer">
-                <p>As entregas são realizadas na escola em dias específicos que serão combinados por WhatsApp após a confirmação do pagamento.</p>
+                <p>TODOS os pedidos são retirados na <strong>E.E. Prof. Oswaldo Januzzi</strong>, 
+                na Av. Frei Marcelo Manilia, 750 - Centro, Buritama-SP. Não fazemos entregas.</p>
               </div>
             </div>
             
-            <div className="faq-item animate-in" style={{ animationDelay: '0.1s' }}>
+            <div 
+              className={`faq-item animate-in ${activeFaq === 1 ? 'active' : ''}`}
+              onClick={() => toggleFaq(1)}
+              style={{ animationDelay: '0.1s' }}
+            >
               <div className="faq-question">
-                <h3>Posso retirar na escola?</h3>
-                <span className="faq-icon">+</span>
+                <h3>Quais os horários de retirada?</h3>
+                <span className="faq-icon">{activeFaq === 1 ? '−' : '+'}</span>
               </div>
               <div className="faq-answer">
-                <p>Sim! Oferecemos retirada na escola em horários combinados previamente. É necessário agendar pelo WhatsApp.</p>
+                <p><strong>Duas opções:</strong><br/>
+                  1. <strong>Durante os intervalos</strong> das aulas<br/>
+                  2. <strong>A partir das 10h</strong> da manhã<br/><br/>
+                  Sempre combinando previamente pelo WhatsApp! ⏰</p>
               </div>
             </div>
             
-            <div className="faq-item animate-in" style={{ animationDelay: '0.2s' }}>
+            <div 
+              className={`faq-item animate-in ${activeFaq === 2 ? 'active' : ''}`}
+              onClick={() => toggleFaq(2)}
+              style={{ animationDelay: '0.2s' }}
+            >
               <div className="faq-question">
-                <h3>Qual o prazo de entrega?</h3>
-                <span className="faq-icon">+</span>
+                <h3>Como funciona o pagamento?</h3>
+                <span className="faq-icon">{activeFaq === 2 ? '−' : '+'}</span>
               </div>
               <div className="faq-answer">
-                <p>Geralmente de 3 a 7 dias úteis após a confirmação do pagamento. Produtos especiais podem ter prazos diferentes.</p>
+                <p>1. Escolha seus produtos<br/>
+                   2. Faça o pedido pelo WhatsApp<br/>
+                   3. Passaremos o valor e chave PIX<br/>
+                   4. Envie o comprovante e combine a retirada</p>
               </div>
             </div>
             
-            <div className="faq-item animate-in" style={{ animationDelay: '0.3s' }}>
+            <div 
+              className={`faq-item animate-in ${activeFaq === 3 ? 'active' : ''}`}
+              onClick={() => toggleFaq(3)}
+              style={{ animationDelay: '0.3s' }}
+            >
               <div className="faq-question">
-                <h3>Posso trocar o tamanho?</h3>
-                <span className="faq-icon">+</span>
+                <h3>Quem prepara os produtos?</h3>
+                <span className="faq-icon">{activeFaq === 3 ? '−' : '+'}</span>
               </div>
               <div className="faq-answer">
-                <p>Sim, desde que a troca seja solicitada em até 3 dias após o recebimento e o produto esteja em perfeito estado.</p>
+                <p>Todos os salgados e doces são feitos pelos próprios alunos do Terceirão 2026 
+                e suas famílias, com muito carinho e higiene! 🧑‍🍳</p>
               </div>
             </div>
           </div>
@@ -473,11 +419,6 @@ const Contact = () => {
           color: white;
         }
 
-        .info-icon.email {
-          background: linear-gradient(135deg, var(--color-yellow), #FFB347);
-          color: var(--color-dark);
-        }
-
         .info-icon.location {
           background: linear-gradient(135deg, var(--color-green), #05B88E);
           color: white;
@@ -548,6 +489,7 @@ const Contact = () => {
           padding: 0.75rem;
           background: var(--color-light-gray);
           border-radius: var(--radius-md);
+          font-size: 0.9rem;
         }
 
         .info-note {
@@ -555,6 +497,33 @@ const Contact = () => {
           color: #999;
           margin: 0;
           font-style: italic;
+        }
+
+        .horarios-list {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-sm);
+        }
+
+        .horario-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.5rem;
+          background: var(--color-light-gray);
+          border-radius: var(--radius-sm);
+        }
+
+        .horario-dia {
+          font-weight: 600;
+          color: var(--color-dark);
+          font-size: 0.9rem;
+        }
+
+        .horario-hora {
+          color: #666;
+          font-size: 0.85rem;
+          text-align: right;
         }
 
         .payment-card {
@@ -634,25 +603,28 @@ const Contact = () => {
           box-shadow: var(--shadow-md);
         }
 
-        .payment-note {
-          display: flex;
-          align-items: flex-start;
-          gap: var(--space-sm);
-          padding: var(--space-md);
-          background: rgba(255, 193, 7, 0.1);
-          border-radius: var(--radius-md);
-          border-left: 4px solid #FFC107;
+        .payment-process {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: var(--radius-lg);
+          padding: var(--space-lg);
         }
 
-        .note-icon {
-          font-size: 1.5rem;
-          flex-shrink: 0;
+        .payment-process h4 {
+          color: var(--color-yellow);
+          margin-bottom: var(--space-md);
+          font-size: 1.125rem;
         }
 
-        .payment-note p {
-          margin: 0;
-          font-size: 0.875rem;
+        .process-steps {
           color: rgba(255, 255, 255, 0.9);
+          padding-left: var(--space-md);
+          margin: 0;
+        }
+
+        .process-steps li {
+          margin-bottom: var(--space-sm);
+          font-size: 0.875rem;
+          line-height: 1.5;
         }
 
         .contact-form-container {
@@ -661,6 +633,8 @@ const Contact = () => {
           padding: var(--space-xl);
           box-shadow: var(--shadow-xl);
           border: 1px solid var(--color-gray);
+          display: flex;
+          flex-direction: column;
         }
 
         .form-header {
@@ -683,162 +657,43 @@ const Contact = () => {
           margin: 0;
         }
 
-        .success-message {
-          text-align: center;
-          padding: var(--space-2xl) var(--space-xl);
-        }
-
-        .success-icon {
-          color: var(--color-green);
-          margin-bottom: var(--space-lg);
-          animation: scaleIn 0.6s var(--ease-bounce);
-        }
-
-        .success-title {
-          font-size: 1.75rem;
-          color: var(--color-green);
-          margin-bottom: var(--space-sm);
-          font-weight: 700;
-        }
-
-        .success-text {
-          color: #666;
-          font-size: 1rem;
-          max-width: 400px;
-          margin: 0 auto var(--space-lg);
-          line-height: 1.6;
-        }
-
-        .success-decoration {
-          display: flex;
-          justify-content: center;
-          gap: 0.5rem;
-          margin-top: var(--space-xl);
-        }
-
-        .success-dot {
-          width: 8px;
-          height: 8px;
-          background: var(--color-green);
-          border-radius: 50%;
-          opacity: 0.5;
-          animation: var(--pulse-animation);
-        }
-
-        .success-dot:nth-child(2) { animation-delay: 0.2s; }
-        .success-dot:nth-child(3) { animation-delay: 0.4s; }
-
-        .contact-form {
+        .products-action {
           display: flex;
           flex-direction: column;
-          gap: var(--space-lg);
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-
-        .form-label {
-          display: flex;
-          justify-content: space-between;
+          gap: var(--space-xl);
           align-items: center;
+          justify-content: center;
+          flex: 1;
         }
 
-        .label-text {
-          font-weight: 600;
-          color: var(--color-dark);
-          font-size: 0.95rem;
-        }
-
-        .label-required::after {
-          content: '*';
-          color: var(--color-red);
-          margin-left: 0.25rem;
-        }
-
-        .form-input,
-        .form-select,
-        .form-textarea {
-          width: 100%;
-          padding: 0.875rem 1rem;
-          border: 2px solid var(--color-gray);
-          border-radius: var(--radius-md);
-          font-family: 'Poppins', sans-serif;
-          font-size: 1rem;
-          transition: all var(--transition-normal);
-          background: var(--color-light-gray);
-        }
-
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus {
-          outline: none;
-          border-color: var(--color-yellow);
-          box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.1);
-          background: var(--color-white);
-        }
-
-        .form-textarea {
-          resize: vertical;
-          min-height: 120px;
-        }
-
-        .textarea-note {
-          font-size: 0.75rem;
-          color: #666;
-          background: var(--color-light-gray);
-          padding: 0.5rem 0.75rem;
-          border-radius: var(--radius-sm);
-          margin-top: 0.5rem;
-        }
-
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: var(--space-lg);
-        }
-
-        @media (min-width: 768px) {
-          .form-row {
-            grid-template-columns: 1fr 1fr;
-          }
-        }
-
-        .form-actions {
+        .products-btn {
           display: flex;
-          flex-direction: column;
-          gap: var(--space-md);
-          margin-top: var(--space-lg);
-        }
-
-        .submit-btn {
-          position: relative;
-          overflow: hidden;
+          align-items: center;
+          gap: 1rem;
           background: var(--gradient-primary);
           color: var(--color-dark);
-          border: none;
-          padding: 1rem 2rem;
+          text-decoration: none;
+          padding: 1.25rem 2.5rem;
           border-radius: var(--radius-lg);
-          font-family: 'Poppins', sans-serif;
+          font-size: 1.25rem;
           font-weight: 700;
-          font-size: 1.125rem;
-          cursor: pointer;
           transition: all var(--transition-normal);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.75rem;
+          box-shadow: var(--shadow-yellow);
+          border: none;
+          cursor: pointer;
+          font-family: 'Poppins', sans-serif;
+          position: relative;
+          overflow: hidden;
         }
 
-        .submit-btn:hover {
-          transform: translateY(-3px);
-          box-shadow: var(--shadow-yellow);
+        .products-btn:hover {
+          transform: translateY(-5px);
+          box-shadow: var(--shadow-yellow-lg);
           animation: var(--glow-animation);
         }
 
-        .btn-effect {
+        .products-btn::before {
+          content: '';
           position: absolute;
           top: 50%;
           left: 50%;
@@ -850,18 +705,167 @@ const Contact = () => {
           transition: width 0.6s, height 0.6s;
         }
 
-        .submit-btn:hover .btn-effect {
+        .products-btn:hover::before {
           width: 300px;
           height: 300px;
         }
 
-        .form-note {
+        .products-preview {
+          width: 100%;
+        }
+
+        .products-preview h3 {
+          text-align: center;
+          color: var(--color-dark);
+          font-size: 1.5rem;
+          margin-bottom: var(--space-lg);
+          font-weight: 600;
+        }
+
+        .categories-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: var(--space-md);
+        }
+
+        @media (max-width: 768px) {
+          .categories-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .category-card {
+          background: var(--color-light-gray);
+          border-radius: var(--radius-lg);
+          padding: var(--space-lg);
+          text-align: center;
+          transition: all var(--transition-normal);
+          border: 2px solid transparent;
+        }
+
+        .category-card:hover {
+          transform: translateY(-5px);
+          border-color: var(--color-yellow);
+          box-shadow: var(--shadow-md);
+        }
+
+        .category-icon {
+          font-size: 2.5rem;
+          margin-bottom: var(--space-sm);
+        }
+
+        .category-card h4 {
+          color: var(--color-dark);
+          margin-bottom: var(--space-xs);
+          font-size: 1.125rem;
+          font-weight: 600;
+        }
+
+        .category-card p {
+          color: #666;
+          font-size: 0.875rem;
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .process-info {
+          width: 100%;
+        }
+
+        .process-info h3 {
+          text-align: center;
+          color: var(--color-dark);
+          font-size: 1.5rem;
+          margin-bottom: var(--space-lg);
+          font-weight: 600;
+        }
+
+        .process-steps-horizontal {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: var(--space-sm);
+        }
+
+        .process-step {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: var(--space-xs);
+          flex: 1;
+          min-width: 100px;
+        }
+
+        .process-step .step-number {
+          width: 40px;
+          height: 40px;
+          background: var(--color-yellow);
+          color: var(--color-dark);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
           justify-content: center;
-          font-size: 0.875rem;
+          font-weight: 700;
+          font-size: 1.125rem;
+        }
+
+        .process-step p {
+          text-align: center;
+          font-size: 0.85rem;
           color: #666;
+          margin: 0;
+          font-weight: 500;
+        }
+
+        .step-arrow {
+          color: var(--color-yellow);
+          font-size: 1.5rem;
+          font-weight: bold;
+          opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+          .step-arrow {
+            display: none;
+          }
+          
+          .process-steps-horizontal {
+            flex-direction: column;
+            gap: var(--space-lg);
+          }
+          
+          .process-step {
+            flex-direction: row;
+            gap: var(--space-md);
+            min-width: 100%;
+            justify-content: flex-start;
+          }
+          
+          .process-step p {
+            text-align: left;
+          }
+        }
+
+        .retirada-info {
+          display: flex;
+          gap: var(--space-md);
+          padding: var(--space-md);
+          background: rgba(255, 209, 102, 0.1);
+          border-radius: var(--radius-md);
+          border-left: 4px solid var(--color-yellow);
+          margin-top: var(--space-lg);
+        }
+
+        .retirada-icon {
+          font-size: 1.5rem;
+          flex-shrink: 0;
+        }
+
+        .retirada-text {
+          color: #666;
+          font-size: 0.875rem;
+          line-height: 1.5;
         }
 
         /* FAQ Section */
@@ -986,6 +990,30 @@ const Contact = () => {
           .form-title {
             font-size: 1.5rem;
           }
+          
+          .retirada-info {
+            flex-direction: column;
+            text-align: center;
+          }
+          
+          .retirada-icon {
+            align-self: center;
+          }
+          
+          .horario-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+          }
+          
+          .horario-hora {
+            text-align: left;
+          }
+          
+          .products-btn {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+          }
         }
 
         @media (max-width: 480px) {
@@ -1001,6 +1029,10 @@ const Contact = () => {
           
           .faq-question h3 {
             font-size: 1rem;
+          }
+          
+          .contact-detail {
+            font-size: 0.8rem;
           }
         }
       `}</style>

@@ -1,3 +1,4 @@
+// src/context/CartContext.jsx
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { VENDOR_INFO } from '../config/vendor';
 
@@ -180,15 +181,22 @@ export const CartProvider = ({ children }) => {
 
   // Funções de controle do modal
   const toggleCart = useCallback(() => {
-    setIsCartOpen(prev => !prev);
-  }, []);
+    console.log('toggleCart chamado, estado atual:', isCartOpen);
+    setIsCartOpen(prev => {
+      const newState = !prev;
+      console.log('Novo estado do carrinho:', newState);
+      return newState;
+    });
+  }, [isCartOpen]);
 
   const openCart = useCallback(() => {
+    console.log('Abrindo carrinho...');
     setIsCartOpen(true);
     setShowPayment(false);
   }, []);
 
   const closeCart = useCallback(() => {
+    console.log('Fechando carrinho...');
     setIsCartOpen(false);
     setShowPayment(false);
   }, []);
@@ -198,27 +206,28 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   return (
-    <CartContext.Provider value={{
-      cart,
-      cartTotal,
-      isCartOpen,
-      showPayment,
-      currentOrder,
-      toggleCart,
-      openCart,
-      closeCart,
-      closePaymentOnly,
-      addToCart,
-      removeFromCart,
-      updateQuantity,
-      clearCart,
-      getCartCount,
-      getCartTotal,
-      createOrder,
-      setShowPayment,
-      vendorInfo: VENDOR_INFO
-    }}>
-      {children}
-    </CartContext.Provider>
-  );
+  <CartContext.Provider value={{
+    cart,
+    cartTotal,
+    isCartOpen,
+    showPayment,
+    currentOrder,
+    toggleCart,
+    openCart,
+    closeCart,
+    closePaymentOnly,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    getCartCount,
+    getCartTotal,
+    getTotalItems: getCartCount, // ADICIONE ESTA LINHA
+    createOrder,
+    setShowPayment,
+    vendorInfo: VENDOR_INFO
+  }}>
+    {children}
+  </CartContext.Provider>
+);
 };

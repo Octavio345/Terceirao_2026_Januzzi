@@ -1,13 +1,43 @@
-// src/components/PaymentInfo/PaymentInfo.jsx
-import React from 'react';
-import { Copy, QrCode, Smartphone, CreditCard, AlertCircle, Shield, Zap, Clock, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Copy, QrCode, Smartphone, CreditCard, AlertCircle, Shield, Zap, Clock, CheckCircle, MessageCircle, ArrowRight, Check, Send } from 'lucide-react';
 
 const PaymentInfo = ({ vendorInfo }) => {
+  // Estado para controlar se o usuário já enviou comprovante
+  const [hasSentProof, setHasSentProof] = useState(() => {
+    return localStorage.getItem('hasSentPixProof') === 'true';
+  });
+
+  // Estado para controlar se está em mobile
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Estado para copiar chave PIX
+  const [copied, setCopied] = useState(false);
+
+  // Verificar se é mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  // Atualizar localStorage quando enviar comprovante
+  useEffect(() => {
+    localStorage.setItem('hasSentPixProof', hasSentProof);
+  }, [hasSentProof]);
+
   // Verifica se vendorInfo existe e tem os dados necessários
   if (!vendorInfo) {
     return (
       <div className="error-state">
-        <p>⚠️ Informações do vendedor não disponíveis. Por favor, tente novamente mais tarde.</p>
+        <AlertCircle size={32} />
+        <p>Informações do vendedor não disponíveis.</p>
       </div>
     );
   }
@@ -18,15 +48,30 @@ const PaymentInfo = ({ vendorInfo }) => {
   const pixName = vendorInfo.pixName || '';
   const bankName = vendorInfo.bankName || '';
 
-  const message = `Olá! Quero enviar o comprovante do meu pagamento via PIX.`;
+  const message = `Olá! Acabei de fazer o pagamento via PIX e gostaria de enviar o comprovante.`;
   const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
 
   const copyToClipboard = () => {
     if (pixKey) {
       navigator.clipboard.writeText(pixKey);
-      alert('Chave PIX copiada para a área de transferência!');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
     } else {
-      alert('Chave PIX não disponível.');
+      alert('❌ Chave PIX não disponível.');
+    }
+  };
+
+  // Função para marcar como enviado
+  const handleSendProof = () => {
+    if (!hasSentProof) {
+      setHasSentProof(true);
+      // Abrir WhatsApp
+      window.open(url, '_blank');
+      
+      // Mostrar mensagem de sucesso
+      setTimeout(() => {
+        alert('✅ Comprovante enviado com sucesso! Aguarde a confirmação.');
+      }, 500);
     }
   };
 
@@ -47,7 +92,6 @@ const PaymentInfo = ({ vendorInfo }) => {
     }
   };
 
-  // CORREÇÃO: Variável usada no JSX - não remova!
   const currentPixType = vendorInfo.pixType || determinePixType(pixKey);
 
   return (
@@ -56,328 +100,505 @@ const PaymentInfo = ({ vendorInfo }) => {
         {/* Cabeçalho */}
         <div className="payment-header animate-scale">
           <div className="header-icon">
-            <CreditCard size={40} />
+            <CreditCard size={isMobile ? 32 : 40} />
           </div>
           <div>
-            <h1 className="payment-title">Informações de Pagamento</h1>
+            <h1 className="payment-title">Pagamento via PIX</h1>
             <p className="payment-subtitle">
-              Processo seguro e rápido via PIX. Siga os passos abaixo para confirmar sua compra.
+              {hasSentProof 
+                ? '✅ Comprovante enviado! Aguarde a confirmação.'
+                : 'Pagamento instantâneo e seguro. Siga os passos abaixo.'}
             </p>
           </div>
         </div>
 
+        {/* Banner de Status do Comprovante */}
+        {hasSentProof && (
+          <div className="proof-status-banner success animate-scale">
+            <div className="banner-content">
+              <CheckCircle size={24} />
+              <div>
+                <h3>Comprovante Enviado com Sucesso!</h3>
+                <p>Vendedor confirmará em até 2 horas úteis.</p>
+              </div>
+            </div>
+            <button 
+              className="banner-action"
+              onClick={() => setHasSentProof(false)}
+            >
+              <Send size={16} />
+              Reenviar
+            </button>
+          </div>
+        )}
+
         <div className="payment-grid">
           {/* Seção PIX Principal */}
           <div className="pix-section">
-            <div className="section-header">
-              <div className="section-badge">
-                <Zap size={16} />
-                <span>Pagamento Recomendado</span>
+            {/* Seção de envio de comprovante - TOPO - MUITO EVIDENTE */}
+            <div className="proof-section-main animate-in">
+              <div className="proof-header">
+                <div className="proof-badge">
+                  <MessageCircle size={16} />
+                  <span>⚠️ AÇÃO OBRIGATÓRIA</span>
+                </div>
+                <h2 className="proof-title-main">
+                  <MessageCircle size={28} />
+                  ENVIAR COMPROVANTE
+                </h2>
+                <p className="proof-description-main">
+                  <strong>Após fazer o pagamento PIX, você DEVE enviar o comprovante</strong> para confirmar seu pedido.
+                </p>
               </div>
-              <h2 className="section-title">💳 Pagamento via PIX</h2>
-              <p className="section-description">
-                Transação instantânea, sem taxas e com confirmação imediata
-              </p>
+
+              <div className="proof-actions">
+                <div className="proof-notes">
+                  <div className="proof-note-item">
+                    <Clock size={18} />
+                    <span><strong>Confirmação rápida:</strong> 1-2 horas úteis após envio</span>
+                  </div>
+                  <div className="proof-note-item">
+                    <AlertCircle size={18} />
+                    <span><strong>Atenção:</strong> Pedido só será processado após confirmação</span>
+                  </div>
+                </div>
+
+                {/* Botão PRINCIPAL - DESTAQUE MÁXIMO */}
+                <button
+                  onClick={handleSendProof}
+                  className={`btn-send-proof ${hasSentProof ? 'sent' : 'primary'}`}
+                  disabled={hasSentProof}
+                >
+                  <div className="btn-content">
+                    {hasSentProof ? (
+                      <>
+                        <CheckCircle size={28} />
+                        <div className="btn-text">
+                          <span className="btn-title">COMPROVANTE ENVIADO</span>
+                          <span className="btn-subtitle">Aguardando confirmação do vendedor</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <MessageCircle size={28} />
+                        <div className="btn-text">
+                          <span className="btn-title">ENVIAR COMPROVANTE AGORA</span>
+                          <span className="btn-subtitle">Clique para abrir WhatsApp e enviar o comprovante</span>
+                        </div>
+                        <ArrowRight size={24} className="btn-arrow" />
+                      </>
+                    )}
+                  </div>
+                </button>
+
+                <div className="proof-instruction">
+                  <div className="instruction-icon">💡</div>
+                  <div className="instruction-text">
+                    <strong>Como enviar:</strong> Clique no botão verde acima → Envie a foto/screenshot do comprovante no WhatsApp → Volte para esta página
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="pix-container">
-              {/* Chave PIX */}
-              <div className="pix-key-card animate-in">
-                <div className="key-header">
-                  <div className="key-info">
-                    <Shield size={20} className="key-icon" />
-                    <div>
-                      <h3 className="key-title">Chave PIX ({currentPixType})</h3>
-                      <p className="key-subtitle">Copie esta chave para fazer o pagamento</p>
-                    </div>
-                  </div>
-                  <button 
-                    className="copy-key-btn"
-                    onClick={copyToClipboard}
-                  >
-                    <Copy size={16} />
-                    <span>Copiar Chave</span>
-                  </button>
+            {/* QR Code com imagem - PRIORIDADE */}
+            <div className="qr-code-section animate-in" style={{ animationDelay: '0.1s' }}>
+              <div className="section-header">
+                <div className="section-badge">
+                  <QrCode size={16} />
+                  <span>PAGAMENTO RECOMENDADO</span>
                 </div>
-                <div className="key-value-container">
-                  <code className="key-value">{pixKey || 'Chave PIX não configurada'}</code>
-                  <div className="key-status">
-                    <CheckCircle size={14} />
-                    <span>Chave válida e ativa</span>
-                  </div>
-                </div>
+                <h2 className="section-title">💳 Pagar com PIX</h2>
+                <p className="section-description">
+                  Transação instantânea, segura e sem taxas
+                </p>
               </div>
 
-              {/* QR Code com imagem */}
-              <div className="qr-code-section animate-in" style={{ animationDelay: '0.1s' }}>
-                <div className="qr-code-header">
-                  <QrCode size={20} />
-                  <h3>QR Code para Pagamento</h3>
-                </div>
-                <div className="qr-code-container">
-                  <div className="qr-code-image-wrapper">
-                    <div className="qr-code-image-container">
-                      <img 
-                        src="/qrcode-pix.png"
-                        alt="QR Code PIX" 
-                        className="qr-code-image"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = "https://via.placeholder.com/200/ffffff/000000?text=QR+CODE";
-                        }}
-                      />
+              <div className="qr-code-container">
+                <div className="qr-code-image-wrapper">
+                  <div className="qr-code-image-container">
+                    <div className="qr-code-overlay">
+                      <QrCode size={40} />
                     </div>
-                    <div className="qr-code-details">
-                      <div className="detail-item">
-                        <span className="detail-label">Chave PIX:</span>
-                        <span className="detail-value">{currentPixType}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Destinatário:</span>
-                        <span className="detail-value">{pixName}</span>
-                      </div>
+                    <img 
+                      src="/qrcode-pix.png"
+                      alt="QR Code PIX" 
+                      className="qr-code-image"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23ffffff'/%3E%3Ctext x='50%' y='50%' font-family='Arial' font-size='12' fill='%23000000' text-anchor='middle' dy='.3em'%3EQR CODE%3C/text%3E%3C/svg%3E";
+                      }}
+                    />
+                  </div>
+                  <div className="qr-code-details">
+                    <div className="detail-item highlight">
+                      <span className="detail-label">VALOR DO PEDIDO:</span>
+                      <span className="detail-value">R$ 18,00</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Chave PIX:</span>
+                      <span className="detail-value type-badge">{currentPixType}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Destinatário:</span>
+                      <span className="detail-value name-badge">{pixName}</span>
+                    </div>
+                    {bankName && (
                       <div className="detail-item">
                         <span className="detail-label">Banco:</span>
-                        <span className="detail-value">{bankName}</span>
+                        <span className="detail-value bank-badge">{bankName}</span>
                       </div>
-                    </div>
-                  </div>
-                  <div className="qr-code-text">
-                    <p className="qr-title">Escaneie com seu app de banco</p>
-                    <p className="qr-description">
-                      Abra o app do seu banco, selecione "Pagar com PIX" e escaneie este código.
-                      O valor será inserido automaticamente ou você poderá digitá-lo.
-                    </p>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              {/* Passo a passo */}
-              <div className="pix-steps animate-in" style={{ animationDelay: '0.2s' }}>
-                <h3 className="steps-title">Como pagar via PIX:</h3>
-                <div className="steps-container">
-                  <div className="step">
-                    <div className="step-number">
-                      <span>1</span>
-                    </div>
+                
+                <div className="qr-code-instructions">
+                  <div className="instruction-step">
+                    <div className="step-number">1</div>
                     <div className="step-content">
                       <h4>Abra seu app do banco</h4>
-                      <p>Acesse a opção PIX no seu internet banking ou app</p>
+                      <p>Vá até a opção "Pagar com PIX"</p>
                     </div>
                   </div>
-                  
-                  <div className="step">
-                    <div className="step-number">
-                      <span>2</span>
-                    </div>
+                  <div className="instruction-step">
+                    <div className="step-number">2</div>
                     <div className="step-content">
-                      <h4>Escaneie o QR Code</h4>
-                      <p>Use a câmera do seu celular para escanear o código acima</p>
+                      <h4>Escaneie o código</h4>
+                      <p>Use a câmera do celular para escanear</p>
                     </div>
                   </div>
-                  
-                  <div className="step">
-                    <div className="step-number">
-                      <span>3</span>
-                    </div>
+                  <div className="instruction-step">
+                    <div className="step-number">3</div>
                     <div className="step-content">
                       <h4>Confirme o pagamento</h4>
-                      <p>Verifique os dados e confirme a transação</p>
-                    </div>
-                  </div>
-                  
-                  <div className="step">
-                    <div className="step-number">
-                      <span>4</span>
-                    </div>
-                    <div className="step-content">
-                      <h4>Envie o comprovante</h4>
-                      <p>Envie o comprovante para nosso WhatsApp</p>
+                      <p>Verifique os dados e confirme</p>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Seção de envio de comprovante */}
-              <div className="payment-info animate-in" style={{ animationDelay: '0.3s' }}>
-                <div className="payment-info-content">
-                  <h3 className="proof-title">📤 Envio de Comprovante</h3>
-                  <p>
-                    Após realizar o pagamento via PIX, é <strong>obrigatório</strong> enviar o comprovante pelo WhatsApp para confirmarmos seu pedido.
-                  </p>
-                  <p className="proof-note">
-                    ⏱️ Tempo de confirmação: 1-2 horas úteis após envio do comprovante
-                  </p>
+            {/* Chave PIX - Alternativa */}
+            <div className="pix-key-card animate-in">
+              <div className="card-header">
+                <div className="header-content">
+                  <Shield size={24} className="key-icon" />
+                  <div>
+                    <h3 className="key-title">Chave PIX para Copiar</h3>
+                    <p className="key-subtitle">Use esta opção se preferir pagar sem QR Code</p>
+                  </div>
+                </div>
+                <button 
+                  className={`copy-key-btn ${copied ? 'copied' : ''}`}
+                  onClick={copyToClipboard}
+                >
+                  {copied ? (
+                    <>
+                      <Check size={16} />
+                      <span>Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={16} />
+                      <span>Copiar Chave</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="key-value-container">
+                <code className="key-value">{pixKey || 'Chave PIX não configurada'}</code>
+                <div className="key-type">
+                  <div className="type-tag">{currentPixType}</div>
+                  <div className="key-status">
+                    <CheckCircle size={14} />
+                    <span>Chave verificada</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                  <a
-                    href={url}
-                    target="_blank"
+            {/* Passo a passo completo */}
+            <div className="complete-steps animate-in">
+              <h3 className="steps-title">📋 Passo a Passo Completo</h3>
+              <div className="steps-container">
+                <div className="step">
+                  <div className="step-number">1</div>
+                  <div className="step-content">
+                    <h4>Pague via PIX</h4>
+                    <p>Use o QR Code acima ou copie a chave PIX</p>
+                  </div>
+                </div>
+                <div className="step-arrow">→</div>
+                <div className="step">
+                  <div className="step-number">2</div>
+                  <div className="step-content">
+                    <h4>Salve o comprovante</h4>
+                    <p>Tire print ou salve a confirmação do pagamento</p>
+                  </div>
+                </div>
+                <div className="step-arrow">→</div>
+                <div className="step highlight-step">
+                  <div className="step-number">3</div>
+                  <div className="step-content">
+                    <h4>Envie o comprovante</h4>
+                    <p>Clique no botão verde acima para enviar no WhatsApp</p>
+                  </div>
+                </div>
+                <div className="step-arrow">→</div>
+                <div className="step">
+                  <div className="step-number">4</div>
+                  <div className="step-content">
+                    <h4>Aguarde a confirmação</h4>
+                    <p>Vendedor confirmará em até 2 horas úteis</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar - Desktop */}
+          {!isMobile && (
+            <div className="info-sidebar">
+              {/* Status do Pedido */}
+              <div className="order-status-card animate-in">
+                <div className="status-header">
+                  <div className="status-title">
+                    <Clock size={24} />
+                    <h3>Status do Pedido</h3>
+                  </div>
+                  <div className="order-number">#PED339777347</div>
+                </div>
+                <div className="status-timeline">
+                  <div className={`timeline-step ${!hasSentProof ? 'current' : 'completed'}`}>
+                    <div className="step-indicator">
+                      <div className="step-icon">
+                        {!hasSentProof ? '1' : <Check size={14} />}
+                      </div>
+                    </div>
+                    <div className="step-content">
+                      <h4>Pagamento PIX</h4>
+                      <p>Realize o pagamento via PIX</p>
+                    </div>
+                  </div>
+                  
+                  <div className="timeline-connector"></div>
+                  
+                  <div className={`timeline-step ${hasSentProof ? 'current' : ''}`}>
+                    <div className="step-indicator">
+                      <div className="step-icon">
+                        {hasSentProof ? <Check size={14} /> : '2'}
+                      </div>
+                    </div>
+                    <div className="step-content">
+                      <h4>Enviar Comprovante</h4>
+                      <p>{hasSentProof ? '✅ Enviado' : 'Envie o comprovante'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="timeline-connector"></div>
+                  
+                  <div className="timeline-step">
+                    <div className="step-indicator">
+                      <div className="step-icon">3</div>
+                    </div>
+                    <div className="step-content">
+                      <h4>Confirmação</h4>
+                      <p>Análise do comprovante</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Resumo do Pedido */}
+                <div className="order-summary">
+                  <h4>Resumo do Pedido</h4>
+                  <div className="summary-item">
+                    <span>Subtotal:</span>
+                    <span>R$ 15,00</span>
+                  </div>
+                  <div className="summary-item">
+                    <span>Entrega:</span>
+                    <span>R$ 3,00</span>
+                  </div>
+                  <div className="summary-total">
+                    <span>Total:</span>
+                    <span className="total-value">R$ 18,00</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão de envio de comprovante na sidebar também */}
+              <div className="sidebar-proof-card">
+                <div className="sidebar-proof-header">
+                  <MessageCircle size={20} />
+                  <h4>Enviar Comprovante</h4>
+                </div>
+                <p className="sidebar-proof-text">
+                  Lembre-se de enviar o comprovante após o pagamento
+                </p>
+                <button
+                  onClick={handleSendProof}
+                  className={`sidebar-proof-btn ${hasSentProof ? 'sent' : ''}`}
+                  disabled={hasSentProof}
+                >
+                  {hasSentProof ? (
+                    <>
+                      <CheckCircle size={18} />
+                      <span>Comprovante Enviado</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      <span>Enviar Agora</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Informações importantes */}
+              <div className="important-info-card">
+                <div className="info-header">
+                  <AlertCircle size={24} />
+                  <h3>Informações Importantes</h3>
+                </div>
+                <div className="info-content">
+                  <div className="info-item">
+                    <CheckCircle size={16} />
+                    <span>PIX é instantâneo e seguro</span>
+                  </div>
+                  <div className="info-item">
+                    <CheckCircle size={16} />
+                    <span>Sem taxas adicionais</span>
+                  </div>
+                  <div className="info-item">
+                    <CheckCircle size={16} />
+                    <span>Confirmação em até 2 horas</span>
+                  </div>
+                  <div className="info-item">
+                    <CheckCircle size={16} />
+                    <span>Suporte via WhatsApp</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Precisa de ajuda? */}
+              <div className="help-card">
+                <div className="help-header">
+                  <AlertCircle size={20} />
+                  <h4>Precisa de ajuda?</h4>
+                </div>
+                <div className="help-content">
+                  <p>Entre em contato pelo WhatsApp:</p>
+                  <a 
+                    href={url} 
+                    target="_blank" 
                     rel="noopener noreferrer"
-                    className="btn btn-whatsapp btn-large"
+                    className="help-whatsapp"
                   >
-                    📱 Enviar comprovante no WhatsApp
+                    <MessageCircle size={18} />
+                    <span>Falar com o vendedor</span>
                   </a>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Informações laterais */}
-          <div className="info-sidebar">
-            {/* Outras formas de pagamento */}
-            <div className="other-methods-card animate-in" style={{ animationDelay: '0.3s' }}>
-              <h3 className="methods-title">Outras Formas de Pagamento</h3>
-              <div className="methods-list">
-                <div className="method">
-                  <div className="method-icon">
-                    <Smartphone size={24} />
+          {/* Mobile - Status e Botão Fixo */}
+          {isMobile && (
+            <div className="mobile-bottom-section">
+              {/* Status Móvel */}
+              <div className="mobile-status-card">
+                <div className="status-header">
+                  <Clock size={20} />
+                  <h3>Seu Pedido #PED339777347</h3>
+                </div>
+                <div className="mobile-status-steps">
+                  <div className={`status-step ${!hasSentProof ? 'active' : 'completed'}`}>
+                    <div className="step-indicator">
+                      <div className="step-dot"></div>
+                    </div>
+                    <div className="step-label">
+                      <span>Pagar</span>
+                    </div>
                   </div>
-                  <div className="method-content">
-                    <h4>Transferência Bancária</h4>
-                    <p>Solicite os dados da conta pelo WhatsApp</p>
+                  <div className="step-connector"></div>
+                  <div className={`status-step ${hasSentProof ? 'active' : ''}`}>
+                    <div className="step-indicator">
+                      <div className="step-dot"></div>
+                    </div>
+                    <div className="step-label">
+                      <span>Enviar</span>
+                    </div>
+                  </div>
+                  <div className="step-connector"></div>
+                  <div className="status-step">
+                    <div className="step-indicator">
+                      <div className="step-dot"></div>
+                    </div>
+                    <div className="step-label">
+                      <span>Confirmar</span>
+                    </div>
                   </div>
                 </div>
                 
-                <div className="method">
-                  <div className="method-icon">
-                    <CreditCard size={24} />
-                  </div>
-                  <div className="method-content">
-                    <h4>Dinheiro na Entrega</h4>
-                    <p>Disponível apenas para retirada na escola</p>
+                <div className="mobile-order-summary">
+                  <div className="summary-row">
+                    <span>Total:</span>
+                    <span className="total-value">R$ 18,00</span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Informações importantes */}
-            <div className="important-info-card animate-in" style={{ animationDelay: '0.4s' }}>
-              <div className="info-header">
-                <AlertCircle size={24} className="info-icon" />
-                <h3>Informações Importantes</h3>
-              </div>
-              <div className="info-content">
-                <ul className="info-list">
-                  <li className="info-item">
-                    <CheckCircle size={16} />
-                    <span>Sempre envie o comprovante de pagamento</span>
-                  </li>
-                  <li className="info-item">
-                    <CheckCircle size={16} />
-                    <span>Processamos pedidos apenas com pagamento confirmado</span>
-                  </li>
-                  <li className="info-item">
-                    <CheckCircle size={16} />
-                    <span>Prazo de entrega inicia após confirmação do pagamento</span>
-                  </li>
-                  <li className="info-item">
-                    <CheckCircle size={16} />
-                    <span>Mantenha o comprovante até a entrega do produto</span>
-                  </li>
-                  <li className="info-item">
-                    <CheckCircle size={16} />
-                    <span>PIX é instantâneo e sem taxas</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Avisos */}
-            <div className="warning-card animate-in" style={{ animationDelay: '0.5s' }}>
-              <div className="warning-header">
-                <AlertCircle size={20} />
-                <h4>Atenção</h4>
-              </div>
-              <div className="warning-content">
-                <p>
-                  Não realizamos reembolsos. Em caso de problemas ou dúvidas, 
-                  entre em contato conosco imediatamente para encontrarmos a melhor solução.
-                </p>
-              </div>
-            </div>
-
-            {/* Tempo de confirmação */}
-            <div className="confirmation-card animate-in" style={{ animationDelay: '0.6s' }}>
-              <div className="confirmation-header">
-                <Clock size={20} />
-                <div>
-                  <h4>Tempo de Confirmação</h4>
-                  <p className="confirmation-subtitle">PIX - Instantâneo</p>
+              {/* Lembretes Móvel */}
+              <div className="mobile-reminders">
+                <div className="reminder-item">
+                  <AlertCircle size={16} />
+                  <span>Pague via PIX usando o QR Code acima</span>
                 </div>
-              </div>
-              <div className="confirmation-content">
-                <div className="timeline">
-                  <div className="timeline-step active">
-                    <div className="step-dot"></div>
-                    <div className="step-label">Pagamento</div>
-                  </div>
-                  <div className="timeline-line"></div>
-                  <div className="timeline-step">
-                    <div className="step-dot"></div>
-                    <div className="step-label">Envio do Comprovante</div>
-                  </div>
-                  <div className="timeline-line"></div>
-                  <div className="timeline-step">
-                    <div className="step-dot"></div>
-                    <div className="step-label">Processamento</div>
-                  </div>
-                </div>
-                <p className="timeline-note">
-                  Envie o comprovante assim que fizer o pagamento para agilizar o processo.
-                </p>
-              </div>
-            </div>
-
-            {/* Dúvidas */}
-            <div className="help-card animate-in" style={{ animationDelay: '0.7s' }}>
-              <div className="help-header">
-                <AlertCircle size={20} />
-                <h4>Dúvidas Frequentes</h4>
-              </div>
-              <div className="help-content">
-                <div className="help-item">
-                  <strong>Preciso colocar algum valor específico?</strong>
-                  <p>Sim, informe o valor exato do seu pedido.</p>
-                </div>
-                <div className="help-item">
-                  <strong>E se eu pagar um valor diferente?</strong>
-                  <p>Seu pedido será processado apenas após confirmação do valor correto.</p>
+                <div className="reminder-item highlight">
+                  <MessageCircle size={16} />
+                  <span><strong>ENVIE O COMPROVANTE</strong> após o pagamento</span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Chamada para ação */}
-        <div className="payment-cta animate-scale" style={{ animationDelay: '0.8s' }}>
-          <div className="cta-content">
-            <div className="cta-icon">🎯</div>
-            <div className="cta-text">
-              <h3>Pronto para fazer seu pedido?</h3>
-              <p>Escolha seus produtos, faça o pagamento e envie o comprovante!</p>
-            </div>
-          </div>
-          <div className="cta-actions">
-            <a href="/produtos" className="btn btn-primary btn-large">
-              Ver Produtos
-            </a>
-            <a 
-              href={url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="btn btn-outline btn-large"
-            >
-              Falar no WhatsApp
-            </a>
-          </div>
+          )}
         </div>
       </div>
 
+      {/* Botão fixo para mobile - SUPER EVIDENTE */}
+      {isMobile && !hasSentProof && (
+        <button
+          onClick={handleSendProof}
+          className="mobile-proof-btn-floating"
+        >
+          <div className="floating-btn-content">
+            <MessageCircle size={28} />
+            <div className="floating-btn-text">
+              <span className="floating-btn-title">ENVIAR COMPROVANTE</span>
+              <span className="floating-btn-subtitle">Clique aqui após pagar</span>
+            </div>
+            <ArrowRight size={24} className="floating-btn-arrow" />
+          </div>
+        </button>
+      )}
+
+      {/* Botão flutuante desktop */}
+      {!isMobile && !hasSentProof && (
+        <button
+          onClick={handleSendProof}
+          className="desktop-floating-btn"
+        >
+          <div className="floating-btn-content">
+            <Send size={20} />
+            <span>Enviar Comprovante</span>
+          </div>
+        </button>
+      )}
+
       <style jsx>{`
         .payment-info-section {
-          padding: 48px 20px;
-          background: linear-gradient(135deg, #F1F5F9 0%, #F8FAFC 100%);
+          padding: ${isMobile ? '20px 16px 120px' : '32px 20px 48px'};
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
           min-height: 100vh;
+          position: relative;
         }
 
         .container {
@@ -388,780 +609,817 @@ const PaymentInfo = ({ vendorInfo }) => {
         .error-state {
           text-align: center;
           padding: 60px 20px;
-          background: #FEF3F2;
-          border: 2px dashed #FDA29B;
+          background: #fef3f2;
+          border: 2px dashed #fda29b;
           border-radius: 16px;
           margin: 40px auto;
           max-width: 600px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
         }
 
         .error-state p {
-          color: #B42318;
+          color: #b42318;
           font-size: 18px;
           font-weight: 500;
         }
 
         .payment-header {
           text-align: center;
-          margin-bottom: 48px;
+          margin-bottom: 32px;
         }
 
         .header-icon {
-          background: linear-gradient(135deg, #FFD166 0%, #FFA500 100%);
-          width: 80px;
-          height: 80px;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          width: ${isMobile ? '80px' : '100px'};
+          height: ${isMobile ? '80px' : '100px'};
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           margin: 0 auto 24px;
-          color: #2D3047;
+          color: white;
+          box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
         }
 
         .payment-title {
-          font-size: 2.5rem;
-          color: #2D3047;
+          font-size: ${isMobile ? '1.75rem' : '2.5rem'};
+          color: #1e293b;
           margin-bottom: 12px;
           font-weight: 800;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
 
         .payment-subtitle {
-          color: #666;
-          font-size: 1.125rem;
-          max-width: 600px;
+          color: #64748b;
+          font-size: ${isMobile ? '1rem' : '1.25rem'};
+          max-width: 800px;
           margin: 0 auto;
           line-height: 1.6;
+          font-weight: 500;
+        }
+
+        /* Banner de Status do Comprovante */
+        .proof-status-banner {
+          border-radius: 16px;
+          padding: 20px 24px;
+          margin-bottom: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          animation: slideDown 0.5s ease-out;
+          background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+          border: 2px solid #10b981;
+          box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
+        }
+
+        .banner-content {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex: 1;
+        }
+
+        .banner-content svg {
+          color: #10b981;
+          flex-shrink: 0;
+        }
+
+        .banner-content h3 {
+          color: #065f46;
+          margin: 0 0 8px 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+        }
+
+        .banner-content p {
+          color: #065f46;
+          margin: 0;
+          font-size: 0.95rem;
+          opacity: 0.9;
+        }
+
+        .banner-action {
+          background: transparent;
+          border: 2px solid #10b981;
+          color: #065f46;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.95rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          white-space: nowrap;
+          margin-left: 16px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .banner-action:hover {
+          background: #10b981;
+          color: white;
         }
 
         .payment-grid {
-          display: grid;
-          grid-template-columns: 1fr;
+          display: flex;
+          flex-direction: column;
           gap: 32px;
-          margin-bottom: 48px;
         }
 
-        @media (min-width: 1200px) {
+        @media (min-width: 769px) {
           .payment-grid {
+            display: grid;
             grid-template-columns: 1.5fr 1fr;
+            gap: 40px;
           }
         }
 
+        /* Seção principal PIX */
         .pix-section {
+          display: flex;
+          flex-direction: column;
+          gap: 32px;
+        }
+
+        /* Seção de Comprovante - SUPER EVIDENTE */
+        .proof-section-main {
+          background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+          border-radius: 20px;
+          padding: ${isMobile ? '24px 20px' : '32px'};
+          border: 3px solid #22c55e;
+          box-shadow: 0 20px 40px rgba(34, 197, 94, 0.2);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .proof-section-main::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+
+        .proof-header {
+          margin-bottom: 24px;
+        }
+
+        .proof-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: #dc2626;
+          color: white;
+          padding: 8px 16px;
+          border-radius: 50px;
+          font-weight: 700;
+          font-size: 0.875rem;
+          margin-bottom: 16px;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+
+        .proof-title-main {
+          font-size: ${isMobile ? '1.5rem' : '2rem'};
+          color: #166534;
+          margin-bottom: 12px;
+          font-weight: 800;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .proof-description-main {
+          color: #166534;
+          font-size: ${isMobile ? '1rem' : '1.25rem'};
+          line-height: 1.5;
+          margin: 0;
+        }
+
+        .proof-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .proof-notes {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .proof-note-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 12px;
+          border-left: 4px solid #f59e0b;
+        }
+
+        .proof-note-item span {
+          color: #92400e;
+          font-size: ${isMobile ? '0.9rem' : '1rem'};
+          font-weight: 500;
+        }
+
+        /* Botão PRINCIPAL - MÁXIMO DESTAQUE */
+        .btn-send-proof {
+          border: none;
+          padding: ${isMobile ? '24px 20px' : '28px 32px'};
+          font-weight: 700;
+          border-radius: 16px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          margin: 0;
+          display: block;
+          width: 100%;
+          transform: translateY(0);
+          animation: subtleBounce 3s infinite;
+        }
+
+        @keyframes subtleBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+        }
+
+        .btn-send-proof.primary {
+          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+          color: white;
+          box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-send-proof.sent {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          box-shadow: 0 5px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-send-proof.primary:hover:not(:disabled) {
+          transform: translateY(-3px);
+          box-shadow: 0 15px 40px rgba(34, 197, 94, 0.6);
+        }
+
+        .btn-send-proof:disabled {
+          cursor: not-allowed;
+          opacity: 0.9;
+        }
+
+        .btn-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+        }
+
+        .btn-text {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          flex: 1;
+        }
+
+        .btn-title {
+          font-size: ${isMobile ? '1.125rem' : '1.5rem'};
+          font-weight: 800;
+          margin-bottom: 4px;
+        }
+
+        .btn-subtitle {
+          font-size: ${isMobile ? '0.875rem' : '1rem'};
+          opacity: 0.9;
+          font-weight: 500;
+        }
+
+        .btn-arrow {
+          opacity: 0.8;
+        }
+
+        .proof-instruction {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 16px;
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 12px;
+          border: 2px dashed #22c55e;
+        }
+
+        .instruction-icon {
+          font-size: 24px;
+          flex-shrink: 0;
+        }
+
+        .instruction-text {
+          color: #166534;
+          font-size: ${isMobile ? '0.9rem' : '1rem'};
+          line-height: 1.5;
+        }
+
+        /* QR Code Section */
+        .qr-code-section {
           background: white;
           border-radius: 20px;
-          padding: 32px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
-          border: 1px solid #E2E8F0;
+          padding: ${isMobile ? '24px 20px' : '32px'};
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e2e8f0;
         }
 
         .section-header {
-          margin-bottom: 32px;
+          margin-bottom: 24px;
         }
 
         .section-badge {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          background: linear-gradient(135deg, #FFD166 0%, #FFA500 100%);
-          color: #2D3047;
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
           padding: 8px 16px;
           border-radius: 50px;
           font-weight: 700;
           font-size: 0.875rem;
-          margin-bottom: 24px;
+          margin-bottom: 16px;
         }
 
         .section-title {
-          font-size: 2rem;
-          color: #2D3047;
-          margin-bottom: 12px;
+          font-size: ${isMobile ? '1.5rem' : '2rem'};
+          color: #1e293b;
+          margin-bottom: 8px;
           font-weight: 700;
         }
 
         .section-description {
-          color: #666;
-          font-size: 1rem;
+          color: #64748b;
+          font-size: ${isMobile ? '1rem' : '1.125rem'};
           margin: 0;
-        }
-
-        .pix-container {
-          display: flex;
-          flex-direction: column;
-          gap: 32px;
-        }
-
-        .pix-key-card {
-          background: linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%);
-          border-radius: 16px;
-          padding: 24px;
-          border: 2px solid #FFD166;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-        }
-
-        .key-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 20px;
-          flex-wrap: wrap;
-          gap: 16px;
-        }
-
-        .key-info {
-          display: flex;
-          gap: 12px;
-          align-items: flex-start;
-        }
-
-        .key-icon {
-          color: #FFD166;
-          margin-top: 4px;
-        }
-
-        .key-title {
-          font-size: 1.25rem;
-          color: #2D3047;
-          margin-bottom: 4px;
-          font-weight: 700;
-        }
-
-        .key-subtitle {
-          color: #666;
-          font-size: 0.875rem;
-          margin: 0;
-        }
-
-        .copy-key-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: linear-gradient(135deg, #FFD166 0%, #FFA500 100%);
-          color: #2D3047;
-          border: none;
-          padding: 12px 24px;
-          border-radius: 8px;
-          font-weight: 700;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .copy-key-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 16px rgba(255, 209, 102, 0.3);
-        }
-
-        .key-value-container {
-          background: white;
-          border-radius: 12px;
-          padding: 20px;
-          border: 1px solid #E2E8F0;
-        }
-
-        .key-value {
-          display: block;
-          font-family: 'Courier New', monospace;
-          font-size: 1.25rem;
-          color: #2D3047;
-          font-weight: 600;
-          word-break: break-all;
-          margin-bottom: 12px;
-          padding: 16px;
-          background: #F1F5F9;
-          border-radius: 8px;
-        }
-
-        .key-status {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #10B981;
-          font-size: 0.875rem;
-          font-weight: 600;
-        }
-
-        .qr-code-section {
-          background: white;
-          border-radius: 16px;
-          padding: 24px;
-          border: 1px solid #E2E8F0;
-        }
-
-        .qr-code-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 24px;
-        }
-
-        .qr-code-header h3 {
-          font-size: 1.5rem;
-          color: #2D3047;
-          margin: 0;
-          font-weight: 700;
         }
 
         .qr-code-container {
-          display: grid;
-          grid-template-columns: 1fr;
+          display: flex;
+          flex-direction: column;
           gap: 24px;
-          align-items: start;
-        }
-
-        @media (min-width: 768px) {
-          .qr-code-container {
-            grid-template-columns: 1fr 1fr;
-          }
         }
 
         .qr-code-image-wrapper {
           display: flex;
-          flex-direction: column;
-          gap: 16px;
+          flex-direction: ${isMobile ? 'column' : 'row'};
+          align-items: center;
+          gap: 24px;
         }
 
         .qr-code-image-container {
-          width: 100%;
-          max-width: 280px;
-          margin: 0 auto;
+          flex-shrink: 0;
           background: white;
-          border-radius: 12px;
+          border: 2px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 20px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 2px solid #E2E8F0;
-          padding: 16px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .qr-code-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.9);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .qr-code-image-container:hover .qr-code-overlay {
+          opacity: 1;
         }
 
         .qr-code-image {
-          width: 100%;
-          height: auto;
-          aspect-ratio: 1/1;
+          width: ${isMobile ? '200px' : '240px'};
+          height: ${isMobile ? '200px' : '240px'};
           object-fit: contain;
         }
 
         .qr-code-details {
-          margin-top: 16px;
-          padding: 16px;
-          background: #F8FAFC;
-          border-radius: 12px;
-          border: 1px solid #E2E8F0;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          min-width: 0;
         }
 
         .detail-item {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 10px;
-          font-size: 14px;
+          align-items: center;
+          padding: 12px 0;
+          border-bottom: 1px solid #f1f5f9;
         }
 
-        .detail-item:last-child {
-          margin-bottom: 0;
+        .detail-item.highlight {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          padding: 16px;
+          border-radius: 12px;
+          border: none;
+          margin: 8px 0;
         }
 
         .detail-label {
-          color: #64748B;
-          font-weight: 500;
+          color: #64748b;
+          font-size: ${isMobile ? '0.875rem' : '1rem'};
+          font-weight: 600;
         }
 
         .detail-value {
-          color: #2D3047;
-          font-weight: 600;
+          color: #1e293b;
+          font-size: ${isMobile ? '0.875rem' : '1rem'};
+          font-weight: 700;
           text-align: right;
-          max-width: 180px;
           word-break: break-word;
         }
 
-        .qr-code-text {
+        .type-badge, .name-badge, .bank-badge {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        .type-badge {
+          background: #dbeafe;
+          color: #1d4ed8;
+        }
+
+        .name-badge {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .bank-badge {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .qr-code-instructions {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          margin-top: 16px;
+        }
+
+        .instruction-step {
           display: flex;
-          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 12px;
+        }
+
+        .step-number {
+          width: 32px;
+          height: 32px;
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
           justify-content: center;
-        }
-
-        .qr-title {
-          font-size: 1.5rem;
-          color: #2D3047;
-          margin-bottom: 12px;
           font-weight: 700;
+          font-size: 0.875rem;
+          flex-shrink: 0;
         }
 
-        .qr-description {
-          color: #666;
-          font-size: 1rem;
-          line-height: 1.5;
-          margin: 0;
-        }
-
-        .pix-steps {
+        /* Chave PIX Card */
+        .pix-key-card {
           background: white;
           border-radius: 16px;
           padding: 24px;
-          border: 1px solid #E2E8F0;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e2e8f0;
+        }
+
+        .card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+
+        .header-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .key-icon {
+          color: #10b981;
+        }
+
+        .key-title {
+          font-size: 1.25rem;
+          color: #1e293b;
+          margin: 0 0 4px 0;
+          font-weight: 700;
+        }
+
+        .key-subtitle {
+          color: #64748b;
+          font-size: 0.95rem;
+          margin: 0;
+        }
+
+        .copy-key-btn {
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          white-space: nowrap;
+        }
+
+        .copy-key-btn.copied {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .copy-key-btn:hover:not(.copied) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .key-value-container {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 20px;
+        }
+
+        .key-value {
+          color: #1e293b;
+          font-size: 0.95rem;
+          font-family: 'Courier New', monospace;
+          word-break: break-all;
+          display: block;
+          margin-bottom: 16px;
+          line-height: 1.5;
+          padding: 12px;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .key-type {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .type-tag {
+          background: #dbeafe;
+          color: #1d4ed8;
+          padding: 6px 16px;
+          border-radius: 20px;
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        .key-status {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: #10b981;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        /* Passo a passo completo */
+        .complete-steps {
+          background: white;
+          border-radius: 16px;
+          padding: 24px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e2e8f0;
         }
 
         .steps-title {
           font-size: 1.5rem;
-          color: #2D3047;
+          color: #1e293b;
           margin-bottom: 24px;
           font-weight: 700;
         }
 
         .steps-container {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 24px;
-        }
-
-        @media (min-width: 768px) {
-          .steps-container {
-            grid-template-columns: repeat(2, 1fr);
-          }
+          display: flex;
+          flex-direction: ${isMobile ? 'column' : 'row'};
+          align-items: center;
+          justify-content: space-between;
+          gap: ${isMobile ? '16px' : '8px'};
         }
 
         .step {
+          flex: 1;
           display: flex;
-          gap: 16px;
-          align-items: flex-start;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 12px;
+          min-width: 0;
+        }
+
+        .step.highlight-step {
+          background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+          border: 2px solid #22c55e;
+          transform: scale(1.05);
+          z-index: 1;
         }
 
         .step-number {
           width: 40px;
           height: 40px;
-          background: linear-gradient(135deg, #FFD166 0%, #FFA500 100%);
-          color: #2D3047;
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+          color: white;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-weight: 800;
-          font-size: 1.125rem;
-          flex-shrink: 0;
-          box-shadow: 0 4px 12px rgba(255, 209, 102, 0.3);
-        }
-
-        .step-content h4 {
-          color: #2D3047;
-          margin-bottom: 8px;
-          font-size: 1.125rem;
           font-weight: 700;
-        }
-
-        .step-content p {
-          color: #666;
-          font-size: 0.875rem;
-          line-height: 1.5;
-          margin: 0;
-        }
-
-        /* Seção de envio de comprovante */
-        .payment-info {
-          background: #F0F9FF;
-          border-radius: 16px;
-          padding: 24px;
-          border: 2px solid #BAE6FD;
-          margin-top: 16px;
-        }
-
-        .payment-info-content {
-          text-align: center;
-        }
-
-        .proof-title {
-          font-size: 1.5rem;
-          color: #0369A1;
-          margin-bottom: 16px;
-          font-weight: 700;
-        }
-
-        .payment-info-content p {
-          color: #0369A1;
           font-size: 1rem;
-          line-height: 1.6;
-          margin-bottom: 16px;
-        }
-
-        .proof-note {
-          background: rgba(255, 255, 255, 0.8);
-          padding: 12px 16px;
-          border-radius: 12px;
-          border-left: 3px solid #FFD166;
-          margin: 24px 0 !important;
-          color: #92400E !important;
-        }
-
-        .btn-whatsapp {
-          background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-          color: white;
-          border: none;
-          padding: 16px 32px;
-          font-size: 1.125rem;
-          font-weight: 600;
-          border-radius: 12px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          text-decoration: none;
-          margin-top: 16px;
-        }
-
-        .btn-whatsapp:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(37, 211, 102, 0.3);
-        }
-
-        .info-sidebar {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .other-methods-card,
-        .important-info-card,
-        .warning-card,
-        .confirmation-card,
-        .help-card {
-          background: white;
-          border-radius: 16px;
-          padding: 24px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-          border: 1px solid #E2E8F0;
-        }
-
-        .methods-title {
-          font-size: 1.5rem;
-          color: #2D3047;
-          margin-bottom: 20px;
-          font-weight: 700;
-        }
-
-        .methods-list {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .method {
-          display: flex;
-          gap: 16px;
-          align-items: center;
-          padding: 16px;
-          background: #F8FAFC;
-          border-radius: 12px;
-          transition: all 0.3s ease;
-        }
-
-        .method:hover {
-          transform: translateX(5px);
-          background: white;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .method-icon {
-          width: 50px;
-          height: 50px;
-          background: linear-gradient(135deg, #FFD166 0%, #FFA500 100%);
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #2D3047;
           flex-shrink: 0;
         }
 
-        .method-content h4 {
-          color: #2D3047;
-          margin-bottom: 4px;
-          font-size: 1.125rem;
-        }
-
-        .method-content p {
-          color: #666;
-          font-size: 0.875rem;
-          margin: 0;
-        }
-
-        .info-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 20px;
-        }
-
-        .info-icon {
-          color: #FFD166;
-        }
-
-        .info-header h3 {
+        .step-arrow {
+          color: #94a3b8;
           font-size: 1.5rem;
-          color: #2D3047;
-          margin: 0;
           font-weight: 700;
+          padding: 0 8px;
         }
 
-        .info-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .info-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-        }
-
-        .info-item svg {
-          color: #10B981;
-          flex-shrink: 0;
-          margin-top: 2px;
-        }
-
-        .info-item span {
-          color: #666;
-          font-size: 0.95rem;
-          line-height: 1.5;
-        }
-
-        .warning-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 16px;
-        }
-
-        .warning-header svg {
-          color: #EF4444;
-        }
-
-        .warning-header h4 {
-          color: #2D3047;
-          margin: 0;
-          font-size: 1.25rem;
-          font-weight: 700;
-        }
-
-        .warning-content p {
-          color: #666;
-          font-size: 0.95rem;
-          line-height: 1.5;
-          margin: 0;
-        }
-
-        .confirmation-header {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          margin-bottom: 20px;
-        }
-
-        .confirmation-header h4 {
-          color: #2D3047;
-          margin: 0 0 4px 0;
-          font-size: 1.25rem;
-          font-weight: 700;
-        }
-
-        .confirmation-subtitle {
-          color: #10B981;
-          font-size: 0.875rem;
-          font-weight: 600;
-          margin: 0;
-        }
-
-        .timeline {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 16px;
-        }
-
-        .timeline-step {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-          flex: 1;
-        }
-
-        .step-dot {
-          width: 12px;
-          height: 12px;
-          background: #E2E8F0;
-          border-radius: 50%;
-        }
-
-        .timeline-step.active .step-dot {
-          background: #FFD166;
-          box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.2);
-        }
-
-        .step-label {
-          font-size: 0.75rem;
-          color: #666;
-          text-align: center;
-          font-weight: 500;
-          white-space: nowrap;
-        }
-
-        .timeline-line {
-          flex: 1;
-          height: 2px;
-          background: #E2E8F0;
-        }
-
-        .timeline-step.active + .timeline-line {
-          background: #FFD166;
-        }
-
-        .timeline-note {
-          font-size: 0.875rem;
-          color: #666;
-          text-align: center;
-          margin: 0;
-          font-style: italic;
-        }
-
-        .help-card {
-          background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-          border: 1px solid #F59E0B;
-        }
-
-        .help-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 16px;
-        }
-
-        .help-header svg {
-          color: #92400E;
-        }
-
-        .help-header h4 {
-          color: #92400E;
-          margin: 0;
-          font-size: 1.25rem;
-          font-weight: 700;
-        }
-
-        .help-content {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .help-item {
-          padding: 12px;
-          background: rgba(255, 255, 255, 0.7);
-          border-radius: 8px;
-        }
-
-        .help-item strong {
-          color: #92400E;
-          font-size: 0.95rem;
-          display: block;
-          margin-bottom: 4px;
-        }
-
-        .help-item p {
-          color: #666;
-          font-size: 0.875rem;
-          margin: 0;
-          line-height: 1.4;
-        }
-
-        .payment-cta {
-          background: linear-gradient(135deg, #2D3047 0%, #1A1C2E 100%);
-          border-radius: 20px;
-          padding: 48px;
-          color: white;
-          text-align: center;
-        }
-
-        .cta-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 24px;
-          margin-bottom: 32px;
-        }
-
-        @media (min-width: 768px) {
-          .cta-content {
-            flex-direction: row;
-            text-align: left;
+        @media (max-width: 768px) {
+          .step-arrow {
+            display: none;
           }
         }
 
-        .cta-icon {
-          font-size: 3rem;
+        /* Botões flutuantes */
+        .mobile-proof-btn-floating {
+          position: fixed;
+          bottom: 20px;
+          left: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+          color: white;
+          padding: 20px 24px;
+          z-index: 1000;
+          border: none;
+          border-radius: 16px;
+          cursor: pointer;
+          box-shadow: 0 10px 40px rgba(34, 197, 94, 0.4);
+          animation: pulseGlow 2s infinite;
+          transition: all 0.3s ease;
         }
 
-        .cta-text {
+        @keyframes pulseGlow {
+          0%, 100% { 
+            box-shadow: 0 10px 40px rgba(34, 197, 94, 0.4);
+          }
+          50% { 
+            box-shadow: 0 10px 40px rgba(34, 197, 94, 0.6);
+          }
+        }
+
+        .mobile-proof-btn-floating:active {
+          transform: scale(0.98);
+        }
+
+        .floating-btn-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .floating-btn-text {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
           flex: 1;
         }
 
-        .cta-text h3 {
-          font-size: 1.75rem;
-          margin-bottom: 12px;
-          font-weight: 700;
+        .floating-btn-title {
+          font-size: 1.125rem;
+          font-weight: 800;
         }
 
-        .cta-text p {
+        .floating-btn-subtitle {
+          font-size: 0.875rem;
           opacity: 0.9;
-          font-size: 1.125rem;
-          margin: 0;
         }
 
-        .cta-actions {
-          display: flex;
-          gap: 16px;
-          justify-content: center;
-          flex-wrap: wrap;
+        .floating-btn-arrow {
+          opacity: 0.8;
         }
 
-        .btn-outline {
-          background: transparent;
-          border: 2px solid white;
+        .desktop-floating-btn {
+          position: fixed;
+          bottom: 40px;
+          right: 40px;
+          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
           color: white;
-          padding: 16px 32px;
-          border-radius: 12px;
-          font-weight: 600;
-          text-decoration: none;
-          transition: all 0.3s ease;
-        }
-
-        .btn-outline:hover {
-          background: white;
-          color: #2D3047;
-        }
-
-        .btn-primary {
-          background: linear-gradient(135deg, #FFD166 0%, #FFA500 100%);
-          color: #2D3047;
+          padding: 16px 24px;
+          z-index: 1000;
           border: none;
-          padding: 16px 32px;
-          border-radius: 12px;
+          border-radius: 50px;
+          cursor: pointer;
+          box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
+          display: flex;
+          align-items: center;
+          gap: 8px;
           font-weight: 600;
-          text-decoration: none;
           transition: all 0.3s ease;
         }
 
-        .btn-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(255, 209, 102, 0.3);
+        .desktop-floating-btn:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 15px 40px rgba(34, 197, 94, 0.6);
         }
 
-        .btn-large {
-          font-size: 1.125rem;
-          padding: 16px 40px;
+        /* Estilos mobile */
+        .mobile-bottom-section {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .mobile-status-card {
+          background: white;
+          border-radius: 16px;
+          padding: 20px;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e2e8f0;
+        }
+
+        .mobile-status-steps {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin: 20px 0;
+        }
+
+        .mobile-order-summary {
+          padding-top: 16px;
+          border-top: 2px solid #f1f5f9;
+        }
+
+        .mobile-reminders {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .reminder-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .reminder-item.highlight {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border: 2px solid #f59e0b;
         }
 
         /* Animações */
@@ -1192,79 +1450,6 @@ const PaymentInfo = ({ vendorInfo }) => {
           to {
             transform: translateY(0);
             opacity: 1;
-          }
-        }
-
-        /* Responsivo */
-        @media (max-width: 768px) {
-          .payment-title {
-            font-size: 2rem;
-          }
-          
-          .pix-section {
-            padding: 24px;
-          }
-          
-          .key-header {
-            flex-direction: column;
-          }
-          
-          .copy-key-btn {
-            width: 100%;
-          }
-          
-          .qr-code-container {
-            grid-template-columns: 1fr;
-          }
-          
-          .qr-code-image-container {
-            max-width: 220px;
-          }
-          
-          .cta-actions {
-            flex-direction: column;
-            align-items: center;
-          }
-          
-          .btn-large {
-            width: 100%;
-            max-width: 300px;
-          }
-
-          .btn-whatsapp {
-            width: 100%;
-          }
-
-          .timeline {
-            flex-direction: column;
-            gap: 16px;
-          }
-
-          .timeline-line {
-            width: 2px;
-            height: 20px;
-          }
-
-          .step-label {
-            font-size: 0.7rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .payment-header {
-            padding: 0 12px;
-          }
-          
-          .section-title {
-            font-size: 1.5rem;
-          }
-          
-          .steps-container {
-            grid-template-columns: 1fr;
-          }
-          
-          .qr-code-image-container {
-            max-width: 180px;
           }
         }
       `}</style>

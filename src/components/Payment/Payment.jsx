@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Copy, Check, QrCode, Smartphone, Banknote, Shield, Clock, Download, X } from 'lucide-react';
+import { 
+  Copy, Check, QrCode, Smartphone, Banknote, Shield, Clock, 
+  Download, X, Wallet, CreditCard, Calculator, DollarSign 
+} from 'lucide-react'; // Adicionei DollarSign aqui
 import { useCart } from '../../context/CartContext';
 import QRCodeGenerator from '../QRCodeGenerator/QRCodeGenerator';
 
@@ -103,14 +106,38 @@ const Payment = () => {
     const deliveryOption = currentOrder.deliveryOption || 'retirada';
     const deliveryAddress = currentOrder.deliveryAddress || null;
     const deliveryDate = currentOrder.deliveryDate || null;
+    const paymentMethod = currentOrder.paymentMethod || 'pix';
+    const cashAmount = currentOrder.cashAmount || null;
+    const cashChange = currentOrder.cashChange || 0;
     
     // CORREÇÃO: Usar emojis compatíveis com WhatsApp
-    let message = `*📋 ENVIAR COMPROVANTE PIX*\n\n`;
+    let message = `*📋 ${paymentMethod === 'pix' ? 'ENVIAR COMPROVANTE PIX' : 'CONFIRMAR PAGAMENTO EM DINHEIRO'}*\n\n`;
     
     // Informações básicas
     message += `*🧾 PEDIDO:* ${currentOrder.id}\n`;
     message += `*👤 CLIENTE:* ${currentOrder.customer?.name || 'Não informado'}\n`;
     message += `*💰 VALOR PAGO:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
+    
+    // Informações de pagamento
+    message += `*💳 INFORMAÇÕES DE PAGAMENTO*\n`;
+    if (paymentMethod === 'pix') {
+      message += `*🔑 FORMA DE PAGAMENTO:* PIX\n`;
+      message += `*💰 VALOR:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n`;
+      message += `*📱 CHAVE PIX:* ${vendorInfo?.pixKey || 'Será enviada após confirmação'}\n`;
+    } else {
+      message += `*💵 FORMA DE PAGAMENTO:* DINHEIRO\n`;
+      message += `*💰 VALOR A PAGAR:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n`;
+      if (cashAmount) {
+        message += `*💸 VALOR INFORMADO:* R$ ${cashAmount.toFixed(2)}\n`;
+        if (cashChange > 0) {
+          message += `*🔄 TROCO NECESSÁRIO:* R$ ${cashChange.toFixed(2)}\n`;
+        } else {
+          message += `*✅ VALOR EXATO - SEM TROCO*\n`;
+        }
+      }
+      message += `*📝 OBS:* Pagamento será realizado na ${deliveryOption === 'retirada' ? 'retirada' : 'entrega'}\n`;
+    }
+    message += `\n`;
     
     // Informações de entrega/retirada
     message += `*📦 INFORMAÇÕES DE ENTREGA*\n`;
@@ -141,7 +168,7 @@ const Payment = () => {
         if (deliveryAddress.reference) {
           message += `• Ponto de referência: ${deliveryAddress.reference}\n`;
         }
-        message += `• São Paulo/SP\n`;
+        message += `• Buritama/SP\n`;
       } else {
         message += `*📍 ENDEREÇO:* Informado durante o pedido\n`;
       }
@@ -172,8 +199,13 @@ const Payment = () => {
     
     message += totalText;
     
-    // Instrução para anexar comprovante
-    message += `*📎 ANEXE A FOTO DO COMPROVANTE PIX*`;
+    // Instrução para anexar comprovante ou confirmar pagamento
+    if (paymentMethod === 'pix') {
+      message += `*📎 ANEXE A FOTO DO COMPROVANTE PIX*`;
+    } else {
+      message += `*💵 CONFIRMAÇÃO DE PAGAMENTO EM DINHEIRO*\n`;
+      message += `Por favor, confirme que está com o valor correto para ${deliveryOption === 'retirada' ? 'retirada' : 'entrega'}`;
+    }
 
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
@@ -200,6 +232,9 @@ const Payment = () => {
     const deliveryOption = currentOrder.deliveryOption || 'retirada';
     const deliveryAddress = currentOrder.deliveryAddress || null;
     const deliveryDate = currentOrder.deliveryDate || null;
+    const paymentMethod = currentOrder.paymentMethod || 'pix';
+    const cashAmount = currentOrder.cashAmount || null;
+    const cashChange = currentOrder.cashChange || 0;
     
     const receiptText = `
 🎓 COMPROVANTE DE PEDIDO - TERCEIRÃO 2026
@@ -212,6 +247,17 @@ DADOS DO CLIENTE:
 Nome: ${currentOrder.customer?.name || 'Não informado'}
 Telefone: ${currentOrder.customer?.phone || 'Não informado'}
 Email: ${currentOrder.customer?.email || 'Não informado'}
+
+INFORMAÇÕES DE PAGAMENTO:
+${paymentMethod === 'pix' ? 
+  `Forma de pagamento: PIX
+Valor: R$ ${currentOrder.total?.toFixed(2) || '0.00'}
+Chave PIX: ${vendorInfo?.pixKey || 'Será enviada após confirmação'}` : 
+  `Forma de pagamento: DINHEIRO
+Valor a pagar: R$ ${currentOrder.total?.toFixed(2) || '0.00'}
+${cashAmount ? `Valor informado: R$ ${cashAmount.toFixed(2)}
+${cashChange > 0 ? `Troco necessário: R$ ${cashChange.toFixed(2)}` : 'Valor exato - Sem troco'}` : 'Valor será informado no momento'}
+Pagamento será realizado na ${deliveryOption === 'retirada' ? 'retirada' : 'entrega'}`}
 
 INFORMAÇÕES DE ENTREGA:
 ${deliveryOption === 'retirada' ? 
@@ -239,6 +285,7 @@ Taxa de entrega: R$ 3,00
 TOTAL: R$ ${currentOrder.total?.toFixed(2) || '0.00'}` : `
 TOTAL: R$ ${currentOrder.total?.toFixed(2) || '0.00'}`}
 
+${paymentMethod === 'pix' ? `
 DADOS PARA PAGAMENTO PIX:
 Chave PIX: ${vendorInfo?.pixKey || 'Não configurada'}
 Nome: ${vendorInfo?.pixName || 'Não configurado'}
@@ -250,7 +297,12 @@ INSTRUÇÕES:
 2. Tire uma foto do comprovante
 3. Clique em "Enviar Comprovante"
 4. Anexe a foto no WhatsApp que abrir
-5. Aguarde a confirmação (1-2 horas úteis)
+5. Aguarde a confirmação (1-2 horas úteis)` : `
+INSTRUÇÕES PARA PAGAMENTO EM DINHEIRO:
+1. Prepare o valor de R$ ${currentOrder.total?.toFixed(2) || '0.00'} em dinheiro
+${cashAmount ? `2. Você informou que pagará com: R$ ${cashAmount.toFixed(2)}\n${cashChange > 0 ? `3. Prepare troco de: R$ ${cashChange.toFixed(2)}` : '3. Valor exato - sem troco necessário'}` : '2. Informe o valor que pagará quando receber o pedido'}
+4. O pagamento será realizado no momento da ${deliveryOption === 'retirada' ? 'retirada' : 'entrega'}
+5. Aguarde a confirmação do agendamento`}
 
 ==========================================
 Guarde este comprovante para referência.
@@ -275,6 +327,9 @@ Guarde este comprovante para referência.
   const deliveryOption = currentOrder.deliveryOption || 'retirada';
   const deliveryAddress = currentOrder.deliveryAddress || null;
   const deliveryDate = currentOrder.deliveryDate || null;
+  const paymentMethod = currentOrder.paymentMethod || 'pix';
+  const cashAmount = currentOrder.cashAmount || null;
+  const cashChange = currentOrder.cashChange || 0;
 
   // Formatar data para exibição
   const formatDeliveryDate = (dateString) => {
@@ -294,7 +349,9 @@ Guarde este comprovante para referência.
         {/* Cabeçalho */}
         <div className="payment-header">
           <div className="header-content">
-            <h2 className="payment-title">Pagamento via PIX</h2>
+            <h2 className="payment-title">
+              {paymentMethod === 'pix' ? 'Pagamento via PIX' : 'Pagamento em Dinheiro'}
+            </h2>
             <p className="payment-subtitle">Pedido #{currentOrder.id} • R$ {currentOrder.total?.toFixed(2) || '0.00'}</p>
             <p className="delivery-info-preview">
               📦 {deliveryOption === 'retirada' ? 'Retirada na Escola' : `Entrega a Domicílio (+R$ 3,00)`}
@@ -340,8 +397,8 @@ Guarde este comprovante para referência.
             <div className="step active">
               <div className="step-icon">1</div>
               <div className="step-text">
-                <h4>Copie os dados PIX</h4>
-                <p>Use a chave abaixo para pagar</p>
+                <h4>{paymentMethod === 'pix' ? 'Copie os dados PIX' : 'Verifique o valor'}</h4>
+                <p>{paymentMethod === 'pix' ? 'Use a chave abaixo para pagar' : 'Confirme o valor total'}</p>
               </div>
             </div>
             
@@ -350,8 +407,8 @@ Guarde este comprovante para referência.
             <div className={`step ${showProofForm ? 'active' : ''}`}>
               <div className="step-icon">2</div>
               <div className="step-text">
-                <h4>Faça o pagamento</h4>
-                <p>Use seu app de banco</p>
+                <h4>{paymentMethod === 'pix' ? 'Faça o pagamento' : 'Prepare o dinheiro'}</h4>
+                <p>{paymentMethod === 'pix' ? 'Use seu app de banco' : 'Com troco se necessário'}</p>
               </div>
             </div>
             
@@ -360,96 +417,192 @@ Guarde este comprovante para referência.
             <div className="step">
               <div className="step-icon">3</div>
               <div className="step-text">
-                <h4>Envie comprovante</h4>
-                <p>Confirme o pagamento</p>
+                <h4>{paymentMethod === 'pix' ? 'Envie comprovante' : 'Confirme pagamento'}</h4>
+                <p>{paymentMethod === 'pix' ? 'Confirme o pagamento' : 'Aguarde a entrega'}</p>
               </div>
             </div>
           </div>
 
-          {/* QR Code e Chave PIX */}
-          <div className="pix-section">
-            <div className="pix-header">
-              <QrCode size={24} />
-              <h3>Pagamento Instantâneo PIX</h3>
-            </div>
-            
-            <div className="qr-code-container">
-              {/* QR Code REAL */}
-              <div className="qr-code-real-container">
-                <div className="qr-code-wrapper">
-                  <QRCodeGenerator 
-                    pixKey={vendorInfo?.pixKey || ''}
-                    amount={currentOrder.total?.toString() || '0'}
-                    name={vendorInfo?.pixName || ''}
-                  />
-                </div>
-                <div className="qr-code-info">
-                  <p className="qr-code-amount">R$ {currentOrder.total?.toFixed(2) || '0.00'}</p>
-                  <p className="qr-code-name">{vendorInfo?.pixName || 'Vendedor'}</p>
-                  <p className="qr-code-hint">Escaneie com seu app bancário</p>
-                </div>
+          {/* Seção de Pagamento - PIX ou Dinheiro */}
+          {paymentMethod === 'pix' ? (
+            <div className="pix-section">
+              <div className="pix-header">
+                <QrCode size={24} />
+                <h3>Pagamento Instantâneo PIX</h3>
               </div>
               
-              <div className="pix-instructions">
-                <p className="instruction-title">Como pagar:</p>
-                <ol className="instruction-list">
-                  <li>Abra o app do seu banco</li>
-                  <li>Acesse a função PIX</li>
-                  <li>Escolha "Pix Copia e Cola"</li>
-                  <li>Cole a chave abaixo</li>
-                  <li>Confirme o pagamento</li>
-                </ol>
+              <div className="qr-code-container">
+                {/* QR Code REAL */}
+                <div className="qr-code-real-container">
+                  <div className="qr-code-wrapper">
+                    <QRCodeGenerator 
+                      pixKey={vendorInfo?.pixKey || ''}
+                      amount={currentOrder.total?.toString() || '0'}
+                      name={vendorInfo?.pixName || ''}
+                    />
+                  </div>
+                  <div className="qr-code-info">
+                    <p className="qr-code-amount">R$ {currentOrder.total?.toFixed(2) || '0.00'}</p>
+                    <p className="qr-code-name">{vendorInfo?.pixName || 'Vendedor'}</p>
+                    <p className="qr-code-hint">Escaneie com seu app bancário</p>
+                  </div>
+                </div>
                 
-                <div className="scan-instruction">
-                  <QrCode size={16} />
-                  <span>Ou escaneie o QR Code acima</span>
+                <div className="pix-instructions">
+                  <p className="instruction-title">Como pagar:</p>
+                  <ol className="instruction-list">
+                    <li>Abra o app do seu banco</li>
+                    <li>Acesse a função PIX</li>
+                    <li>Escolha "Pix Copia e Cola"</li>
+                    <li>Cole a chave abaixo</li>
+                    <li>Confirme o pagamento</li>
+                  </ol>
+                  
+                  <div className="scan-instruction">
+                    <QrCode size={16} />
+                    <span>Ou escaneie o QR Code acima</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Chave PIX */}
-            <div className="pix-key-container">
-              <div className="pix-key-header">
-                <Smartphone size={20} />
-                <span>Chave PIX (copia e cola)</span>
-              </div>
-              
-              <div className="pix-key-wrapper">
-                <code className="pix-key">{vendorInfo?.pixKey || 'Chave PIX não configurada'}</code>
-                <button 
-                  className={`copy-btn ${copied ? 'copied' : ''}`}
-                  onClick={handleCopyPixKey}
-                  type="button"
-                  disabled={!vendorInfo?.pixKey}
-                >
-                  {copied ? <Check size={18} /> : <Copy size={18} />}
-                  <span>{copied ? 'Copiado!' : 'Copiar'}</span>
-                </button>
-              </div>
-              
-              <div className="pix-details">
-                <div className="detail">
-                  <Banknote size={16} />
-                  <span>Valor: <strong>R$ {currentOrder.total?.toFixed(2) || '0.00'}</strong></span>
+              {/* Chave PIX */}
+              <div className="pix-key-container">
+                <div className="pix-key-header">
+                  <Smartphone size={20} />
+                  <span>Chave PIX (copia e cola)</span>
                 </div>
-                <div className="detail">
-                  <Shield size={16} />
-                  <span>Destinatário: <strong>{vendorInfo?.pixName || 'Vendedor'}</strong></span>
+                
+                <div className="pix-key-wrapper">
+                  <code className="pix-key">{vendorInfo?.pixKey || 'Chave PIX não configurada'}</code>
+                  <button 
+                    className={`copy-btn ${copied ? 'copied' : ''}`}
+                    onClick={handleCopyPixKey}
+                    type="button"
+                    disabled={!vendorInfo?.pixKey}
+                  >
+                    {copied ? <Check size={18} /> : <Copy size={18} />}
+                    <span>{copied ? 'Copiado!' : 'Copiar'}</span>
+                  </button>
                 </div>
-                <div className="detail">
-                  <Banknote size={16} />
-                  <span>Banco: <strong>{vendorInfo?.bankName || 'Banco'}</strong></span>
+                
+                <div className="pix-details">
+                  <div className="detail">
+                    <Banknote size={16} />
+                    <span>Valor: <strong>R$ {currentOrder.total?.toFixed(2) || '0.00'}</strong></span>
+                  </div>
+                  <div className="detail">
+                    <Shield size={16} />
+                    <span>Destinatário: <strong>{vendorInfo?.pixName || 'Vendedor'}</strong></span>
+                  </div>
+                  <div className="detail">
+                    <Banknote size={16} />
+                    <span>Banco: <strong>{vendorInfo?.bankName || 'Banco'}</strong></span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="cash-payment-section">
+              <div className="cash-header">
+                <Wallet size={24} />
+                <h3>Pagamento em Dinheiro</h3>
+              </div>
+              
+              <div className="cash-details-container">
+                <div className="cash-detail-card">
+                  <div className="cash-detail-header">
+                    <Calculator size={20} />
+                    <h4>Detalhes do Pagamento</h4>
+                  </div>
+                  
+                  <div className="cash-detail-content">
+                    <div className="cash-detail-item">
+                      <div className="cash-detail-label">
+                        <DollarSign size={16} /> {/* CORRIGIDO: Agora DollarSign está importado */}
+                        <span>Valor a pagar:</span>
+                      </div>
+                      <div className="cash-detail-value total">R$ {currentOrder.total?.toFixed(2)}</div>
+                    </div>
+                    
+                    {cashAmount && (
+                      <>
+                        <div className="cash-detail-item">
+                          <div className="cash-detail-label">
+                            <Wallet size={16} />
+                            <span>Valor informado:</span>
+                          </div>
+                          <div className="cash-detail-value given">R$ {cashAmount.toFixed(2)}</div>
+                        </div>
+                        
+                        <div className="cash-detail-item change">
+                          <div className="cash-detail-label">
+                            <Calculator size={16} />
+                            <span>Troco necessário:</span>
+                          </div>
+                          <div className="cash-detail-value change">
+                            {cashChange > 0 ? `R$ ${cashChange.toFixed(2)}` : '✅ Valor exato'}
+                          </div>
+                        </div>
+                        
+                        <div className="cash-instruction-box">
+                          <div className="instruction-icon">💵</div>
+                          <div className="instruction-text">
+                            <strong>Prepare o valor em dinheiro:</strong>
+                            <p>Tenha R$ {cashAmount.toFixed(2)} pronto para o pagamento na {deliveryOption === 'retirada' ? 'retirada' : 'entrega'}</p>
+                            {cashChange > 0 && (
+                              <p className="change-instruction">O vendedor precisará ter R$ {cashChange.toFixed(2)} de troco</p>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {!cashAmount && (
+                      <div className="cash-no-amount-info">
+                        <div className="no-amount-icon">ℹ️</div>
+                        <div className="no-amount-text">
+                          <p><strong>Valor não informado:</strong></p>
+                          <p>Você não especificou o valor em dinheiro que pagará.</p>
+                          <p>Por favor, tenha o valor total de <strong>R$ {currentOrder.total?.toFixed(2)}</strong> pronto para a {deliveryOption === 'retirada' ? 'retirada' : 'entrega'}.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="cash-instructions">
+                  <div className="instructions-header">
+                    <Shield size={20} />
+                    <h4>Instruções para Pagamento em Dinheiro</h4>
+                  </div>
+                  <ol className="instructions-list">
+                    <li>Prepare o valor correto em dinheiro</li>
+                    <li>Se informou valor maior, avise que precisará de troco</li>
+                    <li>O pagamento será realizado no momento da {deliveryOption === 'retirada' ? 'retirada' : 'entrega'}</li>
+                    <li>Confirme o pagamento via WhatsApp</li>
+                    <li>Aguarde o agendamento da {deliveryOption === 'retirada' ? 'retirada' : 'entrega'}</li>
+                  </ol>
+                  
+                  <div className="cash-warning">
+                    <div className="warning-icon">⚠️</div>
+                    <div className="warning-text">
+                      <strong>Importante:</strong> Certifique-se de ter o valor correto. 
+                      Em caso de dúvidas sobre o troco, entre em contato antes.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Comprovante de pagamento */}
           {!showProofForm ? (
             <div className="proof-section">
               <div className="proof-header">
                 <Clock size={24} />
-                <h3>Enviar Comprovante</h3>
+                <h3>
+                  {paymentMethod === 'pix' ? 'Enviar Comprovante' : 'Confirmar Pagamento'}
+                </h3>
               </div>
               
               <div className="proof-options">
@@ -458,10 +611,16 @@ Guarde este comprovante para referência.
                   onClick={() => setShowProofForm(true)}
                   type="button"
                 >
-                  <span className="option-icon">📱</span>
+                  <span className="option-icon">
+                    {paymentMethod === 'pix' ? '📱' : '💵'}
+                  </span>
                   <div className="option-text">
-                    <h4>Enviar comprovante</h4>
-                    <p>Clique após fazer o pagamento</p>
+                    <h4>{paymentMethod === 'pix' ? 'Enviar comprovante' : 'Confirmar pagamento'}</h4>
+                    <p>
+                      {paymentMethod === 'pix' 
+                        ? 'Clique após fazer o pagamento' 
+                        : 'Clique para confirmar que está com o valor'}
+                    </p>
                   </div>
                 </button>
                 
@@ -471,10 +630,14 @@ Guarde este comprovante para referência.
                     <h4>Mensagem Automática</h4>
                   </div>
                   <div className="preview-content">
-                    <p><strong>📋 ENVIAR COMPROVANTE PIX</strong></p>
+                    <p><strong>{paymentMethod === 'pix' ? '📋 ENVIAR COMPROVANTE PIX' : '💵 CONFIRMAR PAGAMENTO EM DINHEIRO'}</strong></p>
                     <p><strong>🧾 PEDIDO:</strong> {currentOrder.id}</p>
                     <p><strong>👤 CLIENTE:</strong> {currentOrder.customer?.name || 'Não informado'}</p>
                     <p><strong>💰 VALOR PAGO:</strong> R$ {currentOrder.total?.toFixed(2) || '0.00'}</p>
+                    <p><strong>💳 PAGAMENTO:</strong> {paymentMethod === 'pix' ? 'PIX' : 'Dinheiro'}</p>
+                    {paymentMethod === 'dinheiro' && cashAmount && (
+                      <p><strong>💸 VALOR INFORMADO:</strong> R$ {cashAmount.toFixed(2)}</p>
+                    )}
                     <p><strong>📦 ENTREGA:</strong> {deliveryOption === 'retirada' ? 'Retirada na Escola' : 'Entrega a Domicílio (+R$ 3,00)'}</p>
                     {deliveryOption === 'entrega' && (
                       <>
@@ -482,8 +645,11 @@ Guarde este comprovante para referência.
                         <p><strong>📅 PREVISÃO:</strong> {deliveryDate ? deliveryDate : 'Próximo dia útil'}</p>
                       </>
                     )}
-                    <p><strong>📎 ANEXE A FOTO DO COMPROVANTE PIX</strong></p>
-                    <p className="preview-note">Ao clicar, o WhatsApp abrirá com esta mensagem pronta.</p>
+                    <p className="preview-note">
+                      {paymentMethod === 'pix' 
+                        ? '📎 Anexe a foto do comprovante quando o WhatsApp abrir'
+                        : '✅ Confirme que está com o valor correto para pagamento'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -491,16 +657,21 @@ Guarde este comprovante para referência.
               <div className="security-note">
                 <Shield size={20} />
                 <p>
-                  <strong>Importante:</strong> Só envie o comprovante após o pagamento ser realizado. 
-                  Nunca compartilhe dados sensíveis.
+                  <strong>Importante:</strong> {paymentMethod === 'pix' 
+                    ? 'Só envie o comprovante após o pagamento ser realizado. Nunca compartilhe dados sensíveis.'
+                    : 'Só confirme o pagamento se estiver com o valor correto em mãos. Combine detalhes pelo WhatsApp.'}
                 </p>
               </div>
             </div>
           ) : (
             <div className="proof-form">
               <div className="form-header">
-                <h3>Enviar Comprovante</h3>
-                <p>Após realizar o pagamento PIX, clique no botão abaixo para enviar o comprovante</p>
+                <h3>{paymentMethod === 'pix' ? 'Enviar Comprovante' : 'Confirmar Pagamento'}</h3>
+                <p>
+                  {paymentMethod === 'pix' 
+                    ? 'Após realizar o pagamento PIX, clique no botão abaixo para enviar o comprovante'
+                    : 'Confirme que está com o valor correto em dinheiro para pagamento'}
+                </p>
               </div>
               
               {/* Detalhes do pedido */}
@@ -525,6 +696,19 @@ Guarde este comprovante para referência.
                       {deliveryOption === 'retirada' ? '🏫 Retirada na Escola' : '🚚 Entrega a Domicílio'}
                     </span>
                   </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Pagamento:</span>
+                    <span className="detail-value">
+                      {paymentMethod === 'pix' ? '💳 PIX' : '💵 Dinheiro'}
+                      {paymentMethod === 'dinheiro' && cashAmount && ` (R$ ${cashAmount.toFixed(2)})`}
+                    </span>
+                  </div>
+                  {paymentMethod === 'dinheiro' && cashChange > 0 && (
+                    <div className="detail-item">
+                      <span className="detail-label">Troco:</span>
+                      <span className="detail-value">R$ {cashChange.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -546,7 +730,7 @@ Guarde este comprovante para referência.
                         {deliveryAddress.reference && (
                           <p><strong>Referência:</strong> {deliveryAddress.reference}</p>
                         )}
-                        <p><strong>Cidade:</strong> São Paulo/SP</p>
+                        <p><strong>Cidade:</strong> Buritama/SP</p>
                       </>
                     ) : (
                       <p><strong>Endereço:</strong> Informado durante o pedido</p>
@@ -585,12 +769,40 @@ Guarde este comprovante para referência.
                 
                 <div className="message-bubble">
                   <div className="message-header">
-                    <strong>📋 ENVIAR COMPROVANTE PIX</strong>
+                    <strong>{paymentMethod === 'pix' ? '📋 ENVIAR COMPROVANTE PIX' : '💵 CONFIRMAR PAGAMENTO EM DINHEIRO'}</strong>
                   </div>
                   <div className="message-content">
                     <p><strong>🧾 PEDIDO:</strong> {currentOrder.id}</p>
                     <p><strong>👤 CLIENTE:</strong> {currentOrder.customer?.name || 'Não informado'}</p>
                     <p><strong>💰 VALOR PAGO:</strong> R$ {currentOrder.total?.toFixed(2) || '0.00'}</p>
+                    
+                    <div className="message-divider"></div>
+                    
+                    <p><strong>💳 INFORMAÇÕES DE PAGAMENTO</strong></p>
+                    
+                    {paymentMethod === 'pix' ? (
+                      <>
+                        <p><strong>🔑 FORMA DE PAGAMENTO:</strong> PIX</p>
+                        <p><strong>💰 VALOR:</strong> R$ {currentOrder.total?.toFixed(2) || '0.00'}</p>
+                        <p><strong>📱 CHAVE PIX:</strong> {vendorInfo?.pixKey || 'Será enviada após confirmação'}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p><strong>💵 FORMA DE PAGAMENTO:</strong> DINHEIRO</p>
+                        <p><strong>💰 VALOR A PAGAR:</strong> R$ {currentOrder.total?.toFixed(2) || '0.00'}</p>
+                        {cashAmount && (
+                          <>
+                            <p><strong>💸 VALOR INFORMADO:</strong> R$ {cashAmount.toFixed(2)}</p>
+                            {cashChange > 0 ? (
+                              <p><strong>🔄 TROCO NECESSÁRIO:</strong> R$ {cashChange.toFixed(2)}</p>
+                            ) : (
+                              <p><strong>✅ VALOR EXATO - SEM TROCO</strong></p>
+                            )}
+                          </>
+                        )}
+                        <p><strong>📝 OBS:</strong> Pagamento será realizado na {deliveryOption === 'retirada' ? 'retirada' : 'entrega'}</p>
+                      </>
+                    )}
                     
                     <div className="message-divider"></div>
                     
@@ -625,7 +837,7 @@ Guarde este comprovante para referência.
                             {deliveryAddress.reference && (
                               <p>• Referência: {deliveryAddress.reference}</p>
                             )}
-                            <p>• São Paulo/SP</p>
+                            <p>• Buritama/SP</p>
                           </>
                         ) : (
                           <p><strong>📍 ENDEREÇO:</strong> Informado durante o pedido</p>
@@ -659,12 +871,23 @@ Guarde este comprovante para referência.
                     
                     <div className="message-divider"></div>
                     
-                    <p><strong>📎 ANEXE A FOTO DO COMPROVANTE PIX</strong></p>
+                    {paymentMethod === 'pix' ? (
+                      <p><strong>📎 ANEXE A FOTO DO COMPROVANTE PIX</strong></p>
+                    ) : (
+                      <>
+                        <p><strong>💵 CONFIRMAÇÃO DE PAGAMENTO EM DINHEIRO</strong></p>
+                        <p>Por favor, confirme que está com o valor correto para {deliveryOption === 'retirada' ? 'retirada' : 'entrega'}</p>
+                      </>
+                    )}
                   </div>
                 </div>
                 
                 <div className="whatsapp-hint">
-                  <span>📎 Anexe a foto do comprovante quando o WhatsApp abrir</span>
+                  <span>
+                    {paymentMethod === 'pix' 
+                      ? '📎 Anexe a foto do comprovante quando o WhatsApp abrir'
+                      : '✅ Confirme que está com o valor correto para pagamento'}
+                  </span>
                 </div>
               </div>
               
@@ -691,19 +914,28 @@ Guarde este comprovante para referência.
                   ) : (
                     <>
                       <span className="whatsapp-btn-icon">💬</span>
-                      Abrir WhatsApp e Enviar
+                      {paymentMethod === 'pix' ? 'Abrir WhatsApp e Enviar' : 'Confirmar Pagamento'}
                     </>
                   )}
                 </button>
               </div>
               
               <div className="instructions">
-                <h4>📝 Como enviar:</h4>
+                <h4>📝 Como proceder:</h4>
                 <ol>
-                  <li>Clique em "Abrir WhatsApp e Enviar"</li>
+                  <li>Clique em "{paymentMethod === 'pix' ? 'Abrir WhatsApp e Enviar' : 'Confirmar Pagamento'}"</li>
                   <li>O WhatsApp abrirá com a mensagem pronta</li>
-                  <li><strong>Anexe a foto do comprovante PIX</strong></li>
-                  <li>Envie a mensagem com o comprovante</li>
+                  {paymentMethod === 'pix' ? (
+                    <>
+                      <li><strong>Anexe a foto do comprovante PIX</strong></li>
+                      <li>Envie a mensagem com o comprovante</li>
+                    </>
+                  ) : (
+                    <>
+                      <li><strong>Confirme que está com o valor correto</strong></li>
+                      <li>Combine detalhes da {deliveryOption === 'retirada' ? 'retirada' : 'entrega'}</li>
+                    </>
+                  )}
                   <li>Aguarde nossa confirmação</li>
                 </ol>
               </div>
@@ -726,13 +958,26 @@ Guarde este comprovante para referência.
           <div className="important-info">
             <h4>📌 Informações Importantes:</h4>
             <ul>
-              <li><strong>Envio obrigatório:</strong> É necessário enviar o comprovante pelo WhatsApp</li>
-              <li><strong>Tempo de confirmação:</strong> 1-2 horas úteis após envio do comprovante</li>
-              <li><strong>Validação:</strong> Seu pedido será processado apenas após confirmação do pagamento</li>
+              {paymentMethod === 'pix' ? (
+                <>
+                  <li><strong>Envio obrigatório:</strong> É necessário enviar o comprovante pelo WhatsApp</li>
+                  <li><strong>Tempo de confirmação:</strong> 1-2 horas úteis após envio do comprovante</li>
+                  <li><strong>Validação:</strong> Seu pedido será processado apenas após confirmação do pagamento</li>
+                </>
+              ) : (
+                <>
+                  <li><strong>Confirmação necessária:</strong> É necessário confirmar o pagamento via WhatsApp</li>
+                  <li><strong>Pagamento no ato:</strong> O pagamento será realizado na {deliveryOption === 'retirada' ? 'retirada' : 'entrega'}</li>
+                  <li><strong>Prepare o valor:</strong> Tenha o valor correto em mãos {cashChange > 0 && 'com troco se necessário'}</li>
+                </>
+              )}
               <li><strong>Taxa de entrega:</strong> R$ 3,00 para entregas a domicílio (já incluída no valor)</li>
               <li><strong>Prazo de entrega:</strong> Pedidos devem ser feitos com 1 dia de antecedência</li>
               <li><strong>Entrega domicílio:</strong> Realizada no dia seguinte ao pagamento confirmado</li>
               <li><strong>Comprovante:</strong> Mantenha o comprovante até a entrega/retirada do pedido</li>
+              {paymentMethod === 'dinheiro' && cashChange > 0 && (
+                <li><strong>Troco:</strong> O vendedor precisará ter R$ {cashChange.toFixed(2)} de troco</li>
+              )}
             </ul>
           </div>
         </div>
@@ -1156,6 +1401,270 @@ Guarde este comprovante para referência.
 
         .detail strong {
           color: #2D3047;
+        }
+
+        /* Pagamento em Dinheiro */
+        .cash-payment-section {
+          background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+          border-radius: 16px;
+          padding: 24px;
+          margin-bottom: 24px;
+          border: 2px solid #BAE6FD;
+          animation: fadeIn 0.5s ease;
+        }
+
+        .cash-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+
+        .cash-header h3 {
+          font-size: 20px;
+          font-weight: 700;
+          color: #0369A1;
+          margin: 0;
+        }
+
+        .cash-details-container {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .cash-detail-card {
+          background: white;
+          border-radius: 12px;
+          padding: 20px;
+          border: 1px solid #BAE6FD;
+          box-shadow: 0 4px 12px rgba(2, 132, 199, 0.1);
+        }
+
+        .cash-detail-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 20px;
+          padding-bottom: 16px;
+          border-bottom: 2px solid #F0F9FF;
+        }
+
+        .cash-detail-header h4 {
+          font-size: 18px;
+          color: #0369A1;
+          margin: 0;
+          font-weight: 700;
+        }
+
+        .cash-detail-content {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .cash-detail-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px;
+          background: #F8FAFC;
+          border-radius: 10px;
+          border: 1px solid #E2E8F0;
+          transition: all 0.3s ease;
+        }
+
+        .cash-detail-item:hover {
+          background: #F1F5F9;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .cash-detail-item.change {
+          background: linear-gradient(135deg, rgba(147, 51, 234, 0.05), rgba(147, 51, 234, 0.02));
+          border-color: #9333EA;
+        }
+
+        .cash-detail-label {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-weight: 600;
+          color: #0369A1;
+        }
+
+        .cash-detail-value {
+          font-weight: 700;
+          font-size: 18px;
+          color: #1A1C2E;
+        }
+
+        .cash-detail-value.total {
+          color: #FFD166;
+          font-size: 20px;
+        }
+
+        .cash-detail-value.given {
+          color: #10B981;
+        }
+
+        .cash-detail-value.change {
+          color: #9333EA;
+          background: rgba(147, 51, 234, 0.1);
+          padding: 8px 16px;
+          border-radius: 8px;
+          font-size: 16px;
+          border: 1px solid rgba(147, 51, 234, 0.2);
+        }
+
+        .cash-instruction-box {
+          display: flex;
+          gap: 16px;
+          padding: 20px;
+          background: linear-gradient(135deg, rgba(255, 209, 102, 0.1), rgba(255, 209, 102, 0.05));
+          border-radius: 12px;
+          border: 1px solid #FFD166;
+          margin-top: 16px;
+          align-items: flex-start;
+        }
+
+        .instruction-icon {
+          font-size: 32px;
+          flex-shrink: 0;
+        }
+
+        .instruction-text {
+          flex: 1;
+        }
+
+        .instruction-text strong {
+          color: #92400E;
+          font-size: 16px;
+          display: block;
+          margin-bottom: 8px;
+        }
+
+        .instruction-text p {
+          color: #92400E;
+          margin: 0 0 8px 0;
+          font-size: 14px;
+          line-height: 1.4;
+        }
+
+        .change-instruction {
+          background: rgba(16, 185, 129, 0.1);
+          padding: 8px 12px;
+          border-radius: 6px;
+          border-left: 3px solid #10B981;
+          margin-top: 8px !important;
+          color: #047857 !important;
+          font-weight: 600;
+        }
+
+        .cash-no-amount-info {
+          display: flex;
+          gap: 16px;
+          padding: 20px;
+          background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05));
+          border-radius: 12px;
+          border: 1px solid #FBBF24;
+          margin-top: 16px;
+          align-items: flex-start;
+        }
+
+        .no-amount-icon {
+          font-size: 32px;
+          flex-shrink: 0;
+        }
+
+        .no-amount-text {
+          flex: 1;
+        }
+
+        .no-amount-text p {
+          color: #92400E;
+          margin: 0 0 8px 0;
+          font-size: 14px;
+          line-height: 1.4;
+        }
+
+        .no-amount-text strong {
+          color: #92400E;
+        }
+
+        .cash-instructions {
+          background: white;
+          border-radius: 12px;
+          padding: 20px;
+          border: 1px solid #BAE6FD;
+        }
+
+        .instructions-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .instructions-header h4 {
+          color: #0369A1;
+          margin: 0;
+          font-size: 16px;
+          font-weight: 700;
+        }
+
+        .instructions-list {
+          list-style: none;
+          padding: 0;
+          margin: 0 0 20px 0;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .instructions-list li {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          color: #0369A1;
+          font-size: 14px;
+          line-height: 1.4;
+        }
+
+        .instructions-list li:before {
+          content: "•";
+          color: #FFD166;
+          font-weight: bold;
+          font-size: 18px;
+          flex-shrink: 0;
+          margin-top: -2px;
+        }
+
+        .cash-warning {
+          display: flex;
+          gap: 12px;
+          padding: 16px;
+          background: rgba(245, 158, 11, 0.1);
+          border-radius: 10px;
+          border: 1px solid #F59E0B;
+          align-items: flex-start;
+        }
+
+        .cash-warning .warning-icon {
+          font-size: 20px;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .cash-warning .warning-text {
+          flex: 1;
+          font-size: 14px;
+          color: #92400E;
+          line-height: 1.4;
+        }
+
+        .cash-warning .warning-text strong {
+          color: #D97706;
         }
 
         /* Comprovante Section */
@@ -1729,6 +2238,7 @@ Guarde este comprovante para referência.
           }
           
           .pix-section,
+          .cash-payment-section,
           .proof-section,
           .proof-form,
           .important-info {
@@ -1753,6 +2263,30 @@ Guarde este comprovante para referência.
           
           .btn {
             width: 100%;
+          }
+          
+          .cash-detail-item {
+            padding: 12px;
+          }
+          
+          .cash-detail-value {
+            font-size: 16px;
+          }
+          
+          .cash-detail-value.total {
+            font-size: 18px;
+          }
+        }
+
+        /* Animações */
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
         }
       `}</style>
