@@ -354,7 +354,7 @@ export const CartProvider = ({ children }) => {
     };
     
     checkCartItems();
-  }, []); // Executar apenas uma vez ao carregar
+  }, [canAddToCart, cart]); // CORREÇÃO: Adicionar as dependências necessárias
 
   return (
     <CartContext.Provider value={{

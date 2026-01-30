@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Heart, Share2, Package, Info, Zap, Clock, AlertCircle, Lock } from 'lucide-react';
+import { ShoppingBag, Heart, Share2, Package, Info, Zap, AlertCircle, Lock } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 
 const ProductCard = ({ product, index }) => {
