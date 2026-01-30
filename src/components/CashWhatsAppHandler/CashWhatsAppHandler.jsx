@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, ArrowLeft, CheckCircle, ExternalLink, Clock, Home, School, Truck, CreditCard, Wallet } from 'lucide-react';
+import { MessageCircle, ArrowLeft, CheckCircle, ExternalLink, Clock } from 'lucide-react';
 
 const CashWhatsAppHandler = ({ orderData, vendorWhatsApp = '5518996349330', onClose }) => {
   const [status, setStatus] = useState('preparing');
