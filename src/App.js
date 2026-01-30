@@ -33,22 +33,27 @@ function App() {
 
   // Verificar atualizações do Service Worker
   useEffect(() => {
-    let registration = null;
-    
+    // Verificar se há atualização pendente no localStorage
+    const updatePending = localStorage.getItem('appUpdatePending');
+    if (updatePending === 'true') {
+      setUpdateAvailable(true);
+    }
+
     const setupServiceWorker = async () => {
       if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
         try {
           // Aguarda o service worker estar pronto
-          registration = await navigator.serviceWorker.ready;
+          const registration = await navigator.serviceWorker.ready;
           
           // Verificar se há um service worker esperando
           if (registration.waiting) {
             setWaitingWorker(registration.waiting);
             setUpdateAvailable(true);
+            localStorage.setItem('appUpdatePending', 'true');
           }
 
           // Ouvir quando um novo service worker estiver instalado
-          registration.addEventListener('updatefound', () => {
+          const onUpdateFound = () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
@@ -57,22 +62,43 @@ function App() {
                   if (navigator.serviceWorker.controller) {
                     setWaitingWorker(newWorker);
                     setUpdateAvailable(true);
+                    localStorage.setItem('appUpdatePending', 'true');
+                    
+                    // Mostrar notificação após 3 segundos
+                    setTimeout(() => {
+                      if (!updateAvailable) {
+                        setUpdateAvailable(true);
+                      }
+                    }, 3000);
                   }
                 }
               });
             }
-          });
+          };
+          
+          registration.addEventListener('updatefound', onUpdateFound);
+          
+          // Verificar atualizações periodicamente (a cada 2 horas)
+          const updateInterval = setInterval(() => {
+            registration.update();
+          }, 2 * 60 * 60 * 1000);
+          
+          return () => {
+            registration.removeEventListener('updatefound', onUpdateFound);
+            clearInterval(updateInterval);
+          };
           
         } catch (error) {
-          console.error('Erro ao configurar Service Worker:', error);
+          console.error('Erro no Service Worker:', error);
         }
       }
     };
 
-    setupServiceWorker();
+    const cleanup = setupServiceWorker();
 
     // Ouvir mudanças de controller (quando um novo service worker assume)
     const onControllerChange = () => {
+      localStorage.removeItem('appUpdatePending');
       window.location.reload();
     };
     
@@ -80,13 +106,26 @@ function App() {
       navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
     }
 
+    // Verificar atualizações quando a janela ganha foco (usuário voltou ao app)
+    const onFocus = () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.update();
+        });
+      }
+    };
+    
+    window.addEventListener('focus', onFocus);
+
     // Limpar event listeners
     return () => {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
       }
+      window.removeEventListener('focus', onFocus);
+      if (cleanup) cleanup.then(fn => fn && fn());
     };
-  }, []);
+  }, [updateAvailable]);
 
   // Função para atualizar o app
   const handleUpdate = () => {
@@ -94,9 +133,17 @@ function App() {
       // Envia mensagem para pular a espera
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
       setUpdateAvailable(false);
+      localStorage.removeItem('appUpdatePending');
       
-      // Não recarrega imediatamente - o event listener de controllerchange vai cuidar disso
+      // O event listener de controllerchange vai recarregar automaticamente
     }
+  };
+
+  // Função para adiar a atualização
+  const handleDismiss = () => {
+    setUpdateAvailable(false);
+    // Mantém no localStorage para mostrar depois
+    localStorage.setItem('appUpdatePending', 'true');
   };
 
   return (
@@ -124,7 +171,7 @@ function App() {
           {updateAvailable && (
             <UpdateNotification 
               onUpdate={handleUpdate}
-              onDismiss={() => setUpdateAvailable(false)}
+              onDismiss={handleDismiss}
             />
           )}
           
@@ -149,6 +196,23 @@ function App() {
               },
             }}
           />
+          
+          {/* Versão do app (opcional, para debug) */}
+          {process.env.NODE_ENV === 'development' && (
+            <div style={{
+              position: 'fixed',
+              bottom: 10,
+              left: 10,
+              background: 'rgba(0,0,0,0.7)',
+              color: 'white',
+              padding: '5px 10px',
+              borderRadius: '5px',
+              fontSize: '12px',
+              zIndex: 1000
+            }}>
+              v{process.env.REACT_APP_VERSION || '1.0.0'}
+            </div>
+          )}
         </div>
       </Router>
     </CartProvider>
