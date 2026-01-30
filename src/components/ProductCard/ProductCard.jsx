@@ -11,12 +11,21 @@ const ProductCard = ({ product, index }) => {
   // VERIFICA SE O PRODUTO É UMA RIFA
   const isRaffle = product.category === 'rifas';
   
-  // VERIFICA SE ESTÁ DISPONÍVEL
-  // Se não for rifa OU se tiver available === false, OU se tiver isUnavailable === true, então está indisponível
-  const isUnavailable = !isRaffle || product.available === false || product.stock === 0 || product.isUnavailable === true;
+  // PRODUTO ESTÁ INDISPONÍVEL SE:
+  // 1. Não for rifa
+  // 2. Ou se tiver available === false
+  // 3. Ou se tiver stock === 0
+  // 4. Ou se tiver isUnavailable === true
+  const isUnavailable = !isRaffle || 
+                       product.available === false || 
+                       product.stock === 0 || 
+                       product.isUnavailable === true;
+
+  // VERIFICA SE ESTÁ REALMENTE DISPONÍVEL
+  const isAvailable = !isUnavailable && product.stock > 0;
 
   const handleLikeClick = () => {
-    if (!isUnavailable) {
+    if (isAvailable) {
       setIsLiked(!isLiked);
     }
   };
@@ -36,9 +45,11 @@ const ProductCard = ({ product, index }) => {
 
   const handleAddToCart = () => {
     // SE ESTIVER INDISPONÍVEL, NÃO FAZ NADA
-    if (isUnavailable) {
-      // Pode mostrar um toast ou mensagem
-      console.log('Produto indisponível para compra');
+    if (isUnavailable || !isAvailable) {
+      // Mostra mensagem no console e alerta visual
+      console.log('Produto indisponível para compra:', product.name);
+      
+      // Pode adicionar um toast ou mensagem flutuante aqui
       return;
     }
     
@@ -52,11 +63,11 @@ const ProductCard = ({ product, index }) => {
 
   const getCategoryColor = (category) => {
     const colors = {
-      'doces': '#FF9AA2',
-      'salgados': '#A0CED9',
-      'bebidas': '#4ECDC4',
+      'doces': '#FF6B6B',
+      'salgados': '#4ECDC4',
+      'bebidas': '#118AB2',
       'rifas': '#FFD166',
-      'combos': '#B5EAD7',
+      'combos': '#06D6A0',
       'default': '#E2F0CB'
     };
     return colors[category] || colors.default;
@@ -78,13 +89,18 @@ const ProductCard = ({ product, index }) => {
         animationDelay: `${index * 0.1}s`
       }}
     >
-      {/* BADGE DO PRODUTO - Mostra badge de indisponível se estiver indisponível */}
+      {/* BADGE DO PRODUTO */}
       {badge && (
         <div className={`product-badge badge-${badge}`}>
           {isUnavailable ? (
             <>
               <Lock size={12} />
               <span>INDISPONÍVEL</span>
+            </>
+          ) : badge === 'limited' ? (
+            <>
+              🎟️
+              <span>RIFA DISPONÍVEL</span>
             </>
           ) : badge === 'novidade' ? (
             <>
@@ -95,11 +111,6 @@ const ProductCard = ({ product, index }) => {
             <>
               🔥
               <span>Mais Vendido!</span>
-            </>
-          ) : badge === 'limited' ? (
-            <>
-              ⭐
-              <span>Edição Limitada!</span>
             </>
           ) : null}
         </div>
@@ -114,14 +125,15 @@ const ProductCard = ({ product, index }) => {
           {isUnavailable && (
             <div className="unavailable-overlay">
               <div className="overlay-content">
-                <Clock size={32} />
-                <span className="overlay-text">Disponível em breve</span>
+                <Lock size={32} />
+                <span className="overlay-text">DISPONÍVEL EM BREVE</span>
+                <small className="overlay-subtext">Apenas rifas disponíveis</small>
               </div>
             </div>
           )}
         </div>
         
-        {/* Ações rápidas - Desabilitadas para indisponíveis */}
+        {/* Ações rápidas */}
         <div className="product-actions">
           <button 
             className={`action-btn ${isLiked ? 'liked' : ''} ${isUnavailable ? 'disabled' : ''}`}
@@ -133,7 +145,7 @@ const ProductCard = ({ product, index }) => {
           </button>
           
           <button 
-            className={`action-btn ${isAnimating ? 'animating' : ''}`}
+            className={`action-btn ${isAnimating ? 'animating' : ''} ${isUnavailable ? 'disabled' : ''}`}
             onClick={handleShareClick}
             aria-label="Compartilhar produto"
             disabled={isUnavailable}
@@ -152,7 +164,7 @@ const ProductCard = ({ product, index }) => {
           }}
         >
           {product.category}
-          {isUnavailable && " (Indisponível)"}
+          {isUnavailable && " (INDISPONÍVEL)"}
         </div>
       </div>
 
@@ -161,8 +173,8 @@ const ProductCard = ({ product, index }) => {
         <div className="product-header">
           <h3 className="product-title">{product.name}</h3>
           <p className="product-description">
-            {isUnavailable && !product.description.includes('INDISPONÍVEL') ? 
-              `${product.description} 🔒 INDISPONÍVEL` : 
+            {isUnavailable ? 
+              `${product.description} 🔒 PRODUTO INDISPONÍVEL - Apenas a Rifa da Formatura está disponível no momento.` : 
               product.description}
           </p>
         </div>
@@ -171,8 +183,11 @@ const ProductCard = ({ product, index }) => {
         {product.tags && product.tags.length > 0 && (
           <div className="product-tags">
             {product.tags.map((tag, idx) => (
-              <span key={idx} className={`tag ${tag === 'indisponível' ? 'tag-unavailable' : ''}`}>
-                {tag === 'indisponível' ? '🔒 ' : ''}{tag}
+              <span 
+                key={idx} 
+                className={`tag ${tag === 'indisponível' || tag === 'disponível' ? `tag-${tag}` : ''}`}
+              >
+                {tag === 'indisponível' ? '🔒 ' : tag === 'disponível' ? '✅ ' : ''}{tag}
               </span>
             ))}
           </div>
@@ -182,10 +197,12 @@ const ProductCard = ({ product, index }) => {
         <div className="product-details">
           <div className="detail">
             <Package size={14} />
-            <span>Estoque: {isUnavailable ? '0' : (product.stock || 0)}</span>
+            <span className={isUnavailable ? 'detail-unavailable' : ''}>
+              Estoque: {isUnavailable ? '0 (INDISPONÍVEL)' : `${product.stock} disponíveis`}
+            </span>
           </div>
           
-          {product.deliveryTime && !isUnavailable && (
+          {product.deliveryTime && isAvailable && (
             <div className="detail">
               <Zap size={14} />
               <span>Entrega: {product.deliveryTime}</span>
@@ -195,7 +212,7 @@ const ProductCard = ({ product, index }) => {
           {isUnavailable && (
             <div className="detail unavailable-detail">
               <AlertCircle size={14} />
-              <span>Produto indisponível</span>
+              <span>PRODUTO INDISPONÍVEL</span>
             </div>
           )}
         </div>
@@ -207,20 +224,20 @@ const ProductCard = ({ product, index }) => {
               <span className={`product-price ${isUnavailable ? 'price-unavailable' : ''}`}>
                 R$ {product.price.toFixed(2)}
               </span>
-              {product.originalPrice && !isUnavailable && (
+              {product.originalPrice && isAvailable && (
                 <span className="original-price">R$ {product.originalPrice.toFixed(2)}</span>
               )}
             </div>
-            {product.discount && !isUnavailable && (
+            {product.discount && isAvailable && (
               <span className="discount-badge">-{product.discount}%</span>
             )}
           </div>
 
           <button 
-            className={`add-to-cart-btn ${isAdded ? 'added' : ''} ${isUnavailable ? 'unavailable-btn' : ''} ${product.stock === 0 && !isUnavailable ? 'out-of-stock' : ''}`}
+            className={`add-to-cart-btn ${isAdded ? 'added' : ''} ${isUnavailable ? 'unavailable-btn' : ''} ${!isAvailable ? 'disabled-btn' : ''}`}
             onClick={handleAddToCart}
-            disabled={isUnavailable || product.stock === 0}
-            aria-label={isUnavailable ? 'Produto indisponível' : product.stock === 0 ? 'Produto esgotado' : 'Adicionar ao carrinho'}
+            disabled={isUnavailable || !isAvailable}
+            aria-label={isUnavailable ? 'Produto indisponível' : !isAvailable ? 'Produto esgotado' : 'Adicionar ao carrinho'}
           >
             {isUnavailable ? (
               <>
@@ -232,7 +249,7 @@ const ProductCard = ({ product, index }) => {
                 <ShoppingBag size={18} />
                 <span>Adicionado!</span>
               </>
-            ) : product.stock === 0 ? (
+            ) : !isAvailable ? (
               <>
                 <span className="btn-icon">😔</span>
                 <span>Esgotado</span>
@@ -250,12 +267,12 @@ const ProductCard = ({ product, index }) => {
         {isUnavailable && !isRaffle && (
           <div className="unavailable-notice">
             <AlertCircle size={14} />
-            <span>Este produto está temporariamente indisponível. Apenas a Rifa da Formatura está disponível para compra no momento.</span>
+            <span><strong>ATENÇÃO:</strong> Este produto está temporariamente indisponível. Apenas a Rifa da Formatura 2026 está disponível para compra no momento.</span>
           </div>
         )}
 
         {/* Informações extras */}
-        {product.shippingInfo && !isUnavailable && (
+        {product.shippingInfo && isAvailable && (
           <div className="shipping-info">
             <Info size={14} />
             <span>{product.shippingInfo}</span>
@@ -280,10 +297,11 @@ const ProductCard = ({ product, index }) => {
         }
 
         .product-card.unavailable {
-          opacity: 0.85;
-          filter: grayscale(0.4);
-          border-color: #e0e0e0;
+          opacity: 0.8;
+          filter: grayscale(0.6);
+          border-color: #dee2e6;
           background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          cursor: not-allowed;
         }
 
         .product-card.unavailable:hover {
@@ -326,24 +344,16 @@ const ProductCard = ({ product, index }) => {
           color: var(--color-dark);
         }
 
-        .badge-novidade {
-          background: linear-gradient(135deg, #FFD700, #FFA500);
-        }
-
-        .badge-popular {
-          background: linear-gradient(135deg, #FF6B6B, #FF8E53);
-          color: white;
-        }
-
-        .badge-limited {
-          background: linear-gradient(135deg, #9D4EDD, #7B2CBF);
-          color: white;
-        }
-
         .badge-indisponível {
           background: linear-gradient(135deg, #6C757D, #495057);
           color: white;
           animation: pulseUnavailable 2s infinite;
+        }
+
+        .badge-limited {
+          background: linear-gradient(135deg, #FFD166, #FFB347);
+          color: var(--color-dark);
+          box-shadow: 0 2px 8px rgba(255, 209, 102, 0.4);
         }
 
         @keyframes pulseUnavailable {
@@ -358,7 +368,7 @@ const ProductCard = ({ product, index }) => {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.7);
+          background: rgba(108, 117, 125, 0.9);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -383,12 +393,18 @@ const ProductCard = ({ product, index }) => {
         }
 
         .overlay-text {
-          font-weight: 600;
+          font-weight: 800;
           font-size: 0.9rem;
-          background: rgba(255, 255, 255, 0.1);
-          padding: 5px 15px;
+          background: rgba(255, 255, 255, 0.15);
+          padding: 8px 20px;
           border-radius: 20px;
           backdrop-filter: blur(10px);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .overlay-subtext {
+          font-size: 0.8rem;
+          opacity: 0.9;
         }
 
         /* Ações desabilitadas */
@@ -410,35 +426,46 @@ const ProductCard = ({ product, index }) => {
           gap: 0.5rem;
           margin-top: var(--space-md);
           padding: 0.75rem;
-          background: linear-gradient(135deg, rgba(108, 117, 125, 0.1) 0%, rgba(73, 80, 87, 0.1) 100%);
+          background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
           border-radius: var(--radius-md);
           font-size: 0.75rem;
-          color: #495057;
+          color: #721c24;
           line-height: 1.4;
-          border-left: 3px solid #6c757d;
+          border-left: 3px solid #dc3545;
         }
 
         .unavailable-notice svg {
-          color: #6c757d;
+          color: #dc3545;
           flex-shrink: 0;
           margin-top: 2px;
         }
 
-        /* Tags com estilo especial para indisponível */
-        .tag-unavailable {
+        /* Tags */
+        .tag-indisponível {
           background: #6c757d !important;
           color: white !important;
           font-weight: 600;
         }
 
-        /* Detalhes para produtos indisponíveis */
-        .unavailable-detail {
-          color: #6c757d;
+        .tag-disponível {
+          background: #28a745 !important;
+          color: white !important;
           font-weight: 600;
         }
 
+        /* Detalhes para produtos indisponíveis */
+        .detail-unavailable {
+          color: #dc3545 !important;
+          font-weight: 600;
+        }
+
+        .unavailable-detail {
+          color: #dc3545;
+          font-weight: 700;
+        }
+
         .unavailable-detail svg {
-          color: #6c757d;
+          color: #dc3545;
         }
 
         /* Preço riscado para indisponíveis */
@@ -448,7 +475,26 @@ const ProductCard = ({ product, index }) => {
           opacity: 0.7;
         }
 
-        /* Imagem */
+        /* Botão de adicionar ao carrinho */
+        .add-to-cart-btn.unavailable-btn {
+          background: #6c757d;
+          color: white;
+          cursor: not-allowed;
+          animation: pulseGray 2s infinite;
+        }
+
+        .add-to-cart-btn.disabled-btn {
+          background: #cccccc;
+          color: #666;
+          cursor: not-allowed;
+        }
+
+        @keyframes pulseGray {
+          0%, 100% { opacity: 0.9; }
+          50% { opacity: 0.7; }
+        }
+
+        /* Resto do CSS permanece igual... */
         .product-image-container {
           position: relative;
           height: 200px;
@@ -474,7 +520,6 @@ const ProductCard = ({ product, index }) => {
 
         .product-emoji {
           font-size: 4rem;
-          animation: var(--float-animation);
           z-index: 2;
           position: relative;
         }
@@ -482,12 +527,7 @@ const ProductCard = ({ product, index }) => {
         .product-card.unavailable .product-emoji {
           animation: none;
           opacity: 0.5;
-          filter: grayscale(0.5);
-        }
-
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
+          filter: grayscale(0.7);
         }
 
         .product-actions {
@@ -560,7 +600,6 @@ const ProductCard = ({ product, index }) => {
           white-space: nowrap;
         }
 
-        /* Informações do produto */
         .product-info {
           padding: var(--space-lg);
           flex: 1;
@@ -593,7 +632,7 @@ const ProductCard = ({ product, index }) => {
 
         .product-card.unavailable .product-description {
           color: #6c757d;
-          opacity: 0.8;
+          opacity: 0.9;
         }
 
         .product-tags {
@@ -631,7 +670,6 @@ const ProductCard = ({ product, index }) => {
           opacity: 0.7;
         }
 
-        /* Rodapé do produto */
         .product-footer {
           margin-top: auto;
           padding-top: var(--space-md);
@@ -694,7 +732,7 @@ const ProductCard = ({ product, index }) => {
           justify-content: center;
         }
 
-        .add-to-cart-btn:hover:not(:disabled):not(.unavailable-btn) {
+        .add-to-cart-btn:hover:not(:disabled):not(.unavailable-btn):not(.disabled-btn) {
           background: var(--color-yellow-dark);
           transform: translateY(-2px);
           box-shadow: var(--shadow-md);
@@ -708,23 +746,6 @@ const ProductCard = ({ product, index }) => {
         .add-to-cart-btn.added {
           background: #4CAF50;
           color: white;
-        }
-
-        .add-to-cart-btn.out-of-stock {
-          background: #cccccc;
-          color: #666;
-        }
-
-        .add-to-cart-btn.unavailable-btn {
-          background: #6c757d;
-          color: white;
-          cursor: not-allowed;
-          animation: pulseGray 2s infinite;
-        }
-
-        @keyframes pulseGray {
-          0%, 100% { opacity: 0.9; }
-          50% { opacity: 0.7; }
         }
 
         .btn-icon {
@@ -771,7 +792,6 @@ const ProductCard = ({ product, index }) => {
           --transition-normal: 0.3s ease;
           --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
           --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-          --float-animation: float 3s ease-in-out infinite;
         }
 
         /* Responsivo */

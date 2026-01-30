@@ -20,7 +20,14 @@ export const CartProvider = ({ children }) => {
       if (savedCart) {
         const parsed = JSON.parse(savedCart);
         console.log('📦 Carrinho carregado do localStorage:', parsed.length, 'itens');
-        return Array.isArray(parsed) ? parsed : [];
+        // FILTRAR APENAS PRODUTOS DISPONÍVEIS (RIFAS)
+        const filteredCart = parsed.filter(item => 
+          item.category === 'rifas' && 
+          item.available !== false && 
+          item.stock > 0
+        );
+        console.log('✅ Carrinho filtrado (apenas disponíveis):', filteredCart.length, 'itens');
+        return Array.isArray(filteredCart) ? filteredCart : [];
       }
     } catch (error) {
       console.error('❌ Erro ao carregar carrinho:', error);
@@ -36,35 +43,100 @@ export const CartProvider = ({ children }) => {
   // 2. SALVAR no localStorage SEMPRE que o carrinho mudar
   useEffect(() => {
     try {
-      localStorage.setItem('terceirao_cart', JSON.stringify(cart));
+      // Garantir que apenas produtos disponíveis sejam salvos
+      const availableCart = cart.filter(item => 
+        item.category === 'rifas' && 
+        item.available !== false && 
+        item.stock > 0
+      );
+      
+      localStorage.setItem('terceirao_cart', JSON.stringify(availableCart));
       
       // Calcular total
-      const total = cart.reduce((sum, item) => {
+      const total = availableCart.reduce((sum, item) => {
         const price = Number(item.price) || 0;
         const quantity = Number(item.quantity) || 0;
         return sum + (price * quantity);
       }, 0);
       
       setCartTotal(total);
-      console.log('💾 Carrinho salvo no localStorage:', cart.length, 'itens');
+      console.log('💾 Carrinho salvo no localStorage (apenas disponíveis):', availableCart.length, 'itens');
     } catch (error) {
       console.error('❌ Erro ao salvar carrinho:', error);
     }
   }, [cart]); // Executa sempre que cart mudar
 
-  // 3. Funções do carrinho (usando useCallback para performance)
+  // 3. VERIFICAR SE PRODUTO PODE SER ADICIONADO AO CARRINHO
+  const canAddToCart = useCallback((product) => {
+    if (!product || !product.id) return false;
+    
+    // VERIFICA SE É UMA RIFA
+    const isRaffle = product.category === 'rifas';
+    
+    // VERIFICA SE ESTÁ DISPONÍVEL
+    // Produto está indisponível se:
+    // 1. Não for rifa
+    // 2. Ou se tiver available === false
+    // 3. Ou se tiver stock === 0
+    // 4. Ou se tiver isUnavailable === true
+    const isUnavailable = !isRaffle || 
+                         product.available === false || 
+                         product.stock === 0 || 
+                         product.isUnavailable === true;
+    
+    return !isUnavailable;
+  }, []);
+
+  // 4. Funções do carrinho (usando useCallback para performance)
   const addToCart = useCallback((product) => {
-    if (!product || !product.id) return;
+    if (!product || !product.id) return false;
+    
+    // VERIFICAR SE O PRODUTO PODE SER ADICIONADO
+    if (!canAddToCart(product)) {
+      console.error('🚫 Produto indisponível para adicionar ao carrinho:', {
+        name: product.name,
+        category: product.category,
+        available: product.available,
+        stock: product.stock,
+        isUnavailable: product.isUnavailable
+      });
+      
+      // Criar evento customizado para mostrar toast/notificação
+      const event = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: `"${product.name}" não está disponível para compra. Apenas a Rifa da Formatura está disponível no momento.`,
+          duration: 5000
+        }
+      });
+      window.dispatchEvent(event);
+      
+      return false;
+    }
     
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
       
       if (existingItem) {
+        // Verificar se excede o estoque (apenas para rifas)
+        const newQuantity = existingItem.quantity + 1;
+        if (product.category === 'rifas' && newQuantity > (product.stock || 0)) {
+          const event = new CustomEvent('showToast', {
+            detail: {
+              type: 'warning',
+              message: `Quantidade máxima disponível para "${product.name}" é ${product.stock}`,
+              duration: 3000
+            }
+          });
+          window.dispatchEvent(event);
+          return prevCart;
+        }
+        
         return prevCart.map(item =>
           item.id === product.id
             ? { 
                 ...item, 
-                quantity: item.quantity + 1,
+                quantity: newQuantity,
                 price: product.price // Garante que o preço está atualizado
               }
             : item
@@ -75,10 +147,25 @@ export const CartProvider = ({ children }) => {
         ...product, 
         quantity: 1,
         emoji: product.emoji || '📦',
-        description: product.description || ''
+        description: product.description || '',
+        // Garantir que tem as propriedades de disponibilidade
+        available: true,
+        isUnavailable: false
       }];
     });
-  }, []);
+    
+    // Mostrar notificação de sucesso
+    const event = new CustomEvent('showToast', {
+      detail: {
+        type: 'success',
+        message: `${product.emoji || '🎟️'} "${product.name}" adicionado ao carrinho!`,
+        duration: 2000
+      }
+    });
+    window.dispatchEvent(event);
+    
+    return true;
+  }, [canAddToCart]);
 
   const removeFromCart = useCallback((productId) => {
     setCart(prevCart => prevCart.filter(item => item.id !== productId));
@@ -91,11 +178,26 @@ export const CartProvider = ({ children }) => {
     }
     
     setCart(prevCart =>
-      prevCart.map(item =>
-        item.id === productId
-          ? { ...item, quantity: Math.max(1, quantity) }
-          : item
-      )
+      prevCart.map(item => {
+        if (item.id === productId) {
+          // Verificar estoque para rifas
+          const product = prevCart.find(p => p.id === productId);
+          if (product && product.category === 'rifas' && quantity > (product.stock || 0)) {
+            const event = new CustomEvent('showToast', {
+              detail: {
+                type: 'warning',
+                message: `Quantidade máxima disponível é ${product.stock}`,
+                duration: 3000
+              }
+            });
+            window.dispatchEvent(event);
+            return item; // Não altera a quantidade
+          }
+          
+          return { ...item, quantity: Math.max(1, quantity) };
+        }
+        return item;
+      })
     );
   }, [removeFromCart]);
 
@@ -126,6 +228,26 @@ export const CartProvider = ({ children }) => {
 
   const createOrder = useCallback((orderData) => {
     const { deliveryOption, deliveryAddress, ...customerInfo } = orderData;
+    
+    // Verificar se todos os itens do carrinho ainda estão disponíveis
+    const unavailableItems = cart.filter(item => !canAddToCart(item));
+    if (unavailableItems.length > 0) {
+      console.error('❌ Itens indisponíveis no carrinho:', unavailableItems);
+      
+      // Remover itens indisponíveis
+      setCart(prevCart => prevCart.filter(item => canAddToCart(item)));
+      
+      const event = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: `${unavailableItems.length} item(ns) foram removidos do carrinho por estarem indisponíveis.`,
+          duration: 5000
+        }
+      });
+      window.dispatchEvent(event);
+      
+      return null;
+    }
     
     const orderId = generateOrderId();
     const today = new Date();
@@ -160,7 +282,10 @@ export const CartProvider = ({ children }) => {
       deliveryAddress: deliveryOption === 'entrega' ? deliveryAddress : null,
       deliveryDate: deliveryDate,
       status: 'pending',
-      vendorInfo: VENDOR_INFO
+      vendorInfo: VENDOR_INFO,
+      // Informações de disponibilidade
+      containsOnlyAvailableItems: true,
+      containsOnlyRaffles: cart.every(item => item.category === 'rifas')
     };
     
     console.log('📋 Pedido criado:', order);
@@ -177,7 +302,7 @@ export const CartProvider = ({ children }) => {
     }
     
     return order;
-  }, [cart, generateOrderId]);
+  }, [cart, canAddToCart, generateOrderId]);
 
   // Funções de controle do modal
   const toggleCart = useCallback(() => {
@@ -205,29 +330,57 @@ export const CartProvider = ({ children }) => {
     setShowPayment(false);
   }, []);
 
+  // 5. Função para verificar itens do carrinho (executar ao carregar)
+  useEffect(() => {
+    // Verificar itens do carrinho ao carregar
+    const checkCartItems = () => {
+      const unavailableItems = cart.filter(item => !canAddToCart(item));
+      if (unavailableItems.length > 0) {
+        console.warn('⚠️ Itens indisponíveis no carrinho:', unavailableItems);
+        
+        // Remover itens indisponíveis
+        setCart(prevCart => prevCart.filter(item => canAddToCart(item)));
+        
+        // Mostrar notificação
+        const event = new CustomEvent('showToast', {
+          detail: {
+            type: 'warning',
+            message: `${unavailableItems.length} item(ns) foram removidos do carrinho por estarem indisponíveis.`,
+            duration: 5000
+          }
+        });
+        window.dispatchEvent(event);
+      }
+    };
+    
+    checkCartItems();
+  }, []); // Executar apenas uma vez ao carregar
+
   return (
-  <CartContext.Provider value={{
-    cart,
-    cartTotal,
-    isCartOpen,
-    showPayment,
-    currentOrder,
-    toggleCart,
-    openCart,
-    closeCart,
-    closePaymentOnly,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    getCartCount,
-    getCartTotal,
-    getTotalItems: getCartCount, // ADICIONE ESTA LINHA
-    createOrder,
-    setShowPayment,
-    vendorInfo: VENDOR_INFO
-  }}>
-    {children}
-  </CartContext.Provider>
-);
+    <CartContext.Provider value={{
+      cart,
+      cartTotal,
+      isCartOpen,
+      showPayment,
+      currentOrder,
+      toggleCart,
+      openCart,
+      closeCart,
+      closePaymentOnly,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      getCartCount,
+      getCartTotal,
+      getTotalItems: getCartCount,
+      createOrder,
+      setShowPayment,
+      vendorInfo: VENDOR_INFO,
+      // Nova função exposta
+      canAddToCart
+    }}>
+      {children}
+    </CartContext.Provider>
+  );
 };

@@ -11,26 +11,29 @@ const Products = () => {
   const [sortBy, setSortBy] = useState('default');
   const [showFilters, setShowFilters] = useState(false);
 
-  // FUNÇÃO SIMPLES PARA PROCESSAR OS PRODUTOS - AQUI É ONDE A MÁGICA ACONTECE!
+  // FUNÇÃO PARA PROCESSAR DISPONIBILIDADE DOS PRODUTOS
   const processProducts = (products) => {
     return products.map(product => {
-      // Se não for rifa, marca como INDISPONÍVEL
-      if (product.category !== 'rifas') {
+      const isRaffle = product.category === 'rifas';
+      
+      if (!isRaffle) {
         return {
           ...product,
-          available: false,       // Força indisponível
-          stock: 0,               // Estoque zero
-          // Adiciona mensagem clara
+          available: false,
+          stock: 0,
+          isUnavailable: true,
+          badge: 'indisponível',
           description: `${product.description} 🔒 INDISPONÍVEL - Apenas rifas estão disponíveis no momento`,
-          // Flag para UI
-          isUnavailable: true
+          tags: [...(product.tags || []), 'indisponível']
         };
       }
-      // Se for rifa, mantém disponível
+      
       return {
         ...product,
         available: true,
-        isRaffle: true
+        isRaffle: true,
+        isUnavailable: false,
+        tags: [...(product.tags || []), 'disponível']
       };
     });
   };
@@ -55,6 +58,13 @@ const Products = () => {
     if (a.category === 'rifas' && b.category !== 'rifas') return -1;
     if (b.category === 'rifas' && a.category !== 'rifas') return 1;
     
+    // Se ambos são rifas ou ambos não são rifas, usa a ordenação normal
+    if (a.category === 'rifas' && b.category === 'rifas') {
+      // Para rifas, ordena por disponibilidade primeiro
+      if (a.available && !b.available) return -1;
+      if (!a.available && b.available) return 1;
+    }
+    
     switch(sortBy) {
       case 'price-low':
         return a.price - b.price;
@@ -70,7 +80,7 @@ const Products = () => {
   });
 
   // Contar produtos disponíveis (apenas rifas)
-  const availableProductsCount = processedProducts.filter(p => p.category === 'rifas').length;
+  const availableProductsCount = processedProducts.filter(p => p.category === 'rifas' && p.available).length;
 
   // Contar produtos por categoria
   const categoryCounts = categories.reduce((acc, category) => {
@@ -82,10 +92,8 @@ const Products = () => {
     return acc;
   }, {});
 
-
-
-  // Mostrar contagem de indisponíveis
-  const unavailableCount = sortedProducts.filter(p => p.category !== 'rifas').length;
+  // Contar produtos indisponíveis
+  const unavailableCount = sortedProducts.filter(p => p.category !== 'rifas' || p.isUnavailable).length;
 
   return (
     <section className="products-section">
@@ -348,8 +356,8 @@ const Products = () => {
                     </span>
                   )}
                   <div className="availability-count">
-                    <span className="available-count">✅ {sortedProducts.filter(p => p.category === 'rifas').length} disponíveis</span>
-                    <span className="unavailable-count">❌ {sortedProducts.filter(p => p.category !== 'rifas').length} indisponíveis</span>
+                    <span className="available-count">✅ {sortedProducts.filter(p => p.category === 'rifas' && p.available).length} disponíveis</span>
+                    <span className="unavailable-count">❌ {sortedProducts.filter(p => p.category !== 'rifas' || p.isUnavailable).length} indisponíveis</span>
                   </div>
                 </div>
               </div>
@@ -413,7 +421,7 @@ const Products = () => {
               <div className={`products-container ${viewMode === 'grid' ? 'grid-view' : 'list-view'}`}>
                 {sortedProducts.map((product, index) => {
                   // Se for rifa, mostra normalmente
-                  if (product.category === 'rifas') {
+                  if (product.category === 'rifas' && product.available) {
                     return (
                       <RaffleProductCard 
                         key={product.id} 
@@ -422,7 +430,7 @@ const Products = () => {
                       />
                     );
                   } else {
-                    // Se não for rifa, passa com flag de indisponível
+                    // Se não for rifa ou estiver indisponível, passa com flag de indisponível
                     return (
                       <ProductCard 
                         key={product.id} 
@@ -609,17 +617,6 @@ const Products = () => {
           margin-bottom: var(--space-lg);
         }
 
-        /* Banner especial para rifas */
-        .raffle-featured-banner {
-          background: linear-gradient(135deg, #9d4edd 0%, #7b2cbf 100%);
-          border-radius: var(--radius-xl);
-          padding: var(--space-xl);
-          position: relative;
-          overflow: hidden;
-          color: var(--color-white);
-          margin-top: var(--space-lg);
-        }
-
         .banner-content {
           display: flex;
           align-items: center;
@@ -654,16 +651,6 @@ const Products = () => {
         .banner-text p {
           opacity: 0.9;
           font-size: clamp(0.875rem, 1.5vw, 1rem);
-        }
-
-        .banner-decoration {
-          position: absolute;
-          top: 0;
-          right: 0;
-          bottom: 0;
-          left: 0;
-          background: radial-gradient(circle at 80% 20%, rgba(255, 209, 102, 0.1) 0%, transparent 50%);
-          z-index: 1;
         }
 
         .catalog-content {
@@ -719,12 +706,6 @@ const Products = () => {
           gap: var(--space-sm);
         }
 
-        .notice-icon-sidebar {
-          color: #6c757d;
-          flex-shrink: 0;
-          margin-top: 2px;
-        }
-
         .notice-content-sidebar h4 {
           font-size: 0.875rem;
           font-weight: 600;
@@ -732,37 +713,71 @@ const Products = () => {
           margin-bottom: 0.25rem;
         }
 
-        .notice-content-sidebar p {
-          font-size: 0.75rem;
-          color: #6c757d;
-          line-height: 1.4;
-          margin: 0;
+        .availability-status {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          margin-top: 5px;
+        }
+
+        .status-item {
+          font-size: 0.85rem;
+          padding: 3px 8px;
+          border-radius: 4px;
+          display: inline-block;
+          font-weight: 600;
+        }
+
+        .status-item.available {
+          background: #d4edda;
+          color: #155724;
+        }
+
+        .status-item.unavailable {
+          background: #f8d7da;
+          color: #721c24;
         }
 
         /* Categorias indisponíveis */
-        .disabled-category {
-          opacity: 0.6;
+        .category-btn.disabled {
           cursor: not-allowed !important;
+          opacity: 0.6;
+          position: relative;
         }
 
-        .disabled-category:hover {
-          transform: none !important;
-          background: var(--color-light-gray) !important;
+        .category-btn.disabled:hover::after {
+          content: 'Indisponível';
+          position: absolute;
+          top: -30px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #333;
+          color: white;
+          padding: 5px 10px;
+          border-radius: 5px;
+          font-size: 0.8rem;
+          white-space: nowrap;
+          z-index: 100;
         }
 
-        .disabled-category.active {
-          opacity: 0.8;
+        .availability-badge {
+          font-size: 0.7rem;
+          padding: 2px 6px;
+          border-radius: 10px;
+          margin-left: 8px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
-        .unavailable-badge {
-          display: inline-block;
+        .availability-badge.available {
+          background: #28a745;
+          color: white;
+        }
+
+        .availability-badge.unavailable {
           background: #6c757d;
           color: white;
-          font-size: 0.625rem;
-          padding: 0.125rem 0.375rem;
-          border-radius: var(--radius-sm);
-          margin-left: 0.5rem;
-          vertical-align: middle;
         }
 
         /* Instruções para rifas na sidebar */
@@ -885,10 +900,6 @@ const Products = () => {
           background: var(--color-white);
         }
 
-        .search-input::placeholder {
-          color: #999;
-        }
-
         .categories-list {
           display: flex;
           flex-direction: column;
@@ -923,7 +934,11 @@ const Products = () => {
           z-index: 1;
         }
 
-        .category-btn:hover::before {
+        .category-btn:hover:not(.disabled)::before {
+          width: 4px;
+        }
+
+        .category-btn.active::before {
           width: 4px;
         }
 
@@ -931,10 +946,6 @@ const Products = () => {
           background: var(--color-white);
           border: 2px solid var(--category-color, #6C757D);
           transform: translateX(5px);
-        }
-
-        .category-btn.active::before {
-          width: 4px;
         }
 
         .category-emoji {
@@ -1001,54 +1012,6 @@ const Products = () => {
           font-weight: 600;
         }
 
-        .featured-list {
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-        }
-
-        .featured-item {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          padding: 0.75rem;
-          background: var(--color-light-gray);
-          border-radius: var(--radius-md);
-          transition: all var(--transition-normal);
-          cursor: pointer;
-        }
-
-        .featured-item:hover {
-          transform: translateX(3px);
-          background: var(--color-white);
-          box-shadow: var(--shadow-sm);
-        }
-
-        .featured-emoji {
-          font-size: 1.5rem;
-          flex-shrink: 0;
-        }
-
-        .featured-info {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .featured-info h4 {
-          font-size: 0.875rem;
-          color: var(--color-dark);
-          margin-bottom: 0.125rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .featured-price {
-          font-size: 0.875rem;
-          color: var(--color-yellow);
-          font-weight: 700;
-        }
-
         .catalog-main {
           display: flex;
           flex-direction: column;
@@ -1113,14 +1076,35 @@ const Products = () => {
           color: #666;
         }
 
-        .availability-hint {
-          font-size: 0.75rem;
-          color: #ff9800;
-          font-weight: 500;
+        .unavailable-tag {
+          color: #dc3545;
+          font-weight: 700;
+          margin-left: 5px;
+          font-size: 0.9rem;
+        }
+
+        .availability-count {
           display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          margin-top: 0.25rem;
+          gap: 15px;
+          margin-top: 5px;
+          flex-wrap: wrap;
+        }
+
+        .available-count, .unavailable-count {
+          font-size: 0.85rem;
+          padding: 3px 8px;
+          border-radius: 12px;
+          font-weight: 600;
+        }
+
+        .available-count {
+          background: rgba(40, 167, 69, 0.1);
+          color: #28a745;
+        }
+
+        .unavailable-count {
+          background: rgba(108, 117, 125, 0.1);
+          color: #6c757d;
         }
 
         .controls-right {
@@ -1198,52 +1182,43 @@ const Products = () => {
         }
 
         /* Aviso de categoria indisponível */
-        .category-unavailable-notice {
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          border-radius: var(--radius-lg);
-          padding: var(--space-lg);
-          border: 2px solid #dee2e6;
-          animation: slideIn 0.5s var(--ease-smooth);
+        .category-unavailable-alert {
+          background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+          border: 2px solid #f5c6cb;
+          border-radius: 15px;
+          padding: 20px;
+          margin-bottom: 25px;
+          text-align: center;
         }
 
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .notice-content {
+        .alert-content {
           display: flex;
+          flex-direction: column;
           align-items: center;
-          gap: var(--space-md);
+          gap: 15px;
         }
 
-        .notice-icon {
-          font-size: 2rem;
-          flex-shrink: 0;
+        .alert-icon {
+          font-size: 3rem;
+          animation: shake 0.5s;
         }
 
-        .notice-text h4 {
-          color: #495057;
-          margin-bottom: 0.5rem;
-          font-size: 1.125rem;
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-10px); }
+          75% { transform: translateX(10px); }
         }
 
-        .notice-text p {
-          color: #6c757d;
-          font-size: 0.875rem;
-          line-height: 1.5;
-          margin-bottom: var(--space-md);
+        .alert-text h4 {
+          color: #721c24;
+          margin-bottom: 10px;
+          font-size: 1.3rem;
         }
 
-        .btn-sm {
-          padding: 0.5rem 1rem;
-          font-size: 0.875rem;
+        .alert-text p {
+          color: #721c24;
+          margin-bottom: 15px;
+          font-size: 1rem;
         }
 
         .products-container {
@@ -1283,11 +1258,6 @@ const Products = () => {
           
           .sort-dropdown {
             min-width: 100%;
-          }
-          
-          .notice-content {
-            flex-direction: column;
-            text-align: center;
           }
         }
 
@@ -1356,672 +1326,16 @@ const Products = () => {
           color: var(--color-white);
         }
 
+        .btn-small {
+          padding: 6px 15px;
+          font-size: 0.9rem;
+        }
+
         .w-full {
           width: 100%;
         }
 
-        /* Aviso geral sobre disponibilidade */
-        .general-availability-notice {
-          background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-          border-radius: var(--radius-xl);
-          padding: var(--space-xl);
-          border: 2px solid #2196f3;
-          margin-top: var(--space-xl);
-        }
-
-        .notice-title {
-          text-align: center;
-          font-size: clamp(1.25rem, 2.5vw, 1.5rem);
-          color: #1565c0;
-          margin-bottom: var(--space-xl);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: var(--space-sm);
-        }
-
-        .notice-content-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: var(--space-lg);
-        }
-
-        .notice-item {
-          display: flex;
-          align-items: flex-start;
-          gap: var(--space-md);
-          padding: var(--space-lg);
-          background: rgba(255, 255, 255, 0.9);
-          border-radius: var(--radius-lg);
-          transition: all var(--transition-normal);
-        }
-
-        .notice-item:hover {
-          transform: translateY(-5px);
-          box-shadow: var(--shadow-sm);
-        }
-
-        .notice-item-icon {
-          font-size: 1.5rem;
-          flex-shrink: 0;
-        }
-
-        .notice-item-content h4 {
-          color: #1565c0;
-          margin-bottom: 0.5rem;
-          font-size: 1.125rem;
-        }
-
-        .notice-item-content p {
-          color: #1976d2;
-          font-size: 0.875rem;
-          line-height: 1.5;
-        }
-
-        /* Seção de informações das rifas */
-        .raffle-info-section {
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          border-radius: var(--radius-xl);
-          padding: var(--space-xl);
-          margin-top: var(--space-xl);
-          border: 2px solid var(--color-yellow);
-        }
-
-        .raffle-info-title {
-          text-align: center;
-          font-size: clamp(1.5rem, 3vw, 1.75rem);
-          color: var(--color-dark);
-          margin-bottom: var(--space-xl);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: var(--space-sm);
-        }
-
-        .raffle-info-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: var(--space-lg);
-        }
-
-        .info-card {
-          display: flex;
-          align-items: flex-start;
-          gap: var(--space-md);
-          padding: var(--space-lg);
-          background: white;
-          border-radius: var(--radius-lg);
-          transition: all var(--transition-normal);
-        }
-
-        .info-card:hover {
-          transform: translateY(-5px);
-          box-shadow: var(--shadow-md);
-        }
-
-        .info-icon {
-          font-size: 2rem;
-          flex-shrink: 0;
-        }
-
-        .info-content h4 {
-          color: var(--color-dark);
-          margin-bottom: 0.5rem;
-          font-size: 1.125rem;
-        }
-
-        .info-content p {
-          color: #666;
-          font-size: 0.875rem;
-          line-height: 1.5;
-        }
-
-        /* Informações de compra */
-        .purchase-guide {
-          background: var(--color-white);
-          border-radius: var(--radius-xl);
-          padding: var(--space-xl);
-          box-shadow: var(--shadow-md);
-          margin-top: var(--space-xl);
-        }
-
-        .guide-title {
-          text-align: center;
-          font-size: clamp(1.5rem, 3vw, 1.75rem);
-          color: var(--color-dark);
-          margin-bottom: var(--space-xl);
-        }
-
-        .guide-steps {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: var(--space-lg);
-        }
-
-        .step {
-          display: flex;
-          gap: var(--space-md);
-          padding: var(--space-lg);
-          background: var(--color-light-gray);
-          border-radius: var(--radius-lg);
-          transition: all var(--transition-normal);
-        }
-
-        .step:hover {
-          transform: translateY(-5px);
-          background: var(--color-white);
-          box-shadow: var(--shadow-md);
-        }
-
-        .step-number {
-          width: 40px;
-          height: 40px;
-          background: var(--gradient-primary);
-          color: var(--color-dark);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 800;
-          font-size: 1.25rem;
-          flex-shrink: 0;
-        }
-
-        .step-content h4 {
-          color: var(--color-dark);
-          margin-bottom: 0.5rem;
-          font-size: 1.125rem;
-        }
-
-        .step-content p {
-          color: #666;
-          font-size: 0.875rem;
-          line-height: 1.5;
-        }
-
-        /* Animações */
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Variables fallback */
-        :global(*) {
-          --space-xs: 0.5rem;
-          --space-sm: 0.75rem;
-          --space-md: 1rem;
-          --space-lg: 1.5rem;
-          --space-xl: 2rem;
-          --space-2xl: 3rem;
-          --color-dark: #1A1A2E;
-          --color-yellow: #FFD166;
-          --color-yellow-dark: #E5BC59;
-          --color-light-gray: #F8F9FA;
-          --color-gray: #E9ECEF;
-          --color-white: #FFFFFF;
-          --gradient-primary: linear-gradient(135deg, #FFD166 0%, #FFA500 100%);
-          --radius-sm: 0.25rem;
-          --radius-md: 0.5rem;
-          --radius-lg: 0.75rem;
-          --radius-xl: 1rem;
-          --radius-full: 9999px;
-          --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-          --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
-          --shadow-xl: 0 10px 40px rgba(0, 0, 0, 0.15);
-          --transition-fast: 0.2s ease;
-          --transition-normal: 0.3s ease;
-          --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-          --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-            /* Estilos adicionais para disponibilidade */
-        .availability-banner {
-          background: linear-gradient(135deg, #FFF3CD 0%, #FFECB5 100%);
-          border: 3px solid #FFC107;
-          border-radius: var(--radius-xl);
-          padding: var(--space-xl);
-          margin-bottom: var(--space-lg);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .availability-banner::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 5px;
-          background: linear-gradient(90deg, #FFC107, #FF9800);
-        }
-
-        .banner-content {
-          position: relative;
-          z-index: 2;
-        }
-
-        .banner-icon {
-          font-size: 2.5rem;
-          margin-bottom: var(--space-md);
-          animation: bounce 2s infinite;
-        }
-
-        .banner-text h3 {
-          color: #856404;
-          font-size: 1.5rem;
-          margin-bottom: var(--space-sm);
-          font-weight: 700;
-        }
-
-        .banner-text p {
-          color: #856404;
-          margin-bottom: var(--space-lg);
-          font-size: 1.1rem;
-          line-height: 1.5;
-        }
-
-        .banner-actions {
-          display: flex;
-          gap: var(--space-md);
-          flex-wrap: wrap;
-        }
-
-        .availability-status {
-          color: #dc3545;
-          font-weight: 600;
-          margin-left: 5px;
-        }
-
-        .available-badge {
-          background: #28a745;
-          color: white;
-          font-size: 0.7rem;
-          padding: 2px 6px;
-          border-radius: 10px;
-          margin-left: 8px;
-          font-weight: 600;
-        }
-
-        .unavailable-badge {
-          background: #6c757d;
-          color: white;
-          font-size: 0.7rem;
-          padding: 2px 6px;
-          border-radius: 10px;
-          margin-left: 8px;
-          font-weight: 600;
-        }
-
-        .availability-summary {
-          display: flex;
-          gap: var(--space-md);
-          margin-top: var(--space-sm);
-        }
-
-        .available-count, .unavailable-count {
-          font-size: 0.85rem;
-          padding: 3px 8px;
-          border-radius: 12px;
-          font-weight: 600;
-        }
-
-        .available-count {
-          background: rgba(40, 167, 69, 0.1);
-          color: #28a745;
-        }
-
-        .unavailable-count {
-          background: rgba(108, 117, 125, 0.1);
-          color: #6c757d;
-        }
-
-        .category-unavailable-notice {
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          border-radius: var(--radius-lg);
-          padding: var(--space-lg);
-          border: 2px solid #dee2e6;
-          margin-bottom: var(--space-xl);
-        }
-
-        .notice-actions {
-          display: flex;
-          align-items: center;
-          gap: var(--space-md);
-          margin-top: var(--space-md);
-        }
-
-        .or-text {
-          color: #6c757d;
-          font-size: 0.9rem;
-        }
-
-        .availability-info-section {
-          background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-          border-radius: var(--radius-xl);
-          padding: var(--space-xl);
-          border: 2px solid #2196f3;
-          margin-top: var(--space-xl);
-        }
-
-        .info-title {
-          text-align: center;
-          color: #1565c0;
-          margin-bottom: var(--space-xl);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: var(--space-sm);
-        }
-
-        .info-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: var(--space-lg);
-        }
-
-        .info-card {
-          background: white;
-          border-radius: var(--radius-lg);
-          padding: var(--space-lg);
-          box-shadow: var(--shadow-sm);
-          transition: all var(--transition-normal);
-        }
-
-        .info-card:hover {
-          transform: translateY(-5px);
-          box-shadow: var(--shadow-md);
-        }
-
-        .info-card.available {
-          border-top: 4px solid #28a745;
-        }
-
-        .info-card.unavailable {
-          border-top: 4px solid #ffc107;
-        }
-
-        .info-card.instructions {
-          border-top: 4px solid #9c27b0;
-        }
-
-        .card-header {
-          display: flex;
-          align-items: center;
-          gap: var(--space-sm);
-          margin-bottom: var(--space-md);
-        }
-
-        .card-icon {
-          font-size: 1.5rem;
-        }
-
-        .card-header h4 {
-          color: var(--color-dark);
-          margin: 0;
-          font-size: 1.1rem;
-        }
-
-        .card-content {
-          color: #666;
-          font-size: 0.9rem;
-          line-height: 1.5;
-        }
-
-        .card-content ul, .card-content ol {
-          padding-left: var(--space-md);
-          margin: var(--space-sm) 0;
-        }
-
-        .card-content li {
-          margin-bottom: var(--space-xs);
-        }
-
-        .raffle-promo-banner {
-          background: linear-gradient(135deg, #9d4edd 0%, #7b2cbf 100%);
-          border-radius: var(--radius-xl);
-          padding: var(--space-xl);
-          color: white;
-          text-align: center;
-          margin-top: var(--space-xl);
-        }
-
-        .promo-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: var(--space-md);
-        }
-
-        .promo-icon {
-          font-size: 3rem;
-          animation: bounce 2s infinite;
-        }
-
-        .promo-text h3 {
-          font-size: 1.5rem;
-          margin-bottom: var(--space-xs);
-        }
-
-        .promo-text p {
-          opacity: 0.9;
-          margin-bottom: var(--space-md);
-        }
-
-        .btn-promo {
-          background: white;
-          color: #7b2cbf;
-          border: none;
-          padding: 0.75rem 2rem;
-          font-weight: 700;
-          border-radius: var(--radius-md);
-          transition: all var(--transition-normal);
-        }
-
-        .btn-promo:hover {
-          transform: scale(1.05);
-          box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-           /* BANNER DE AVISO */
-        .availability-banner {
-          background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-          border-radius: 15px;
-          padding: 25px;
-          margin: 20px 0;
-          color: white;
-          position: relative;
-          overflow: hidden;
-          box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3);
-          animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-          0% { box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3); }
-          50% { box-shadow: 0 8px 40px rgba(220, 53, 69, 0.5); }
-          100% { box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3); }
-        }
-
-        .banner-icon {
-          font-size: 3rem;
-          margin-bottom: 15px;
-          animation: bounce 1s infinite;
-        }
-
-        .banner-text h3 {
-          font-size: 1.5rem;
-          margin-bottom: 10px;
-          font-weight: 700;
-        }
-
-        .banner-text p {
-          opacity: 0.9;
-          margin-bottom: 20px;
-          font-size: 1.1rem;
-          line-height: 1.5;
-        }
-
-        .banner-actions {
-          display: flex;
-          gap: 15px;
-          flex-wrap: wrap;
-        }
-
-        /* AVISO NA SIDEBAR */
-        .availability-notice-sidebar {
-          background: #fff3cd;
-          border: 2px solid #ffc107;
-          border-radius: 10px;
-          padding: 15px;
-          margin-bottom: 20px;
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-        }
-
-        .availability-status {
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
-          margin-top: 5px;
-        }
-
-        .status-item {
-          font-size: 0.85rem;
-          padding: 3px 8px;
-          border-radius: 4px;
-          display: inline-block;
-          font-weight: 600;
-        }
-
-        .status-item.available {
-          background: #d4edda;
-          color: #155724;
-        }
-
-        .status-item.unavailable {
-          background: #f8d7da;
-          color: #721c24;
-        }
-
-        /* BADGES DE DISPONIBILIDADE */
-        .availability-badge {
-          font-size: 0.7rem;
-          padding: 2px 6px;
-          border-radius: 10px;
-          margin-left: 8px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .availability-badge.available {
-          background: #28a745;
-          color: white;
-        }
-
-        .availability-badge.unavailable {
-          background: #6c757d;
-          color: white;
-        }
-
-        /* BOTÕES DESABILITADOS */
-        .category-btn.disabled {
-          cursor: not-allowed !important;
-          opacity: 0.6;
-          position: relative;
-        }
-
-        .category-btn.disabled:hover::after {
-          content: 'Indisponível';
-          position: absolute;
-          top: -30px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #333;
-          color: white;
-          padding: 5px 10px;
-          border-radius: 5px;
-          font-size: 0.8rem;
-          white-space: nowrap;
-          z-index: 100;
-        }
-
-        /* NOTAÇÃO DE INDISPONÍVEL */
-        .unavailable-tag {
-          color: #dc3545;
-          font-weight: 700;
-          margin-left: 5px;
-          font-size: 0.9rem;
-        }
-
-        .availability-count {
-          display: flex;
-          gap: 15px;
-          margin-top: 5px;
-          flex-wrap: wrap;
-        }
-
-        .available-count, .unavailable-count {
-          font-size: 0.85rem;
-          padding: 3px 8px;
-          border-radius: 12px;
-          font-weight: 600;
-        }
-
-        .available-count {
-          background: rgba(40, 167, 69, 0.1);
-          color: #28a745;
-        }
-
-        .unavailable-count {
-          background: rgba(108, 117, 125, 0.1);
-          color: #6c757d;
-        }
-
-        /* ALERTA DE CATEGORIA INDISPONÍVEL */
-        .category-unavailable-alert {
-          background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-          border: 2px solid #f5c6cb;
-          border-radius: 15px;
-          padding: 20px;
-          margin-bottom: 25px;
-          text-align: center;
-        }
-
-        .alert-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 15px;
-        }
-
-        .alert-icon {
-          font-size: 3rem;
-          animation: shake 0.5s;
-        }
-
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-10px); }
-          75% { transform: translateX(10px); }
-        }
-
-        .alert-text h4 {
-          color: #721c24;
-          margin-bottom: 10px;
-          font-size: 1.3rem;
-        }
-
-        .alert-text p {
-          color: #721c24;
-          margin-bottom: 15px;
-          font-size: 1rem;
-        }
-
-        /* SEÇÃO INFORMATIVA */
+        /* Seção informativa */
         .availability-info-section {
           background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
           border-radius: 15px;
@@ -2103,13 +1417,84 @@ const Products = () => {
           margin-top: 10px;
         }
 
-        /* BOTÕES PEQUENOS */
-        .btn-small {
-          padding: 6px 15px;
-          font-size: 0.9rem;
+        /* BANNER DE AVISO */
+        .availability-banner {
+          background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+          border-radius: 15px;
+          padding: 25px;
+          margin: 20px 0;
+          color: white;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3);
+          animation: pulse 2s infinite;
         }
 
-        /* RESPONSIVIDADE */
+        @keyframes pulse {
+          0% { box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3); }
+          50% { box-shadow: 0 8px 40px rgba(220, 53, 69, 0.5); }
+          100% { box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3); }
+        }
+
+        .banner-icon {
+          font-size: 3rem;
+          margin-bottom: 15px;
+          animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+
+        .banner-text h3 {
+          font-size: 1.5rem;
+          margin-bottom: 10px;
+          font-weight: 700;
+        }
+
+        .banner-text p {
+          opacity: 0.9;
+          margin-bottom: 20px;
+          font-size: 1.1rem;
+          line-height: 1.5;
+        }
+
+        .banner-actions {
+          display: flex;
+          gap: 15px;
+          flex-wrap: wrap;
+        }
+
+        /* Variables fallback */
+        :global(*) {
+          --space-xs: 0.5rem;
+          --space-sm: 0.75rem;
+          --space-md: 1rem;
+          --space-lg: 1.5rem;
+          --space-xl: 2rem;
+          --space-2xl: 3rem;
+          --color-dark: #1A1A2E;
+          --color-yellow: #FFD166;
+          --color-yellow-dark: #E5BC59;
+          --color-light-gray: #F8F9FA;
+          --color-gray: #E9ECEF;
+          --color-white: #FFFFFF;
+          --gradient-primary: linear-gradient(135deg, #FFD166 0%, #FFA500 100%);
+          --radius-sm: 0.25rem;
+          --radius-md: 0.5rem;
+          --radius-lg: 0.75rem;
+          --radius-xl: 1rem;
+          --radius-full: 9999px;
+          --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+          --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+          --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.15);
+          --transition-fast: 0.2s ease;
+          --transition-normal: 0.3s ease;
+          --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+          --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
         @media (max-width: 768px) {
           .availability-banner {
             padding: 20px;
