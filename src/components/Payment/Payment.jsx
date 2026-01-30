@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Copy, Check, QrCode, Smartphone, Banknote, Shield, Clock, 
-  Download, X, Wallet, CreditCard, Calculator, DollarSign 
+  Download, X, Wallet, Calculator, DollarSign 
 } from 'lucide-react'; // Adicionei DollarSign aqui
 import { useCart } from '../../context/CartContext';
 import QRCodeGenerator from '../QRCodeGenerator/QRCodeGenerator';

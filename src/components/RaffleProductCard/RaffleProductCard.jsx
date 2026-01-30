@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  ShoppingBag, Heart, Share2, Package, Info, Zap, Check, Users, 
-  Tag, Target, Ticket, Users as UsersIcon, Gift, Calendar, 
-  MapPin, Crown, Sparkles, Search, Star, Clock,
+  ShoppingBag, Heart, Share2,  Info, Zap, Check, Users, 
+   Target, Ticket, Users, Gift, Calendar, 
+  MapPin,  Sparkles, Search, Clock,
   ChevronDown, ChevronUp, Shield, Trophy, TrendingUp,
-  AlertCircle, CheckCircle, Award, BarChart3
+  AlertCircle, CheckCircle,  BarChart3
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 

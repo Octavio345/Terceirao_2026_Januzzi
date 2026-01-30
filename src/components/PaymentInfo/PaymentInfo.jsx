@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, QrCode, Smartphone, CreditCard, AlertCircle, Shield, Zap, Clock, CheckCircle, MessageCircle, ArrowRight, Check, Send } from 'lucide-react';
+import { Copy, QrCode, CreditCard, AlertCircle, Shield,  Clock, CheckCircle, MessageCircle, ArrowRight, Check, Send } from 'lucide-react';
 
 const PaymentInfo = ({ vendorInfo }) => {
   // Estado para controlar se o usuário já enviou comprovante
