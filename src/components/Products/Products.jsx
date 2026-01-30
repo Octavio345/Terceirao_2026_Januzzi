@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ProductCard from '../ProductCard/ProductCard';
 import RaffleProductCard from '../RaffleProductCard/RaffleProductCard';
-import { Filter, Search, Package, Grid, List, ChevronDown, Tag, Star, Zap, Ticket, AlertCircle } from 'lucide-react';
+import { Filter, Search, Package, Grid, List, ChevronDown, Tag, Star, Ticket, AlertCircle } from 'lucide-react';
 import { productsData, categories, categoryColors } from '../../data/products';
 
 const Products = () => {
