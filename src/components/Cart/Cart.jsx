@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   X, ShoppingBag, Trash2, Plus, Minus, MessageCircle, Copy,
   Package, ShoppingCart, ChevronRight, User, Phone, Mail,
-  MapPin, Home, School, Truck, CheckCircle, DollarSign, ArrowLeft,
+   Home, School, Truck, CheckCircle,  ArrowLeft,
   CreditCard, Wallet, Calculator, AlertCircle, Clock, Calendar
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';

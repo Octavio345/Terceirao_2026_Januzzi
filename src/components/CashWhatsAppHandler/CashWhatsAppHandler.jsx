@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageCircle, ArrowLeft, CheckCircle, ExternalLink, Clock } from 'lucide-react';
 
 const CashWhatsAppHandler = ({ orderData, vendorWhatsApp = '5518996349330', onClose }) => {
@@ -9,7 +9,7 @@ const CashWhatsAppHandler = ({ orderData, vendorWhatsApp = '5518996349330', onCl
   const timeoutRef = useRef(null);
 
   // Função para gerar a mensagem formatada
-  const generateWhatsAppMessage = () => {
+  const generateWhatsAppMessage = useCallback(() => {
     const {
       customerInfo,
       deliveryOption,
@@ -108,10 +108,10 @@ const CashWhatsAppHandler = ({ orderData, vendorWhatsApp = '5518996349330', onCl
       `WhatsApp: (18) 99634-9330`;
 
     return message;
-  };
+  }, [orderData]);
 
-  // Função para enviar para WhatsApp
-  const sendToWhatsApp = () => {
+  // Função para enviar para WhatsApp (agora em useCallback)
+  const sendToWhatsApp = useCallback(() => {
     const message = generateWhatsAppMessage();
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${vendorWhatsApp}?text=${encodedMessage}`;
@@ -130,7 +130,7 @@ const CashWhatsAppHandler = ({ orderData, vendorWhatsApp = '5518996349330', onCl
     }, 1000);
     
     return true;
-  };
+  }, [generateWhatsAppMessage, vendorWhatsApp]);
 
   // Countdown automático
   useEffect(() => {
@@ -155,7 +155,7 @@ const CashWhatsAppHandler = ({ orderData, vendorWhatsApp = '5518996349330', onCl
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [status, countdown]);
+  }, [status, countdown, sendToWhatsApp]);
 
   // Fecha automaticamente após 30 segundos
   useEffect(() => {
