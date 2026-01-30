@@ -82,8 +82,7 @@ const Products = () => {
     return acc;
   }, {});
 
-  // Verificar se há rifas nos produtos filtrados
-  const hasRaffles = sortedProducts.some(product => product.category === 'rifas');
+
 
   // Mostrar contagem de indisponíveis
   const unavailableCount = sortedProducts.filter(p => p.category !== 'rifas').length;
