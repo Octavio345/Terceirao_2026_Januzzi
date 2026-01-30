@@ -10,23 +10,20 @@ root.render(
   </React.StrictMode>
 );
 
-// ===== SERVICE WORKER BÁSICO (APENAS REGISTRO) =====
+// Registrar Service Worker apenas em produção
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   window.addEventListener('load', () => {
-    const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`;
-    
-    // Apenas registra, toda a lógica está no App.js
-    navigator.serviceWorker.register(swUrl)
+    navigator.serviceWorker.register('/service-worker.js')
       .then(registration => {
-        console.log('✅ Service Worker registrado');
+        console.log('Service Worker registrado com sucesso:', registration.scope);
         
-        // Verificar atualizações periodicamente (a cada 30 minutos)
+        // Verificar atualizações a cada hora
         setInterval(() => {
           registration.update();
-        }, 30 * 60 * 1000);
+        }, 60 * 60 * 1000);
       })
       .catch(error => {
-        console.error('❌ Erro no Service Worker:', error);
+        console.log('Falha ao registrar Service Worker:', error);
       });
   });
 }
