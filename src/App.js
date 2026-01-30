@@ -30,8 +30,120 @@ function HomePage() {
 function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState(null);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
 
-  // Verificar atualizações do Service Worker
+  // ===== 1. DETECTAR SE PODE INSTALAR PWA =====
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      console.log('🚀 beforeinstallprompt event fired');
+      
+      // Previne que o Chrome mostre o prompt automático
+      e.preventDefault();
+      
+      // Guarda o evento para mostrar depois
+      setDeferredPrompt(e);
+      
+      // Mostra nosso botão personalizado
+      setShowInstallButton(true);
+      
+      // Esconde automaticamente após 10 segundos
+      setTimeout(() => {
+        if (showInstallButton) {
+          setShowInstallButton(false);
+        }
+      }, 10000);
+    };
+
+    // Verificar se o app já está instalado
+    const checkIfAppIsInstalled = () => {
+      // Método 1: Verificar se está em modo standalone
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('📱 App já está instalado (display-mode: standalone)');
+        setIsAppInstalled(true);
+        setShowInstallButton(false);
+        return true;
+      }
+      
+      // Método 2: Verificar navigator.standalone (iOS)
+      if (window.navigator.standalone === true) {
+        console.log('📱 App já está instalado (navigator.standalone)');
+        setIsAppInstalled(true);
+        setShowInstallButton(false);
+        return true;
+      }
+      
+      // Método 3: Verificar localStorage
+      if (localStorage.getItem('appInstalled') === 'true') {
+        console.log('📱 App marcado como instalado no localStorage');
+        setIsAppInstalled(true);
+      }
+      
+      return false;
+    };
+
+    // Adiciona event listeners
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    
+    // Verifica ao carregar
+    checkIfAppIsInstalled();
+    
+    // Verifica quando a visibilidade da página muda (usuário voltou ao app)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkIfAppIsInstalled();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Limpar event listeners
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [showInstallButton]);
+
+  // ===== 2. FUNÇÃO PARA INSTALAR O PWA =====
+  const handleInstallClick = () => {
+    console.log('📲 Botão de instalação clicado');
+    
+    if (deferredPrompt) {
+      // Mostra o prompt de instalação nativo
+      deferredPrompt.prompt();
+      
+      // Aguarda a resposta do usuário
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('✅ Usuário aceitou instalar o PWA');
+          setIsAppInstalled(true);
+          setShowInstallButton(false);
+          
+          // Marca como instalado no localStorage
+          localStorage.setItem('appInstalled', 'true');
+          
+          // Mostra mensagem de sucesso
+          toast.success('App instalado com sucesso!');
+        } else {
+          console.log('❌ Usuário recusou instalar o PWA');
+        }
+        
+        // Limpa o prompt
+        setDeferredPrompt(null);
+      });
+    } else {
+      // Fallback: Instruções manuais
+      alert(
+        'Para instalar o app:\n\n' +
+        'Chrome Desktop: Clique nos 3 pontos (⋮) → "Instalar Terceirão 2026"\n' +
+        'Chrome Mobile: Clique nos 3 pontos (⋮) → "Adicionar à tela inicial"\n' +
+        'Safari: Clique no ícone de compartilhar (□↑) → "Adicionar à tela inicial"'
+      );
+    }
+  };
+
+  // ===== 3. VERIFICAR ATUALIZAÇÕES DO SERVICE WORKER =====
   useEffect(() => {
     // Verificar se há atualização pendente no localStorage
     const updatePending = localStorage.getItem('appUpdatePending');
@@ -64,12 +176,12 @@ function App() {
                     setUpdateAvailable(true);
                     localStorage.setItem('appUpdatePending', 'true');
                     
-                    // Mostrar notificação após 3 segundos
+                    // Mostrar notificação após 5 segundos
                     setTimeout(() => {
                       if (!updateAvailable) {
                         setUpdateAvailable(true);
                       }
-                    }, 3000);
+                    }, 5000);
                   }
                 }
               });
@@ -127,7 +239,7 @@ function App() {
     };
   }, [updateAvailable]);
 
-  // Função para atualizar o app
+  // ===== 4. FUNÇÕES DE ATUALIZAÇÃO =====
   const handleUpdate = () => {
     if (waitingWorker) {
       // Envia mensagem para pular a espera
@@ -139,11 +251,20 @@ function App() {
     }
   };
 
-  // Função para adiar a atualização
   const handleDismiss = () => {
     setUpdateAvailable(false);
     // Mantém no localStorage para mostrar depois
     localStorage.setItem('appUpdatePending', 'true');
+  };
+
+  // ===== 5. FUNÇÃO TOAST PERSONALIZADA =====
+  const toast = {
+    success: (message) => {
+      // Você pode usar react-hot-toast aqui ou um alert simples
+      if (typeof window !== 'undefined') {
+        alert(message); // Temporário - pode substituir por react-hot-toast
+      }
+    }
   };
 
   return (
@@ -167,12 +288,30 @@ function App() {
           <Cart />
           <Payment />
           
-          {/* Notificação de atualização */}
+          {/* Notificação de ATUALIZAÇÃO */}
           {updateAvailable && (
             <UpdateNotification 
               onUpdate={handleUpdate}
               onDismiss={handleDismiss}
             />
+          )}
+          
+          {/* Botão de INSTALAÇÃO do PWA */}
+          {showInstallButton && !isAppInstalled && (
+            <div className="install-prompt">
+              <button onClick={handleInstallClick} className="install-button">
+                <span role="img" aria-label="download">📲</span>
+                Instalar App Terceirão 2026
+                <small>Funciona offline!</small>
+              </button>
+              <button 
+                onClick={() => setShowInstallButton(false)}
+                className="install-close"
+                aria-label="Fechar"
+              >
+                ×
+              </button>
+            </div>
           )}
           
           {/* Toaster para notificações */}
@@ -199,18 +338,9 @@ function App() {
           
           {/* Versão do app (opcional, para debug) */}
           {process.env.NODE_ENV === 'development' && (
-            <div style={{
-              position: 'fixed',
-              bottom: 10,
-              left: 10,
-              background: 'rgba(0,0,0,0.7)',
-              color: 'white',
-              padding: '5px 10px',
-              borderRadius: '5px',
-              fontSize: '12px',
-              zIndex: 1000
-            }}>
+            <div className="version-debug">
               v{process.env.REACT_APP_VERSION || '1.0.0'}
+              {isAppInstalled && ' (Instalado)'}
             </div>
           )}
         </div>
