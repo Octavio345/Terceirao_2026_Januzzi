@@ -19,6 +19,13 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/service-worker.js');
+    });
+  }
+</script>
     
     <title>Loja Terceirão 2026</title>
   </head>

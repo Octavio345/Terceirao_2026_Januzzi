@@ -23,13 +23,16 @@
     "react-router-dom": "^7.13.0",
     "react-scripts": "5.0.1",
     "sweetalert2": "^11.26.17",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "workbox-webpack-plugin": "^7.4.0",
+    "workbox-window": "^7.4.0"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "vercel-build": "npm run build && cp build/service-worker.js build/ 2>/dev/null || true"
   },
   "eslintConfig": {
     "extends": [
@@ -48,5 +51,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "@types/react": "^19.2.4",
+    "@types/react-dom": "^19.2.4",
+    "typescript": "^5.7.3"
   }
 }
