@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShoppingBag, Heart, Share2,  Info, Zap, Check, Users, 
-   Target, Ticket, Users, Gift, Calendar, 
+   Target, Ticket, Gift, Calendar, 
   MapPin,  Sparkles, Search, Clock,
-  ChevronDown, ChevronUp, Shield, Trophy, TrendingUp,
+  ChevronDown, ChevronUp, Shield, Trophy,
   AlertCircle, CheckCircle,  BarChart3
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
