@@ -336,13 +336,6 @@ function App() {
             }}
           />
           
-          {/* Versão do app (opcional, para debug) */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="version-debug">
-              v{process.env.REACT_APP_VERSION || '1.0.0'}
-              {isAppInstalled && ' (Instalado)'}
-            </div>
-          )}
         </div>
       </Router>
     </CartProvider>

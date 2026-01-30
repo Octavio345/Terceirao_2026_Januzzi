@@ -1,5 +1,7 @@
+// ATUALIZE O ProductCard PARA ADICIONAR LÓGICA DE INDISPONIBILIDADE
+
 import React, { useState } from 'react';
-import { ShoppingBag, Heart, Share2, Package, Info, Zap } from 'lucide-react';
+import { ShoppingBag, Heart, Share2, Package, Info, Zap, Clock, AlertCircle } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 
 const ProductCard = ({ product, index }) => {
@@ -8,8 +10,17 @@ const ProductCard = ({ product, index }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
 
+  // VERIFICA SE O PRODUTO É UMA RIFA
+  const isRaffle = product.category === 'rifas';
+  
+  // SE NÃO FOR RIFA E TIVER available === false OU NÃO TIVER DISPONÍVEL, MARCA COMO INDISPONÍVEL
+  // Por padrão, todos os produtos não-rifas estarão indisponíveis
+  const isUnavailable = !isRaffle && !product.available;
+
   const handleLikeClick = () => {
-    setIsLiked(!isLiked);
+    if (!isUnavailable) {
+      setIsLiked(!isLiked);
+    }
   };
 
   const handleShareClick = () => {
@@ -26,7 +37,7 @@ const ProductCard = ({ product, index }) => {
   };
 
   const handleAddToCart = () => {
-    if (addToCart && product.stock > 0) {
+    if (!isUnavailable && product.stock > 0 && addToCart) {
       addToCart(product);
       if (openCart) openCart();
       setIsAdded(true);
@@ -47,13 +58,18 @@ const ProductCard = ({ product, index }) => {
 
   return (
     <div 
-      className="product-card"
+      className={`product-card ${isUnavailable ? 'unavailable' : ''}`}
       style={{
         animationDelay: `${index * 0.1}s`
       }}
     >
-      {/* Badge do produto */}
-      {product.badge && (
+      {/* Badge do produto - Mostra badge de indisponível */}
+      {isUnavailable ? (
+        <div className="product-badge badge-unavailable">
+          <AlertCircle size={12} />
+          <span>Indisponível</span>
+        </div>
+      ) : product.badge && (
         <div className={`product-badge badge-${product.badge}`}>
           {product.badge === 'novidade' && '✨'}
           {product.badge === 'popular' && '🔥'}
@@ -67,13 +83,21 @@ const ProductCard = ({ product, index }) => {
       <div className="product-image-container">
         <div className="product-image">
           <span className="product-emoji">{product.emoji}</span>
+          {/* Overlay de indisponibilidade */}
+          {isUnavailable && (
+            <div className="unavailable-overlay">
+              <Clock size={32} />
+              <span>Indisponível</span>
+            </div>
+          )}
         </div>
         
-        {/* Ações rápidas */}
+        {/* Ações rápidas - Desabilitadas para indisponíveis */}
         <div className="product-actions">
           <button 
-            className={`action-btn ${isLiked ? 'liked' : ''}`}
+            className={`action-btn ${isLiked ? 'liked' : ''} ${isUnavailable ? 'disabled' : ''}`}
             onClick={handleLikeClick}
+            disabled={isUnavailable}
             aria-label={isLiked ? "Remover dos favoritos" : "Adicionar aos favoritos"}
           >
             <Heart size={18} fill={isLiked ? "currentColor" : "none"} />
@@ -92,7 +116,10 @@ const ProductCard = ({ product, index }) => {
         {/* Categoria */}
         <div 
           className="product-category"
-          style={{ backgroundColor: getCategoryColor(product.category) }}
+          style={{ 
+            backgroundColor: getCategoryColor(product.category),
+            opacity: isUnavailable ? 0.6 : 1
+          }}
         >
           {product.category}
         </div>
@@ -118,7 +145,7 @@ const ProductCard = ({ product, index }) => {
         <div className="product-details">
           <div className="detail">
             <Package size={14} />
-            <span>Estoque: {product.stock}</span>
+            <span>Estoque: {isUnavailable ? '0' : product.stock}</span>
           </div>
           
           {product.deliveryTime && (
@@ -138,25 +165,34 @@ const ProductCard = ({ product, index }) => {
                 <span className="original-price">R$ {product.originalPrice.toFixed(2)}</span>
               )}
             </div>
-            {product.discount && (
+            {product.discount && !isUnavailable && (
               <span className="discount-badge">-{product.discount}%</span>
             )}
           </div>
 
           <button 
-            className={`add-to-cart-btn ${isAdded ? 'added' : ''} ${product.stock === 0 ? 'out-of-stock' : ''}`}
+            className={`add-to-cart-btn ${isAdded ? 'added' : ''} ${isUnavailable || product.stock === 0 ? 'out-of-stock' : ''}`}
             onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            aria-label={product.stock === 0 ? 'Produto esgotado' : 'Adicionar ao carrinho'}
+            disabled={isUnavailable || product.stock === 0}
+            aria-label={isUnavailable || product.stock === 0 ? 'Produto indisponível' : 'Adicionar ao carrinho'}
           >
             <ShoppingBag size={18} />
             <span>
               {isAdded ? 'Adicionado!' : 
+               isUnavailable ? 'Indisponível' :
                product.stock === 0 ? 'Esgotado' : 
                'Adicionar'}
             </span>
           </button>
         </div>
+
+        {/* Mensagem de indisponibilidade */}
+        {isUnavailable && (
+          <div className="unavailable-notice">
+            <AlertCircle size={14} />
+            <span>Este produto está temporariamente indisponível. Somente rifas estão disponíveis no momento.</span>
+          </div>
+        )}
 
         {/* Informações extras */}
         {product.shippingInfo && (
@@ -182,6 +218,16 @@ const ProductCard = ({ product, index }) => {
           flex-direction: column;
         }
 
+        .product-card.unavailable {
+          opacity: 0.7;
+          filter: grayscale(0.3);
+        }
+
+        .product-card.unavailable:hover {
+          transform: none;
+          box-shadow: var(--shadow-sm);
+        }
+
         @keyframes fadeInUp {
           from {
             opacity: 0;
@@ -193,12 +239,78 @@ const ProductCard = ({ product, index }) => {
           }
         }
 
-        .product-card:hover {
+        .product-card:hover:not(.unavailable) {
           transform: translateY(-8px);
           box-shadow: var(--shadow-lg);
         }
 
-        /* Badge */
+        /* Badge de indisponível */
+        .badge-unavailable {
+          background: linear-gradient(135deg, #6C757D, #495057);
+          color: white;
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          z-index: 10;
+          padding: 0.375rem 0.75rem;
+          border-radius: var(--radius-full);
+          font-size: 0.75rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        /* Overlay de indisponibilidade na imagem */
+        .unavailable-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          gap: 0.5rem;
+          z-index: 5;
+        }
+
+        .unavailable-overlay span {
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+
+        /* Ações desabilitadas */
+        .action-btn.disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .action-btn.disabled:hover {
+          transform: none;
+          background: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Aviso de indisponibilidade */
+        .unavailable-notice {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: var(--space-md);
+          padding: 0.75rem;
+          background: rgba(108, 117, 125, 0.1);
+          border-radius: var(--radius-md);
+          font-size: 0.75rem;
+          color: #666;
+          line-height: 1.4;
+        }
+
+        /* Badge do produto */
         .product-badge {
           position: absolute;
           top: 12px;
@@ -247,11 +359,17 @@ const ProductCard = ({ product, index }) => {
           display: flex;
           align-items: center;
           justify-content: center;
+          position: relative;
         }
 
         .product-emoji {
           font-size: 4rem;
           animation: var(--float-animation);
+        }
+
+        .product-card.unavailable .product-emoji {
+          animation: none;
+          opacity: 0.7;
         }
 
         @keyframes float {
@@ -284,7 +402,7 @@ const ProductCard = ({ product, index }) => {
           position: relative;
         }
 
-        .action-btn:hover {
+        .action-btn:hover:not(.disabled) {
           background: var(--color-white);
           color: var(--color-dark);
           transform: scale(1.1);
@@ -322,6 +440,7 @@ const ProductCard = ({ product, index }) => {
           color: var(--color-dark);
           text-transform: capitalize;
           backdrop-filter: blur(10px);
+          z-index: 10;
         }
 
         /* Informações do produto */
@@ -344,11 +463,19 @@ const ProductCard = ({ product, index }) => {
           line-height: 1.3;
         }
 
+        .product-card.unavailable .product-title {
+          color: #666;
+        }
+
         .product-description {
           color: #666;
           font-size: 0.875rem;
           line-height: 1.5;
           margin: 0;
+        }
+
+        .product-card.unavailable .product-description {
+          opacity: 0.8;
         }
 
         .product-tags {
@@ -382,6 +509,10 @@ const ProductCard = ({ product, index }) => {
           color: #666;
         }
 
+        .product-card.unavailable .detail {
+          opacity: 0.7;
+        }
+
         /* Rodapé do produto */
         .product-footer {
           margin-top: auto;
@@ -409,6 +540,10 @@ const ProductCard = ({ product, index }) => {
           font-size: 1.5rem;
           font-weight: 800;
           color: var(--color-dark);
+        }
+
+        .product-card.unavailable .product-price {
+          color: #999;
         }
 
         .original-price {
@@ -474,47 +609,6 @@ const ProductCard = ({ product, index }) => {
           border-radius: var(--radius-md);
           font-size: 0.875rem;
           color: #666;
-        }
-
-        /* Responsivo */
-        @media (max-width: 768px) {
-          .product-emoji {
-            font-size: 3rem;
-          }
-          
-          .product-title {
-            font-size: 1.125rem;
-          }
-          
-          .product-price {
-            font-size: 1.25rem;
-          }
-          
-          .add-to-cart-btn {
-            padding: 0.625rem 1rem;
-            font-size: 0.875rem;
-          }
-          
-          .product-details {
-            flex-direction: column;
-            gap: 0.5rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .product-footer {
-            flex-direction: column;
-            align-items: stretch;
-          }
-          
-          .add-to-cart-btn {
-            width: 100%;
-            justify-content: center;
-          }
-          
-          .product-emoji {
-            font-size: 2.5rem;
-          }
         }
 
         /* Variáveis CSS fallback */
