@@ -216,6 +216,78 @@ const handleCashInputChange = useCallback((e) => {
     setShowCashSuggestions(true);
   }
 }, [currentOrder, generateChangeSuggestions]);
+const handleConfirmCashPayment = async () => {
+    if (!currentOrder) {
+      showToast('error', 'Pedido não encontrado');
+      return;
+    }
+
+    // Validar input de dinheiro
+    if (!validateCashInput()) {
+      return;
+    }
+
+    setLoading(true);
+    console.log('💵 INICIANDO PAGAMENTO DINHEIRO...');
+    
+    try {
+      // PASSO 1: Enviar para Firebase (usando a função do CartContext)
+      const success = await confirmRafflesInOrder(currentOrder.id);
+        
+      if (!success) {
+        console.error('❌ Falha ao enviar para Firebase');
+        showToast('error', '❌ Erro ao reservar rifas no sistema. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('✅ Rifas enviadas para Firebase com sucesso!');
+      
+      // PASSO 2: Gerar link do WhatsApp
+      console.log('📱 Gerando link do WhatsApp...');
+      const url = generateWhatsAppMessage();
+      
+      if (url === '#') {
+        showToast('error', 'Erro: WhatsApp não configurado');
+        setLoading(false);
+        return;
+      }
+      
+      // PASSO 3: Abrir WhatsApp
+      console.log('📤 Abrindo WhatsApp...');
+      const newWindow = window.open(url, '_blank');
+      
+      if (!newWindow) {
+        showToast('error', 'Por favor, permita pop-ups para abrir o WhatsApp');
+        setLoading(false);
+        return;
+      }
+      
+      // PASSO 4: Atualizar estado
+      setProofSent(true);
+      savePersistentSession();
+      
+      console.log('🎉 PROCESSO DINHEIRO CONCLUÍDO!');
+      console.log('✅ Rifas enviadas para Firebase como PENDENTES');
+      console.log('✅ WhatsApp aberto para confirmação');
+      
+      showToast('success', '✅ Rifas enviadas para o sistema! Admin já vê sua reserva.');
+      
+      // PASSO 5: Limpar carrinho e fechar modal
+      setTimeout(() => {
+        if (clearCartAfterConfirmation) {
+          clearCartAfterConfirmation();
+        }
+        handleCloseModal();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ Erro crítico no processo dinheiro:', error);
+      showToast('error', '❌ Erro ao processar pagamento. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
 const handleCashInputKeyDown = useCallback((e) => {
   // Permite apenas números e teclas de controle
@@ -685,78 +757,7 @@ const handleCashInputKeyDown = useCallback((e) => {
   };
 
   // ========== FUNÇÃO PRINCIPAL PARA CONFIRMAR PAGAMENTO (DINHEIRO) ==========
-  const handleConfirmCashPayment = async () => {
-    if (!currentOrder) {
-      showToast('error', 'Pedido não encontrado');
-      return;
-    }
-
-    // Validar input de dinheiro
-    if (!validateCashInput()) {
-      return;
-    }
-
-    setLoading(true);
-    console.log('💵 INICIANDO PAGAMENTO DINHEIRO...');
-    
-    try {
-      // PASSO 1: Enviar para Firebase (usando a função do CartContext)
-      const success = await confirmRafflesInOrder(currentOrder.id);
-        
-      if (!success) {
-        console.error('❌ Falha ao enviar para Firebase');
-        showToast('error', '❌ Erro ao reservar rifas no sistema. Tente novamente.');
-        setLoading(false);
-        return;
-      }
-      
-      console.log('✅ Rifas enviadas para Firebase com sucesso!');
-      
-      // PASSO 2: Gerar link do WhatsApp
-      console.log('📱 Gerando link do WhatsApp...');
-      const url = generateWhatsAppMessage();
-      
-      if (url === '#') {
-        showToast('error', 'Erro: WhatsApp não configurado');
-        setLoading(false);
-        return;
-      }
-      
-      // PASSO 3: Abrir WhatsApp
-      console.log('📤 Abrindo WhatsApp...');
-      const newWindow = window.open(url, '_blank');
-      
-      if (!newWindow) {
-        showToast('error', 'Por favor, permita pop-ups para abrir o WhatsApp');
-        setLoading(false);
-        return;
-      }
-      
-      // PASSO 4: Atualizar estado
-      setProofSent(true);
-      savePersistentSession();
-      
-      console.log('🎉 PROCESSO DINHEIRO CONCLUÍDO!');
-      console.log('✅ Rifas enviadas para Firebase como PENDENTES');
-      console.log('✅ WhatsApp aberto para confirmação');
-      
-      showToast('success', '✅ Rifas enviadas para o sistema! Admin já vê sua reserva.');
-      
-      // PASSO 5: Limpar carrinho e fechar modal
-      setTimeout(() => {
-        if (clearCartAfterConfirmation) {
-          clearCartAfterConfirmation();
-        }
-        handleCloseModal();
-      }, 2000);
-      
-    } catch (error) {
-      console.error('❌ Erro crítico no processo dinheiro:', error);
-      showToast('error', '❌ Erro ao processar pagamento. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  
 
   // ========== FUNÇÃO DE EMERGÊNCIA PARA ENVIO MANUAL ==========
   const handleEmergencyManualSend = async () => {
