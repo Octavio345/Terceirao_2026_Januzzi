@@ -729,6 +729,7 @@ const PaymentInfo = ({ vendorInfo }) => {
           display: flex;
           flex-direction: column;
           gap: 32px;
+          background: rgb(0, 0, 0);
         }
 
         @media (min-width: 769px) {

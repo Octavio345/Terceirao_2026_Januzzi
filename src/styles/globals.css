@@ -412,3 +412,35 @@ body {
     -webkit-tap-highlight-color: transparent;
   }
 }
+/* FORÇAR MODAL DE PAGAMENTO PARA O TOPO */
+.payment-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 999999 !important;
+  background: rgba(0, 0, 0, 0.95) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+}
+
+/* Garantir que o modal seja visível */
+.payment-container {
+  position: relative !important;
+  z-index: 9999999 !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+}
+
+/* Esconder qualquer overflow do body quando modal estiver aberto */
+body.modal-open {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+@keyframes shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}

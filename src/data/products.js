@@ -8,9 +8,11 @@ export const productsData = [
     category: 'doces',
     description: 'Cone crocante recheado com chocolate belga e confeitos coloridos',
     emoji: '🍦',
-    badge: 'popular',
-    stock: 50,
-    tags: ['doce', 'chocolate', 'sobremesa']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['doce', 'chocolate', 'sobremesa', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 2,
@@ -19,8 +21,11 @@ export const productsData = [
     category: 'doces',
     description: 'Trufa artesanal de chocolate meio amargo com recheio cremoso',
     emoji: '🍫',
-    stock: 80,
-    tags: ['doce', 'chocolate', 'elegante']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['doce', 'chocolate', 'elegante', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 3,
@@ -29,9 +34,11 @@ export const productsData = [
     category: 'doces',
     description: 'Brownie úmido em pote individual com calda de chocolate e nozes',
     emoji: '🍰',
-    badge: 'novo',
-    stock: 30,
-    tags: ['doce', 'bolo', 'chocolate']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['doce', 'bolo', 'chocolate', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
 
   // ========== SALGADOS ==========
@@ -42,8 +49,11 @@ export const productsData = [
     category: 'salgados',
     description: 'Pão integral com peito de frango grelhado, alface, tomate e molho especial',
     emoji: '🥪',
-    stock: 40,
-    tags: ['salgado', 'natural', 'saudável']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['salgado', 'natural', 'saudável', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 5,
@@ -52,9 +62,11 @@ export const productsData = [
     category: 'salgados',
     description: 'Pão especial com salsicha, purê de batata, milho, batata palha e molhos',
     emoji: '🌭',
-    badge: 'mais vendido',
-    stock: 60,
-    tags: ['salgado', 'tradicional', 'lanche']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['salgado', 'tradicional', 'lanche', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
 
   // ========== BEBIDAS ==========
@@ -65,8 +77,11 @@ export const productsData = [
     category: 'bebidas',
     description: 'Refrigerante Coca-Cola original em lata gelada',
     emoji: '🥤',
-    stock: 100,
-    tags: ['refrigerante', 'gelado', 'clássico']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['refrigerante', 'gelado', 'clássico', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 7,
@@ -75,8 +90,11 @@ export const productsData = [
     category: 'bebidas',
     description: 'Refrigerante Sprite limão em lata gelada',
     emoji: '🥤',
-    stock: 80,
-    tags: ['refrigerante', 'limão', 'gelado']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['refrigerante', 'limão', 'gelado', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 8,
@@ -85,8 +103,11 @@ export const productsData = [
     category: 'bebidas',
     description: 'Refrigerante Fanta sabor uva em lata gelada',
     emoji: '🍇',
-    stock: 70,
-    tags: ['refrigerante', 'uva', 'gelado']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['refrigerante', 'uva', 'gelado', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 9,
@@ -95,8 +116,11 @@ export const productsData = [
     category: 'bebidas',
     description: 'Refrigerante Fanta sabor laranja em lata gelada',
     emoji: '🍊',
-    stock: 70,
-    tags: ['refrigerante', 'laranja', 'gelado']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['refrigerante', 'laranja', 'gelado', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 10,
@@ -105,9 +129,11 @@ export const productsData = [
     category: 'bebidas',
     description: 'Suco natural de laranja ou uva, feito na hora, sem conservantes',
     emoji: '🧃',
-    badge: 'natural',
-    stock: 50,
-    tags: ['suco', 'natural', 'saudável']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['suco', 'natural', 'saudável', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 11,
@@ -116,33 +142,53 @@ export const productsData = [
     category: 'bebidas',
     description: 'Gelo raspado artesanal com xarope saborizado (uva, morango ou limão)',
     emoji: '🍧',
-    badge: 'novo',
-    stock: 40,
-    tags: ['gelado', 'sobremesa', 'refrescante']
+    badge: 'indisponível',
+    stock: 0,
+    tags: ['gelado', 'sobremesa', 'refrescante', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
 
-  // ========== RIFA ÚNICA E ESPECIAL ==========
-{
+  // ========== RIFA ATUALIZADA ==========
+  {
     id: 12,
     name: '🎟️ RIFA DA FORMATURA 2026',
-    price: 15.00, // Preço normal: R$ 15,00
+    price: 15.00, // Preço normal: R$ 15,00 por número
     category: 'rifas',
-    description: 'RIFA OFICIAL DO TERCEIRÃO 2026! Concorra a 1 ingresso no Hot Planet Araçatuba + 2 acompanhantes. TODA renda será investida na nossa formatura inesquecível!',
+    description: 'RIFA OFICIAL DO TERCEIRÃO 2026! Concorra a 1 ingresso no Hot Planet Araçatuba + 2 acompanhantes (Valor do prêmio: R$ 117,00). TODA renda será investida na nossa formatura inesquecível!',
     emoji: '🏆',
     badge: 'limited',
-    stock: 299, // Total de números disponíveis
-    tags: ['rifa', 'hotplanet', 'premiação', 'formatura2026', 'especial'],
+    stock: 900, // Total de 900 números (300 por turma)
+    tags: ['rifa', 'hotplanet', 'premiação', 'formatura2026', 'especial', 'disponível'],
     shippingInfo: '🏆 SORTEIO: 15/03/2026 às 18h na escola',
-    originalPrice: 20.00,
-    discount: 25, // 25% de desconto no preço normal
     isRaffle: true,
     rafflePrize: '1 ingresso Hot Planet + 2 acompanhantes',
+    rafflePrizeValue: 117.00,
     raffleDate: '15 de Março de 2026',
     raffleLocation: 'Escola Estadual - Buritama/SP',
-    // NOVO: Informações de desconto para compra em quantidade
     bulkDiscount: {
-      5: 10.00, // 5 números por R$ 10 cada (total R$ 50)
-      minForDiscount: 5 // Mínimo para desconto
+      5: 10.00,
+      minForDiscount: 5
+    },
+    raffleClasses: {
+      '3A': { 
+        name: '3º ANO A', 
+        totalNumbers: 300, 
+        range: '001-300',
+        availableCount: 300
+      },
+      '3B': { 
+        name: '3º ANO B', 
+        totalNumbers: 300, 
+        range: '301-600',
+        availableCount: 300
+      },
+      '3TECH': { 
+        name: '3º TECH', 
+        totalNumbers: 300, 
+        range: '601-900',
+        availableCount: 300
+      }
     }
   },
 
@@ -154,10 +200,12 @@ export const productsData = [
     category: 'combos',
     description: 'Lanche natural + refrigerante 350ml de sua escolha',
     emoji: '🍔🥤',
-    badge: 'promoção',
+    badge: 'indisponível',
     originalPrice: 25.00,
-    stock: 25,
-    tags: ['combo', 'econômico', 'lanche']
+    stock: 0,
+    tags: ['combo', 'econômico', 'lanche', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 14,
@@ -166,9 +214,12 @@ export const productsData = [
     category: 'combos',
     description: 'Bolo de pote brownie + suco natural 500ml',
     emoji: '🍰🧃',
+    badge: 'indisponível',
     originalPrice: 20.00,
-    stock: 20,
-    tags: ['combo', 'doce', 'refrescante']
+    stock: 0,
+    tags: ['combo', 'doce', 'refrescante', 'indisponível'],
+    available: false,
+    isUnavailable: true
   },
   {
     id: 15,
@@ -177,10 +228,12 @@ export const productsData = [
     category: 'combos',
     description: 'Lanche + Refri + Doce (escolha cada item)',
     emoji: '🎯',
-    badge: 'super oferta',
+    badge: 'indisponível',
     originalPrice: 40.00,
-    stock: 15,
-    tags: ['combo', 'completo', 'econômico']
+    stock: 0,
+    tags: ['combo', 'completo', 'econômico', 'indisponível'],
+    available: false,
+    isUnavailable: true
   }
 ];
 
@@ -189,37 +242,43 @@ export const categories = [
     id: 'all', 
     name: 'Todos os Produtos', 
     emoji: '🛒',
-    description: 'Veja nossa seleção completa'
+    description: 'Veja nossa seleção completa',
+    isAvailable: false
   },
   { 
     id: 'doces', 
     name: 'Doces & Sobremesas', 
     emoji: '🍰',
-    description: 'Delícias para adoçar seu dia'
+    description: 'Delícias para adoçar seu dia',
+    isAvailable: false
   },
   { 
     id: 'salgados', 
     name: 'Salgados & Lanches', 
     emoji: '🥪',
-    description: 'Pratos salgados e lanches saborosos'
+    description: 'Pratos salgados e lanches saborosos',
+    isAvailable: false
   },
   { 
     id: 'bebidas', 
     name: 'Bebidas & Refrigerantes', 
     emoji: '🥤',
-    description: 'Bebidas geladas e refrescantes'
+    description: 'Bebidas geladas e refrescantes',
+    isAvailable: false
   },
   { 
     id: 'rifas', 
-    name: 'Rifa Especial', 
+    name: 'Rifa da Formatura', 
     emoji: '🎟️',
-    description: 'Participe da nossa rifa da formatura!'
+    description: 'Participe da nossa rifa da formatura!',
+    isAvailable: true
   },
   { 
     id: 'combos', 
     name: 'Combos Especiais', 
     emoji: '🎁',
-    description: 'Pacotes com desconto especial'
+    description: 'Pacotes com desconto especial',
+    isAvailable: false
   }
 ];
 

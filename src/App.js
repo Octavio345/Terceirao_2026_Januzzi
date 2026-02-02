@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { Toaster } from 'react-hot-toast';
 import './styles/variables.css';
 import './styles/globals.css';
+import { RaffleManagerProvider } from './context/RaffleManagerContext';
+import ScrollToTop from './components/ScrollToTop';
 
-// Importar componentes
+// Importar componentes principais
 import Header from './components/Header/Header';
 import Footer from './components/Footer/Footer';
 import Hero from './components/Hero/Hero';
@@ -16,16 +18,43 @@ import PaymentInfo from './components/PaymentInfo/PaymentInfo';
 import Cart from './components/Cart/Cart';
 import Payment from './components/Payment/Payment';
 import UpdateNotification from './components/UpdateNotification/UpdateNotification';
-import Toast from './components/Toast/Toast'; // Importar o componente Toast
+import Toast from './components/Toast/Toast';
+
+// Importar componentes do admin
+import AdminLogin from './components/Admin/Login';
+import AdminDashboard from './components/Admin/Dashboard';
+import AdminRaffleManager from './components/Admin/RaffleManager';
+import AdminSalesManager from './components/Admin/SalesManager';
+import AdminLayout from './components/Admin/AdminLayout';
+
+// Componente para verificar scroll com Payment aberto
+function ScrollManager() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Quando a rota muda, voltar ao topo
+    window.scrollTo(0, 0);
+  }, [location]);
+  
+  return null;
+}
 
 function HomePage() {
   return (
     <>
       <Hero />
       <Products />
+      <About />
+      <Contact />
       <PaymentInfo />
     </>
   );
+}
+
+// Componente de rota protegida
+function ProtectedRoute({ children }) {
+  const isAdmin = localStorage.getItem('terceirao-admin') === 'true';
+  return isAdmin ? children : <Navigate to="/admin/login" replace />;
 }
 
 function App() {
@@ -40,16 +69,10 @@ function App() {
     const handleBeforeInstallPrompt = (e) => {
       console.log('🚀 beforeinstallprompt event fired');
       
-      // Previne que o Chrome mostre o prompt automático
       e.preventDefault();
-      
-      // Guarda o evento para mostrar depois
       setDeferredPrompt(e);
-      
-      // Mostra nosso botão personalizado
       setShowInstallButton(true);
       
-      // Esconde automaticamente após 10 segundos
       setTimeout(() => {
         if (showInstallButton) {
           setShowInstallButton(false);
@@ -57,9 +80,7 @@ function App() {
       }, 10000);
     };
 
-    // Verificar se o app já está instalado
     const checkIfAppIsInstalled = () => {
-      // Método 1: Verificar se está em modo standalone
       if (window.matchMedia('(display-mode: standalone)').matches) {
         console.log('📱 App já está instalado (display-mode: standalone)');
         setIsAppInstalled(true);
@@ -67,7 +88,6 @@ function App() {
         return true;
       }
       
-      // Método 2: Verificar navigator.standalone (iOS)
       if (window.navigator.standalone === true) {
         console.log('📱 App já está instalado (navigator.standalone)');
         setIsAppInstalled(true);
@@ -75,7 +95,6 @@ function App() {
         return true;
       }
       
-      // Método 3: Verificar localStorage
       if (localStorage.getItem('appInstalled') === 'true') {
         console.log('📱 App marcado como instalado no localStorage');
         setIsAppInstalled(true);
@@ -84,13 +103,9 @@ function App() {
       return false;
     };
 
-    // Adiciona event listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    
-    // Verifica ao carregar
     checkIfAppIsInstalled();
     
-    // Verifica quando a visibilidade da página muda (usuário voltou ao app)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         checkIfAppIsInstalled();
@@ -99,7 +114,6 @@ function App() {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Limpar event listeners
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -111,20 +125,15 @@ function App() {
     console.log('📲 Botão de instalação clicado');
     
     if (deferredPrompt) {
-      // Mostra o prompt de instalação nativo
       deferredPrompt.prompt();
       
-      // Aguarda a resposta do usuário
       deferredPrompt.userChoice.then((choiceResult) => {
         if (choiceResult.outcome === 'accepted') {
           console.log('✅ Usuário aceitou instalar o PWA');
           setIsAppInstalled(true);
           setShowInstallButton(false);
-          
-          // Marca como instalado no localStorage
           localStorage.setItem('appInstalled', 'true');
           
-          // Mostra notificação via evento
           const event = new CustomEvent('showToast', {
             detail: {
               type: 'success',
@@ -145,11 +154,9 @@ function App() {
           window.dispatchEvent(event);
         }
         
-        // Limpa o prompt
         setDeferredPrompt(null);
       });
     } else {
-      // Fallback: Instruções manuais via toast
       const event = new CustomEvent('showToast', {
         detail: {
           type: 'info',
@@ -163,12 +170,10 @@ function App() {
 
   // ===== 3. VERIFICAR ATUALIZAÇÕES DO SERVICE WORKER =====
   useEffect(() => {
-    // Verificar se há atualização pendente no localStorage
     const updatePending = localStorage.getItem('appUpdatePending');
     if (updatePending === 'true') {
       setUpdateAvailable(true);
       
-      // Notificar usuário sobre atualização pendente
       setTimeout(() => {
         const event = new CustomEvent('showToast', {
           detail: {
@@ -184,20 +189,16 @@ function App() {
     const setupServiceWorker = async () => {
       if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
         try {
-          // Registrar service worker
           const registration = await navigator.serviceWorker.register('/service-worker.js');
           console.log('✅ Service Worker registrado com sucesso:', registration);
           
-          // Aguarda o service worker estar pronto
           await navigator.serviceWorker.ready;
           
-          // Verificar se há um service worker esperando
           if (registration.waiting) {
             setWaitingWorker(registration.waiting);
             setUpdateAvailable(true);
             localStorage.setItem('appUpdatePending', 'true');
             
-            // Notificar sobre atualização
             const event = new CustomEvent('showToast', {
               detail: {
                 type: 'info',
@@ -208,19 +209,16 @@ function App() {
             window.dispatchEvent(event);
           }
 
-          // Ouvir quando um novo service worker estiver instalado
           const onUpdateFound = () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed') {
-                  // Verifica se já tem um controller (não é a primeira instalação)
                   if (navigator.serviceWorker.controller) {
                     setWaitingWorker(newWorker);
                     setUpdateAvailable(true);
                     localStorage.setItem('appUpdatePending', 'true');
                     
-                    // Mostrar notificação após 5 segundos
                     setTimeout(() => {
                       if (!updateAvailable) {
                         setUpdateAvailable(true);
@@ -235,7 +233,6 @@ function App() {
                       }
                     }, 5000);
                   } else {
-                    // Primeira instalação - app instalado com sucesso
                     console.log('✅ App instalado pela primeira vez');
                     const event = new CustomEvent('showToast', {
                       detail: {
@@ -253,7 +250,6 @@ function App() {
           
           registration.addEventListener('updatefound', onUpdateFound);
           
-          // Verificar atualizações periodicamente (a cada 2 horas)
           const updateInterval = setInterval(() => {
             registration.update().then(() => {
               console.log('🔄 Verificação de atualização do Service Worker');
@@ -281,12 +277,10 @@ function App() {
 
     const cleanup = setupServiceWorker();
 
-    // Ouvir mudanças de controller (quando um novo service worker assume)
     const onControllerChange = () => {
       console.log('🔄 Controller do Service Worker mudou - recarregando página...');
       localStorage.removeItem('appUpdatePending');
       
-      // Notificar usuário sobre atualização aplicada
       const event = new CustomEvent('showToast', {
         detail: {
           type: 'success',
@@ -296,7 +290,6 @@ function App() {
       });
       window.dispatchEvent(event);
       
-      // Recarregar após 1 segundo para dar tempo da mensagem aparecer
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -306,7 +299,6 @@ function App() {
       navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
     }
 
-    // Verificar atualizações quando a janela ganha foco (usuário voltou ao app)
     const onFocus = () => {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(registration => {
@@ -319,7 +311,6 @@ function App() {
     
     window.addEventListener('focus', onFocus);
 
-    // Limpar event listeners
     return () => {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
@@ -333,19 +324,14 @@ function App() {
   const handleUpdate = () => {
     if (waitingWorker) {
       console.log('🔄 Aplicando atualização...');
-      
-      // Envia mensagem para pular a espera
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
       setUpdateAvailable(false);
       localStorage.removeItem('appUpdatePending');
-      
-      // O event listener de controllerchange vai recarregar automaticamente
     }
   };
 
   const handleDismiss = () => {
     setUpdateAvailable(false);
-    // Mantém no localStorage para mostrar depois
     localStorage.setItem('appUpdatePending', 'true');
     
     const event = new CustomEvent('showToast', {
@@ -392,108 +378,147 @@ function App() {
   }, []);
 
   return (
-    <CartProvider>
-      <Router>
+    <RaffleManagerProvider>
+      <CartProvider>
         <div className="App">
-          {/* Componente de Toast para notificações */}
           <Toast />
           
-          <Header />
-          
-          <main>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/produtos" element={<Products />} />
-              <Route path="/sobre" element={<About />} />
-              <Route path="/contato" element={<Contact />} />
-            </Routes>
-          </main>
-          
-          <Footer />
-          
-          {/* Cart Modal - renderizado fora das rotas */}
-          <Cart />
+          {/* Payment DEVE ESTAR FORA DO ROUTER */}
           <Payment />
           
-          {/* Notificação de ATUALIZAÇÃO */}
-          {updateAvailable && (
-            <UpdateNotification 
-              onUpdate={handleUpdate}
-              onDismiss={handleDismiss}
+          <Router>
+            <ScrollManager />
+            <ScrollToTop />
+            
+            {/* NOTIFICAÇÕES GLOBAIS - Fora das rotas mas dentro do Router */}
+            {/* Notificação de ATUALIZAÇÃO */}
+            {updateAvailable && (
+              <UpdateNotification 
+                onUpdate={handleUpdate}
+                onDismiss={handleDismiss}
+              />
+            )}
+            
+            <Routes>
+              {/* Rotas públicas (com Header e Footer) */}
+              <Route path="/*" element={
+                <>
+                  <Header />
+                  <main>
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/produtos" element={<Products />} />
+                      <Route path="/sobre" element={<About />} />
+                      <Route path="/contato" element={<Contact />} />
+                      
+                      {/* Redirecionar rotas antigas do admin */}
+                      <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+                      <Route path="/admin/*" element={<Navigate to="/admin/login" replace />} />
+                    </Routes>
+                  </main>
+                  <Footer />
+                  
+                  {/* Cart DENTRO da rota pública */}
+                  <Cart />
+                </>
+              } />
+              
+              {/* Rotas do admin (layout próprio) */}
+              <Route path="/admin/*" element={
+                <AdminLayout />
+              }>
+                <Route path="login" element={<AdminLogin />} />
+                <Route path="dashboard" element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="rifas" element={
+                  <ProtectedRoute>
+                    <AdminRaffleManager />
+                  </ProtectedRoute>
+                } />
+                <Route path="vendas" element={
+                  <ProtectedRoute>
+                    <AdminSalesManager />
+                  </ProtectedRoute>
+                } />
+                <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+              </Route>
+            </Routes>
+            
+            {/* Botão de INSTALAÇÃO do PWA */}
+            {showInstallButton && !isAppInstalled && (
+              <div className="install-prompt">
+                <button onClick={handleInstallClick} className="install-button">
+                  <span role="img" aria-label="download">📲</span>
+                  Instalar App Terceirão 2026
+                  <small>Funciona offline! 🎯</small>
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowInstallButton(false);
+                    const event = new CustomEvent('showToast', {
+                      detail: {
+                        type: 'info',
+                        message: 'Você pode instalar o app a qualquer momento usando o menu do navegador.',
+                        duration: 3000
+                      }
+                    });
+                    window.dispatchEvent(event);
+                  }}
+                  className="install-close"
+                  aria-label="Fechar"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            
+            {/* Toaster para notificações (fallback) */}
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                duration: 3000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  fontSize: '14px',
+                },
+                success: {
+                  style: {
+                    background: '#10b981',
+                    border: '1px solid #059669',
+                  },
+                  icon: '✅',
+                },
+                error: {
+                  style: {
+                    background: '#ef4444',
+                    border: '1px solid #dc2626',
+                  },
+                  icon: '❌',
+                },
+                warning: {
+                  style: {
+                    background: '#f59e0b',
+                    color: '#000',
+                    border: '1px solid #d97706',
+                  },
+                  icon: '⚠️',
+                },
+                info: {
+                  style: {
+                    background: '#3b82f6',
+                    border: '1px solid #2563eb',
+                  },
+                  icon: 'ℹ️',
+                },
+              }}
             />
-          )}
-          
-          {/* Botão de INSTALAÇÃO do PWA */}
-          {showInstallButton && !isAppInstalled && (
-            <div className="install-prompt">
-              <button onClick={handleInstallClick} className="install-button">
-                <span role="img" aria-label="download">📲</span>
-                Instalar App Terceirão 2026
-                <small>Funciona offline! 🎯</small>
-              </button>
-              <button 
-                onClick={() => {
-                  setShowInstallButton(false);
-                  const event = new CustomEvent('showToast', {
-                    detail: {
-                      type: 'info',
-                      message: 'Você pode instalar o app a qualquer momento usando o menu do navegador.',
-                      duration: 3000
-                    }
-                  });
-                  window.dispatchEvent(event);
-                }}
-                className="install-close"
-                aria-label="Fechar"
-              >
-                ×
-              </button>
-            </div>
-          )}
-          
-          {/* Toaster para notificações (fallback) */}
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-                borderRadius: '8px',
-                padding: '16px',
-                fontSize: '14px',
-              },
-              success: {
-                style: {
-                  background: '#10b981',
-                  border: '1px solid #059669',
-                },
-                icon: '✅',
-              },
-              error: {
-                style: {
-                  background: '#ef4444',
-                  border: '1px solid #dc2626',
-                },
-                icon: '❌',
-              },
-              warning: {
-                style: {
-                  background: '#f59e0b',
-                  color: '#000',
-                  border: '1px solid #d97706',
-                },
-                icon: '⚠️',
-              },
-              info: {
-                style: {
-                  background: '#3b82f6',
-                  border: '1px solid #2563eb',
-                },
-                icon: 'ℹ️',
-              },
-            }}
-          />
+          </Router>
           
           {/* Estilos para o prompt de instalação */}
           <style jsx>{`
@@ -506,7 +531,7 @@ function App() {
               padding: 16px 20px;
               border-radius: 12px;
               box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-              z-index: 9999;
+              z-index: 9998;
               display: flex;
               align-items: center;
               gap: 12px;
@@ -607,8 +632,8 @@ function App() {
             }
           `}</style>
         </div>
-      </Router>
-    </CartProvider>
+      </CartProvider>
+    </RaffleManagerProvider>
   );
 }
 

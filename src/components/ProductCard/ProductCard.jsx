@@ -119,6 +119,48 @@ const ProductCard = ({ product, index }) => {
       {/* Imagem do produto com overlay de indisponibilidade */}
       <div className="product-image-container">
         <div className="product-image">
+          {/* BANNER ESPECIAL PARA RIFAS */}
+          {isRaffle && product.available && (
+            <div className="raffle-banner">
+              <img 
+                src="/images/hotplanet-banner.jpg" // Imagem da sua pasta public/images/
+                alt="Hot Planet Araçatuba - Prêmio da Rifa"
+                className="banner-image"
+                onError={(e) => {
+                  // Fallback caso a imagem não exista
+                  e.target.style.display = 'none';
+                  e.target.parentElement.innerHTML = `
+                    <div class="banner-fallback">
+                      <div class="fallback-content">
+                        <span class="fallback-icon">🏆</span>
+                        <div class="fallback-text">
+                          <h4>GRANDE PRÊMIO</h4>
+                          <h3>Hot Planet Araçatuba</h3>
+                          <p>1 ingresso + 2 acompanhantes</p>
+                          <div class="prize-value">R$ 117,00</div>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }}
+              />
+              <div className="banner-overlay">
+                <div className="banner-content">
+                  <div className="prize-tag">
+                    <span className="tag-icon">🏆</span>
+                    <span className="tag-text">GRANDE PRÊMIO</span>
+                  </div>
+                  <h3 className="prize-title">Hot Planet Araçatuba</h3>
+                  <p className="prize-description">1 ingresso + 2 acompanhantes</p>
+                  <div className="prize-value">
+                    <span className="value-icon">💰</span>
+                    <span className="value-text">Prêmio: R$ 117,00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <span className="product-emoji">{product.emoji}</span>
           
           {/* Overlay de indisponibilidade */}
@@ -326,12 +368,161 @@ const ProductCard = ({ product, index }) => {
           border-color: var(--color-yellow);
         }
 
+        /* BANNER DA RIFA - NOVO */
+        .raffle-banner {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 160px;
+          overflow: hidden;
+          border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+          z-index: 1;
+        }
+
+        .banner-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.5s ease;
+        }
+
+        .raffle-banner:hover .banner-image {
+          transform: scale(1.05);
+        }
+
+        .banner-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(45deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+
+        .banner-content {
+          text-align: center;
+          color: white;
+          max-width: 90%;
+        }
+
+        .prize-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(255, 209, 102, 0.2);
+          border: 2px solid var(--color-yellow);
+          padding: 8px 16px;
+          border-radius: 20px;
+          margin-bottom: 15px;
+          backdrop-filter: blur(10px);
+        }
+
+        .tag-icon {
+          font-size: 20px;
+        }
+
+        .tag-text {
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          color: var(--color-yellow);
+        }
+
+        .prize-title {
+          font-size: 22px;
+          font-weight: 800;
+          margin: 0 0 8px 0;
+          color: white;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .prize-description {
+          font-size: 14px;
+          opacity: 0.9;
+          margin: 0 0 15px 0;
+          font-weight: 500;
+        }
+
+        .prize-value {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(255, 255, 255, 0.15);
+          padding: 10px 20px;
+          border-radius: 20px;
+          font-weight: 700;
+          font-size: 16px;
+          color: var(--color-yellow);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .value-icon {
+          font-size: 18px;
+        }
+
+        /* Fallback para quando a imagem não carrega */
+        .banner-fallback {
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+
+        .fallback-content {
+          text-align: center;
+          color: white;
+        }
+
+        .fallback-icon {
+          font-size: 40px;
+          margin-bottom: 15px;
+          display: block;
+        }
+
+        .fallback-text h4 {
+          font-size: 14px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin: 0 0 10px 0;
+          color: var(--color-yellow);
+        }
+
+        .fallback-text h3 {
+          font-size: 22px;
+          font-weight: 800;
+          margin: 0 0 8px 0;
+          color: white;
+        }
+
+        .fallback-text p {
+          font-size: 14px;
+          opacity: 0.9;
+          margin: 0 0 15px 0;
+        }
+
+        .prize-value {
+          font-size: 20px;
+          font-weight: 800;
+          color: var(--color-yellow);
+        }
+
         /* Badge do produto */
         .product-badge {
           position: absolute;
           top: 12px;
           left: 12px;
-          z-index: 10;
+          z-index: 20;
           padding: 0.375rem 0.75rem;
           border-radius: var(--radius-full);
           font-size: 0.75rem;
@@ -354,6 +545,7 @@ const ProductCard = ({ product, index }) => {
           background: linear-gradient(135deg, #FFD166, #FFB347);
           color: var(--color-dark);
           box-shadow: 0 2px 8px rgba(255, 209, 102, 0.4);
+          z-index: 15;
         }
 
         @keyframes pulseUnavailable {
@@ -375,7 +567,7 @@ const ProductCard = ({ product, index }) => {
           justify-content: center;
           color: white;
           gap: 0.5rem;
-          z-index: 5;
+          z-index: 10;
           border-radius: inherit;
         }
 
@@ -494,7 +686,7 @@ const ProductCard = ({ product, index }) => {
           50% { opacity: 0.7; }
         }
 
-        /* Resto do CSS permanece igual... */
+        /* Imagem do produto ajustada para rifas */
         .product-image-container {
           position: relative;
           height: 200px;
@@ -524,6 +716,23 @@ const ProductCard = ({ product, index }) => {
           position: relative;
         }
 
+        /* Para rifas, ajusta a posição do emoji */
+        .product-card:has(.raffle-banner) .product-emoji {
+          position: absolute;
+          bottom: 20px;
+          right: 20px;
+          font-size: 3rem;
+          background: rgba(0, 0, 0, 0.5);
+          border-radius: 50%;
+          width: 60px;
+          height: 60px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          backdrop-filter: blur(5px);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
         .product-card.unavailable .product-emoji {
           animation: none;
           opacity: 0.5;
@@ -536,7 +745,7 @@ const ProductCard = ({ product, index }) => {
           right: 12px;
           display: flex;
           gap: 0.5rem;
-          z-index: 10;
+          z-index: 20;
         }
 
         .action-btn {
@@ -585,7 +794,7 @@ const ProductCard = ({ product, index }) => {
         .product-category {
           position: absolute;
           bottom: 12px;
-          right: 12px;
+          left: 12px;
           padding: 0.25rem 0.75rem;
           border-radius: var(--radius-full);
           font-size: 0.75rem;
@@ -593,11 +802,22 @@ const ProductCard = ({ product, index }) => {
           color: var(--color-dark);
           text-transform: capitalize;
           backdrop-filter: blur(10px);
-          z-index: 10;
+          z-index: 15;
           max-width: 80%;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        /* Para rifas, ajusta a categoria */
+        .product-card:has(.raffle-banner) .product-category {
+          bottom: auto;
+          top: 12px;
+          left: auto;
+          right: 60px;
+          background: rgba(255, 209, 102, 0.9);
+          color: var(--color-dark);
+          font-weight: 700;
         }
 
         .product-info {
@@ -796,8 +1016,28 @@ const ProductCard = ({ product, index }) => {
 
         /* Responsivo */
         @media (max-width: 768px) {
+          .raffle-banner {
+            height: 140px;
+          }
+          
+          .prize-title {
+            font-size: 18px;
+          }
+          
+          .prize-description {
+            font-size: 12px;
+          }
+          
           .product-emoji {
             font-size: 3rem;
+          }
+          
+          .product-card:has(.raffle-banner) .product-emoji {
+            width: 50px;
+            height: 50px;
+            font-size: 2.5rem;
+            bottom: 15px;
+            right: 15px;
           }
           
           .product-title {
@@ -829,6 +1069,27 @@ const ProductCard = ({ product, index }) => {
         }
 
         @media (max-width: 480px) {
+          .raffle-banner {
+            height: 120px;
+          }
+          
+          .banner-content {
+            padding: 10px;
+          }
+          
+          .prize-title {
+            font-size: 16px;
+          }
+          
+          .prize-tag {
+            padding: 6px 12px;
+            margin-bottom: 10px;
+          }
+          
+          .tag-text {
+            font-size: 10px;
+          }
+          
           .product-footer {
             flex-direction: column;
             align-items: stretch;
@@ -841,6 +1102,14 @@ const ProductCard = ({ product, index }) => {
           
           .product-emoji {
             font-size: 2.5rem;
+          }
+          
+          .product-card:has(.raffle-banner) .product-emoji {
+            width: 40px;
+            height: 40px;
+            font-size: 2rem;
+            bottom: 10px;
+            right: 10px;
           }
           
           .product-pricing {

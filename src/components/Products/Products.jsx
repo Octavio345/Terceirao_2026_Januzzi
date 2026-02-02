@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ProductCard from '../ProductCard/ProductCard';
 import RaffleProductCard from '../RaffleProductCard/RaffleProductCard';
-import { Filter, Search, Package, Grid, List, ChevronDown, Tag, Star, Ticket, AlertCircle } from 'lucide-react';
+import { Filter, Search, Package, List, ChevronDown, Tag, Star, Ticket, AlertCircle } from 'lucide-react';
 import { productsData, categories, categoryColors } from '../../data/products';
 
 const Products = () => {
@@ -369,7 +369,6 @@ const Products = () => {
                     onClick={() => setViewMode('grid')}
                     aria-label="Visualização em grade"
                   >
-                    <Grid size={18} />
                   </button>
                   <button 
                     className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
@@ -418,29 +417,29 @@ const Products = () => {
 
             {/* Grid/Lista de produtos */}
             {sortedProducts.length > 0 ? (
-              <div className={`products-container ${viewMode === 'grid' ? 'grid-view' : 'list-view'}`}>
-                {sortedProducts.map((product, index) => {
-                  // Se for rifa, mostra normalmente
-                  if (product.category === 'rifas' && product.available) {
-                    return (
-                      <RaffleProductCard 
-                        key={product.id} 
-                        product={product} 
-                        index={index % 10}
-                      />
-                    );
-                  } else {
-                    // Se não for rifa ou estiver indisponível, passa com flag de indisponível
-                    return (
-                      <ProductCard 
-                        key={product.id} 
-                        product={product} 
-                        index={index % 10}
-                      />
-                    );
-                  }
-                })}
-              </div>
+            <div className="products-container list-view">
+              {sortedProducts.map((product, index) => {
+                // Se for rifa, mostra normalmente
+                if (product.category === 'rifas' && product.available) {
+                  return (
+                    <RaffleProductCard 
+                      key={product.id} 
+                      product={product} 
+                      index={index % 10}
+                    />
+                  );
+                } else {
+                  // Se não for rifa ou estiver indisponível, passa com flag de indisponível
+                  return (
+                    <ProductCard 
+                      key={product.id} 
+                      product={product} 
+                      index={index % 10}
+                    />
+                  );
+                }
+              })}
+            </div>
             ) : (
               <div className="empty-state">
                 <div className="empty-icon">😕</div>
@@ -1514,6 +1513,16 @@ const Products = () => {
           
           .info-grid {
             grid-template-columns: 1fr;
+          }
+        }
+          .raffle-card-wrapper {
+          grid-column: 1 / -1; /* Faz o card da rifa ocupar toda a linha */
+          margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+          .raffle-card-wrapper {
+            margin-bottom: 20px;
           }
         }
       `}</style>

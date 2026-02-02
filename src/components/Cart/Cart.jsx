@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  X, ShoppingBag, Trash2, Plus, Minus, MessageCircle, Copy,
-  Package, ShoppingCart, ChevronRight, User, Phone, Mail,
-   Home, School, Truck, CheckCircle,  ArrowLeft,
-  CreditCard, Wallet, Calculator, AlertCircle, Clock, Calendar
+  X, Trash2, Plus, Minus,
+  Package, ShoppingCart, ChevronRight, User,
+  Home, School, Truck, CheckCircle,
+  CreditCard, Wallet, AlertCircle, Clock, Calendar,
+  Banknote, Check, Sparkles
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
-import CashWhatsAppHandler from '../CashWhatsAppHandler/CashWhatsAppHandler';
-import './Cart.css'
+import './Cart.css';
 
 const DELIVERY_FEE = 3.00;
 
@@ -42,7 +42,7 @@ const Cart = () => {
   const {
     cart,
     isCartOpen,
-    toggleCart,
+    closeCart,
     removeFromCart,
     updateQuantity,
     clearCart,
@@ -93,30 +93,8 @@ const Cart = () => {
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [formStep, setFormStep] = useState(1);
 
-  const [showCashWhatsAppHandler, setShowCashWhatsAppHandler] = useState(false);
-  const [orderDataForWhatsApp, setOrderDataForWhatsApp] = useState(null);
-
-  // =======================
-  // DETECTAR RETORNO DO WHATSAPP
-  // =======================
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && showCashWhatsAppHandler) {
-        setTimeout(() => {
-          setShowCashWhatsAppHandler(false);
-          setOrderDataForWhatsApp(null);
-        }, 300);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleVisibilityChange);
-    };
-  }, [showCashWhatsAppHandler]);
+  // Refs
+  const cashInputRef = useRef(null);
 
   // =======================
   // UTILITÁRIOS
@@ -124,18 +102,12 @@ const Cart = () => {
   const parseCashAmount = useCallback((value) => {
     if (!value) return 0;
     
-    const clean = value.replace(/[^\d,]/g, '');
-    if (!clean) return 0;
-
-    if (!clean.includes(',')) {
-      return parseFloat(clean) / 100;
-    }
-
-    const [inteiro, decimal = ''] = clean.split(',');
-    const intPart = inteiro === '' ? '0' : inteiro;
-    const decPart = decimal.padEnd(2, '0').slice(0, 2);
+    // Remove tudo que não é número
+    const numbers = value.replace(/[^\d]/g, '');
+    if (!numbers) return 0;
     
-    return parseFloat(`${intPart}.${decPart}`) || 0;
+    // Converte para centavos e depois para reais
+    return parseFloat(numbers) / 100;
   }, []);
 
   const formatCurrency = useCallback((value) => {
@@ -251,6 +223,40 @@ const Cart = () => {
         `📱 Chave PIX será enviada após confirmação\n`;
     }
 
+    // Verificar se há rifas
+    const hasRaffles = items.some(item => item.isRaffle);
+    const raffleItems = items.filter(item => item.isRaffle);
+    
+    // Informações importantes sobre as rifas
+    let rafflesInfo = '';
+    if (hasRaffles && raffleItems.length > 0) {
+      rafflesInfo = `\n*🎟️ RIFAS SELECIONADAS:*\n`;
+      raffleItems.forEach((item, index) => {
+        if (index < 5) {
+          rafflesInfo += `• ${item.selectedClass || ''} Nº ${item.selectedNumber?.toString().padStart(3, '0') || ''}\n`;
+        }
+      });
+      if (raffleItems.length > 5) {
+        rafflesInfo += `• ... e mais ${raffleItems.length - 5} rifa(s)\n`;
+      }
+      
+      rafflesInfo += `\n*⚠️ INFORMAÇÃO IMPORTANTE SOBRE AS RIFAS:*\n`;
+      
+      if (paymentMethod === 'pix') {
+        rafflesInfo += `• As rifas estão RESERVADAS LOCALMENTE\n`;
+        rafflesInfo += `• Elas serão enviadas para o sistema SOMENTE quando você:\n`;
+        rafflesInfo += `   1. Enviar o comprovante PIX\n`;
+        rafflesInfo += `   2. Clicar em "Já enviei o comprovante"\n`;
+        rafflesInfo += `• Até lá, o administrador NÃO VÊ suas rifas!\n`;
+      } else {
+        rafflesInfo += `• As rifas serão enviadas para o sistema como RESERVADAS PENDENTES\n`;
+        rafflesInfo += `• O administrador verá sua reserva (status: aguardando pagamento)\n`;
+        rafflesInfo += `• Após pagamento físico, serão marcadas como PAGAS\n`;
+      }
+      
+      rafflesInfo += `\n`;
+    }
+
     // Resumo financeiro
     const summaryText = `💰 *RESUMO FINANCEIRO*\n` +
       `└── Subtotal: ${formatBRL(subtotal)}\n` +
@@ -262,6 +268,7 @@ const Cart = () => {
       customerText + '\n' +
       deliveryText + '\n' +
       paymentText + '\n' +
+      rafflesInfo + '\n' +
       `🛒 *ITENS DO PEDIDO*\n${itemsText}\n\n` +
       summaryText + '\n' +
       `⏰ Data/hora: ${new Date().toLocaleString('pt-BR')}\n\n` +
@@ -420,35 +427,75 @@ const Cart = () => {
     }
   };
 
+  // CORREÇÃO PRINCIPAL: Função otimizada para digitação do valor em dinheiro
   const handleCashAmountChange = (e) => {
     const value = e.target.value;
     
-    let numbers = value.replace(/\D/g, '');
-    numbers = numbers.substring(0, 10);
+    // Remove tudo que não é número
+    let numbers = value.replace(/[^\d]/g, '');
     
+    // Se estiver vazio, seta vazio
     if (!numbers) {
       setCashAmount('');
       return;
     }
     
-    const amount = parseInt(numbers, 10) / 100;
+    // Limita a 10 dígitos (até 99 milhões)
+    numbers = numbers.substring(0, 10);
     
-    const formatted = amount.toLocaleString('pt-BR', {
+    // Se o valor for apenas "0", mantém "0"
+    if (numbers === '0') {
+      setCashAmount('0');
+      return;
+    }
+    
+    // Converte para número
+    const numericValue = parseInt(numbers, 10);
+    
+    // Se for NaN, seta vazio
+    if (isNaN(numericValue)) {
+      setCashAmount('');
+      return;
+    }
+    
+    // Converte para reais (dividindo por 100)
+    const amountInReais = numericValue / 100;
+    
+    // Formata para exibição
+    const formatted = amountInReais.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
     
     setCashAmount(formatted);
+    
+    // Mantém o cursor na posição correta
+    requestAnimationFrame(() => {
+      if (cashInputRef.current) {
+        // Salva a posição do cursor
+        const cursorPosition = cashInputRef.current.selectionStart;
+        
+        // Restaura o foco se o elemento ainda existir
+        if (document.activeElement !== cashInputRef.current) {
+          cashInputRef.current.focus();
+        }
+        
+        // Restaura a posição do cursor
+        cashInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    });
   };
 
   const handleCashAmountBlur = () => {
-    if (cashAmount) {
+    if (cashAmount && cashAmount.trim() !== '') {
       const cash = parseCashAmount(cashAmount);
       if (!isNaN(cash) && cash > 0) {
-        setCashAmount(cash.toLocaleString('pt-BR', {
+        // Formata novamente para garantir 2 casas decimais
+        const formatted = cash.toLocaleString('pt-BR', {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
-        }));
+        });
+        setCashAmount(formatted);
       }
     }
   };
@@ -473,11 +520,25 @@ const Cart = () => {
         amount = totalWithDelivery;
     }
     
-    setCashAmount(amount.toLocaleString('pt-BR', {
+    const formatted = amount.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }));
+    });
+    
+    setCashAmount(formatted);
     setCashValidationError('');
+    
+    // Foca no input após selecionar sugestão
+    setTimeout(() => {
+      if (cashInputRef.current) {
+        cashInputRef.current.focus();
+        // Coloca o cursor no final
+        cashInputRef.current.setSelectionRange(
+          formatted.length,
+          formatted.length
+        );
+      }
+    }, 100);
   };
 
   // =======================
@@ -536,7 +597,7 @@ const Cart = () => {
   // =======================
   // FINALIZAR PEDIDO
   // =======================
-  const handleFinalizeOrder = () => {
+  const handleFinalizeOrder = useCallback(() => {
     if (cart.length === 0) {
       alert('Seu carrinho está vazio!');
       return;
@@ -577,26 +638,31 @@ const Cart = () => {
     };
 
     try {
-      if (paymentMethod === 'pix') {
-        createOrder(orderData);
-      } else {
-        // Formatar a mensagem corretamente
-        const whatsAppMessage = formatWhatsAppMessage(orderData);
-        
-        // Criar URL do WhatsApp
-        const phoneNumber = "5518996349330";
-        const encodedMessage = encodeURIComponent(whatsAppMessage);
-        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-        
-        // Limpar carrinho e abrir WhatsApp
-        clearCart();
-        window.open(whatsappUrl, '_blank');
+      console.log('🛒 FINALIZANDO PEDIDO:', {
+        id: 'A SER GERADO',
+        total: orderData.total,
+        paymentMethod: orderData.paymentMethod,
+        hasRaffles: cart.some(item => item.isRaffle),
+        raffleCount: cart.filter(item => item.isRaffle).length
+      });
+      
+      console.log('⚠️ ATENÇÃO: As rifas ainda NÃO foram para o Firebase!');
+      console.log('📋 Para PIX: Serão enviadas quando clicar em "Já enviei comprovante"');
+      console.log('💰 Para DINHEIRO: Serão enviadas quando clicar em "Enviar para WhatsApp"');
+      
+      const createdOrder = createOrder(orderData);
+      console.log('✅ Pedido criado com sucesso:', createdOrder);
+      
+      // Feedback visual para o usuário
+      if (createdOrder) {
+        alert('✅ Pedido criado com sucesso! Agora é só enviar o comprovante.');
       }
+      
     } catch (error) {
       console.error('Erro ao criar pedido:', error);
       alert('Erro ao processar pedido. Tente novamente.');
     }
-  };
+  }, [cart, validateForm, customerInfo, deliveryOption, deliveryAddress, deliveryDate, subtotal, totalWithDelivery, paymentMethod, cashAmount, cashChange, parseCashAmount, createOrder]);
 
   // =======================
   // COPIA DO PEDIDO
@@ -640,7 +706,7 @@ const Cart = () => {
   // VIEW PRODUCTS
   // =======================
   const handleViewProducts = () => {
-    toggleCart();
+    closeCart();
     
     setTimeout(() => {
       const productsSection = document.querySelector('#produtos, .products-section, section[data-products]');
@@ -664,12 +730,156 @@ const Cart = () => {
   };
 
   // =======================
-  // FUNÇÃO PARA FECHAR WHATSAPP HANDLER
+  // ENVIAR PARA WHATSAPP
   // =======================
-  const handleCloseWhatsAppHandler = () => {
-    setShowCashWhatsAppHandler(false);
-    setOrderDataForWhatsApp(null);
+  const handleSendToWhatsApp = () => {
+    if (!isFormValid) {
+      alert('Por favor, preencha todos os dados obrigatórios primeiro.');
+      return;
+    }
+
+    const orderData = {
+      customerInfo: {
+        ...customerInfo,
+        phone: customerInfo.phone.replace(/\D/g, '')
+      },
+      deliveryOption,
+      deliveryAddress: deliveryOption === 'entrega' ? deliveryAddress : {},
+      deliveryDate,
+      subtotal,
+      deliveryFee: deliveryOption === 'entrega' ? DELIVERY_FEE : 0,
+      total: totalWithDelivery,
+      paymentMethod,
+      cashAmount: paymentMethod === 'dinheiro' ? parseCashAmount(cashAmount) : 0,
+      cashChange: paymentMethod === 'dinheiro' ? cashChange : 0,
+      items: [...cart]
+    };
+
+    const message = formatWhatsAppMessage(orderData);
+    const whatsappNumber = '5518996349330';
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+
+    window.open(whatsappUrl, '_blank');
   };
+
+  // =======================
+  // COMPONENTE DE PAGAMENTO EM DINHEIRO OTIMIZADO
+  // =======================
+  const CashPaymentSection = () => (
+    <div className="cash-payment-section">
+      <div className="section-header">
+        <div className="section-title-icon">
+          <div className="icon-wrapper success">
+            <Banknote size={20} />
+          </div>
+          <h4>Pagamento em Dinheiro</h4>
+        </div>
+        <p className="section-subtitle">Informe o valor para calcularmos o troco</p>
+      </div>
+      
+      <div className="cash-input-section">
+        <label className="input-label">
+          Valor entregue
+          <span className="hint">(digite apenas números)</span>
+        </label>
+        
+        <div className="amount-input-wrapper">
+          <div className="currency-prefix">R$</div>
+          <input
+            ref={cashInputRef}
+            type="text"
+            placeholder="0,00"
+            value={cashAmount}
+            onChange={handleCashAmountChange}
+            onBlur={handleCashAmountBlur}
+            className="amount-input"
+            inputMode="decimal"
+            autoComplete="off"
+          />
+        </div>
+        
+        {cashValidationError && (
+          <div className="error-message">
+            <AlertCircle size={16} />
+            <span>{cashValidationError}</span>
+          </div>
+        )}
+        
+        <div className="quick-suggestions">
+          <p className="suggestions-title">Sugestões rápidas</p>
+          <div className="suggestion-buttons">
+            <button
+              type="button"
+              className="suggestion-btn primary"
+              onClick={() => handleQuickCashSuggestion('exact')}
+            >
+              <Check size={14} />
+              Valor exato
+            </button>
+            <button
+              type="button"
+              className="suggestion-btn"
+              onClick={() => handleQuickCashSuggestion('round-up')}
+            >
+              <Sparkles size={14} />
+              Arredondar
+            </button>
+            <button
+              type="button"
+              className="suggestion-btn"
+              onClick={() => handleQuickCashSuggestion('+5')}
+            >
+              + R$ 5
+            </button>
+            <button
+              type="button"
+              className="suggestion-btn"
+              onClick={() => handleQuickCashSuggestion('+10')}
+            >
+              + R$ 10
+            </button>
+          </div>
+        </div>
+        
+        <div className="calculation-summary">
+          <div className="summary-item">
+            <span className="summary-label">Total a pagar</span>
+            <span className="summary-value">{formatCurrency(totalWithDelivery)}</span>
+          </div>
+          
+          {cashAmount && (
+            <>
+              <div className="summary-item">
+                <span className="summary-label">Valor entregue</span>
+                <span className="summary-value success">
+                  {formatCurrency(parseCashAmount(cashAmount))}
+                </span>
+              </div>
+              
+              <div className="divider"></div>
+              
+              <div className="summary-item highlight">
+                <span className="summary-label">Troco necessário</span>
+                <span className={`summary-value ${cashChange > 0 ? 'accent' : 'success'}`}>
+                  {cashChange > 0 ? (
+                    <>
+                      {formatCurrency(cashChange)}
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={14} />
+                      Valor exato
+                    </>
+                  )}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   // =======================
   // RENDER FORM STEPS
@@ -690,7 +900,6 @@ const Cart = () => {
               <div className="form-fields">
                 <div className="form-group">
                   <div className="input-icon">
-                    <User size={18} />
                   </div>
                   <input
                     type="text"
@@ -709,7 +918,6 @@ const Cart = () => {
 
                 <div className="form-group">
                   <div className="input-icon">
-                    <Phone size={18} />
                   </div>
                   <input
                     type="tel"
@@ -728,7 +936,6 @@ const Cart = () => {
 
                 <div className="form-group">
                   <div className="input-icon">
-                    <Mail size={18} />
                   </div>
                   <input
                     type="email"
@@ -752,7 +959,6 @@ const Cart = () => {
                 onClick={() => setShowCustomerForm(false)}
                 type="button"
               >
-                <ArrowLeft size={18} />
                 <span>Voltar ao Carrinho</span>
               </button>
               <button
@@ -762,7 +968,6 @@ const Cart = () => {
                 type="button"
               >
                 <span>Continuar</span>
-                <ChevronRight size={18} />
               </button>
             </div>
           </>
@@ -776,6 +981,28 @@ const Cart = () => {
                 <Truck size={20} />
                 Entrega e Pagamento
               </h4>
+
+              {/* Aviso sobre Rifas (se houver) */}
+              {cart.some(item => item.isRaffle) && (
+                <div className="important-raffle-notice">
+                  <div className="notice-header">
+                    <AlertCircle size={20} />
+                    <h5>ATENÇÃO - RIFAS NO CARRINHO</h5>
+                  </div>
+                  <div className="notice-content">
+                    <p><strong>Seu carrinho contém {cart.filter(item => item.isRaffle).length} rifa(s).</strong></p>
+                    <p>As rifas estão apenas RESERVADAS no seu navegador.</p>
+                    <p><strong>Para confirmar a compra:</strong></p>
+                    <ul>
+                      <li>💳 <strong>PIX:</strong> Envie comprovante + Clique em "Já enviei"</li>
+                      <li>💰 <strong>DINHEIRO:</strong> Clique em "Enviar para WhatsApp"</li>
+                    </ul>
+                    <p className="critical-warning">
+                      ⚠️ O administrador só vê suas rifas após a confirmação final!
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Aviso de Entrega */}
               {deliveryOption === 'entrega' && (
@@ -968,148 +1195,59 @@ const Cart = () => {
 
               {/* Forma de Pagamento */}
               <div className="payment-section">
-                <div className="section-title-sm">
-                  <span className="section-icon">💳</span>
-                  <span>Forma de Pagamento</span>
+                <div className="section-header">
+                  <div className="section-title-icon">
+                    <div className="icon-wrapper accent">
+                      <CreditCard size={20} />
+                    </div>
+                    <h3 className="forma_de_pagamento">Forma de Pagamento</h3>
+                  </div>
+                  <p className="section-subtitle">Escolha como deseja realizar o pagamento</p>
                 </div>
                 
-                <div className="payment-options-grid">
+                <div className="options-grid">
                   {PAYMENT_OPTIONS.map((option) => (
-                    <div
+                    <button
                       key={option.id}
-                      className={`payment-option-card ${paymentMethod === option.id ? 'selected' : ''}`}
+                      type="button"
+                      className={`option-card ${paymentMethod === option.id ? 'selected' : ''}`}
                       onClick={() => handlePaymentMethodChange(option.id)}
                     >
-                      <div className="payment-icon-wrapper">
-                        <option.icon size={28} className="payment-icon" />
-                      </div>
-                      
-                      <div className="payment-content">
-                        <div className="payment-header">
-                          <h5 className="payment-title">{option.label}</h5>
+                      <div className="option-header">
+                        <div className="option-icon-wrapper">
+                          <div className="icon-circle accent">
+                            <option.icon size={22} />
+                          </div>
+                        </div>
+                        
+                        <div className="option-title-wrapper">
+                          <h4>{option.label}</h4>
                           {paymentMethod === option.id && (
-                            <CheckCircle size={18} className="payment-check" />
+                            <div className="selected-badge">
+                              <CheckCircle size={16} />
+                            </div>
                           )}
                         </div>
-                        
-                        <p className="payment-desc">{option.description}</p>
-                        
-                        <div className="benefits-list">
-                          {option.benefits.map((benefit, index) => (
-                            <div key={index} className="benefit-item">
-                              <CheckCircle size={12} />
-                              <span>{benefit}</span>
-                            </div>
-                          ))}
-                        </div>
                       </div>
-                    </div>
+                      
+                      <p className="option-description">{option.description}</p>
+                      
+                      <div className="benefits-container">
+                        {option.benefits.map((benefit, index) => (
+                          <div key={index} className="benefit-item">
+                            <div className="benefit-icon">
+                              <CheckCircle size={12} />
+                            </div>
+                            <span className="benefit-text">{benefit}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </button>
                   ))}
                 </div>
 
-                {/* Campo para valor em dinheiro */}
-                {paymentMethod === 'dinheiro' && (
-                  <div className="cash-section">
-                    <div className="cash-header">
-                      <div className="cash-title-wrapper">
-                        <Calculator size={20} />
-                        <div>
-                          <h5>Pagamento em dinheiro</h5>
-                          <p className="cash-subtitle">
-                            Informe o valor para calcularmos o troco
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="cash-input-container">
-                      <div className="cash-input-group">
-                        <span className="cash-prefix">R$</span>
-                        <input
-                          type="text"
-                          placeholder="0,00"
-                          value={cashAmount}
-                          onChange={handleCashAmountChange}
-                          onBlur={handleCashAmountBlur}
-                          className="cash-input"
-                          inputMode="decimal"
-                          autoComplete="off"
-                        />
-                      </div>
-                      
-                      {/* Mensagem de erro */}
-                      {cashValidationError && (
-                        <div className="cash-error-message">
-                          <AlertCircle size={16} />
-                          <span>{cashValidationError}</span>
-                        </div>
-                      )}
-                      
-                      {/* Sugestões rápidas */}
-                      <div className="cash-suggestions">
-                        <p className="suggestions-title">Sugestões rápidas:</p>
-                        <div className="suggestion-buttons">
-                          <button
-                            type="button"
-                            className="suggestion-btn exact"
-                            onClick={() => handleQuickCashSuggestion('exact')}
-                          >
-                            Valor exato
-                          </button>
-                          <button
-                            type="button"
-                            className="suggestion-btn"
-                            onClick={() => handleQuickCashSuggestion('round-up')}
-                          >
-                            Arredondar
-                          </button>
-                          <button
-                            type="button"
-                            className="suggestion-btn"
-                            onClick={() => handleQuickCashSuggestion('+5')}
-                          >
-                            + R$ 5,00
-                          </button>
-                          <button
-                            type="button"
-                            className="suggestion-btn"
-                            onClick={() => handleQuickCashSuggestion('+10')}
-                          >
-                            + R$ 10,00
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {/* Resumo do cálculo */}
-                      <div className="cash-summary">
-                        <div className="summary-row">
-                          <span>Total a pagar:</span>
-                          <span className="summary-value">{formatCurrency(totalWithDelivery)}</span>
-                        </div>
-                        
-                        {cashAmount && (
-                          <>
-                            <div className="summary-row">
-                              <span>Valor informado:</span>
-                              <span className="summary-value given">
-                                {formatCurrency(parseCashAmount(cashAmount))}
-                              </span>
-                            </div>
-                            
-                            <div className="summary-divider-light"></div>
-                            
-                            <div className="summary-row change-row">
-                              <span>Troco necessário:</span>
-                              <span className={`summary-value change ${cashChange > 0 ? 'positive' : 'exact'}`}>
-                                {cashChange > 0 ? formatCurrency(cashChange) : '✅ Valor exato'}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Seção de Dinheiro (condicional) */}
+                {paymentMethod === 'dinheiro' && <CashPaymentSection />}
               </div>
             </div>
 
@@ -1119,7 +1257,6 @@ const Cart = () => {
                 onClick={() => setFormStep(1)}
                 type="button"
               >
-                <ArrowLeft size={18} />
                 <span>Voltar</span>
               </button>
               <button
@@ -1130,13 +1267,11 @@ const Cart = () => {
               >
                 {paymentMethod === 'pix' ? (
                   <>
-                    <CreditCard size={18} />
                     <span>Finalizar com PIX</span>
                   </>
                 ) : (
                   <>
-                    <MessageCircle size={18} />
-                    <span>Enviar para WhatsApp</span>
+                    <span>Finalizar com <br /> Dinheiro</span>
                   </>
                 )}
               </button>
@@ -1152,29 +1287,16 @@ const Cart = () => {
   // =======================
   // RENDER CONDICIONAL
   // =======================
-  if (!isCartOpen) return null;
-
-  if (showCashWhatsAppHandler && orderDataForWhatsApp) {
-    return (
-      <div className="cart-overlay" onClick={handleCloseWhatsAppHandler}>
-        <div className="cart-container" onClick={e => e.stopPropagation()}>
-          <div className="whatsapp-handler-wrapper">
-            <CashWhatsAppHandler
-              orderData={orderDataForWhatsApp}
-              vendorWhatsApp="5518996349330"
-              onClose={handleCloseWhatsAppHandler}
-            />
-          </div>
-        </div>
-      </div>
-    );
+  if (!isCartOpen) {
+    console.log('Cart is closed, not rendering');
+    return null;
   }
 
   // =======================
   // RENDER PRINCIPAL
   // =======================
   return (
-    <div className="cart-overlay" onClick={toggleCart}>
+    <div className="cart-overlay" onClick={closeCart}>
       <div className="cart-container" onClick={e => e.stopPropagation()}>
         {/* Cabeçalho */}
         <div className="cart-header">
@@ -1184,6 +1306,7 @@ const Cart = () => {
               <div className="cart-badge">{getCartCount()}</div>
             </div>
             <div className="header-text">
+              
               <h2 className="cart-title">Meu Carrinho</h2>
               <p className="cart-subtitle">
                 {getCartCount()} {getCartCount() === 1 ? 'item' : 'itens'}
@@ -1192,7 +1315,7 @@ const Cart = () => {
           </div>
           <button
             className="close-button"
-            onClick={toggleCart}
+            onClick={closeCart}
             aria-label="Fechar carrinho"
             type="button"
           >
@@ -1217,7 +1340,6 @@ const Cart = () => {
                   onClick={handleViewProducts}
                   type="button"
                 >
-                  <ShoppingBag size={20} />
                   <span>Ver Produtos Disponíveis</span>
                 </button>
               </div>
@@ -1281,10 +1403,35 @@ const Cart = () => {
                               </button>
                             </div>
                             
-                            {item.description && (
-                              <p className="item-desc">{item.description}</p>
+                            {/* MOSTRAR INFORMAÇÕES DA RIFA */}
+                            {item.isRaffle && (
+                              <div className="raffle-details">
+                                <div className="raffle-detail">
+                                  <span className="detail-label">Turma:</span>
+                                  <span className="detail-value">{item.classInfo?.name || item.selectedClass}</span>
+                                </div>
+                                <div className="raffle-detail">
+                                  <span className="detail-label">Número:</span>
+                                  <span className="detail-value raffle-number">
+                                    {item.selectedNumber?.toString().padStart(3, '0') || 'Não especificado'}
+                                  </span>
+                                </div>
+                                <div className="raffle-detail">
+                                  <span className="detail-label">Tipo:</span>
+                                  <span className="detail-value">Rifa Hot Planet</span>
+                                </div>
+                                <div className="raffle-status-notice">
+                                  <span>
+                                    <strong>Status:</strong> {item.status === 'reservado_local' ? 'Reservada localmente' : 'Reservada'}
+                                  </span>
+                                </div>
+                              </div>
                             )}
                             
+                            {item.description && !item.isRaffle && (
+                              <p className="item-desc">{item.description}</p>
+                            )}
+                                                      
                             <div className="item-footer">
                               <div className="quantity-control">
                                 <button
@@ -1318,6 +1465,28 @@ const Cart = () => {
                         </div>
                       ))}
                     </div>
+                    
+                    {/* Aviso sobre Rifas */}
+                    {cart.some(item => item.isRaffle) && (
+                      <div className="raffle-cart-notice">
+                        <div className="notice-header">
+                          <AlertCircle size={18} />
+                          <h4>ATENÇÃO - RIFAS NO CARRINHO</h4>
+                        </div>
+                        <div className="notice-content">
+                          <p>Você tem <strong>{cart.filter(item => item.isRaffle).length} rifa(s)</strong> no carrinho.</p>
+                          <p><strong>As rifas estão apenas RESERVADAS no seu navegador.</strong></p>
+                          <p>Para confirmar a compra e enviar as rifas para o sistema:</p>
+                          <ul>
+                            <li>💳 <strong>PIX:</strong> Envie comprovante + Clique em "Já enviei"</li>
+                            <li>💰 <strong>DINHEIRO:</strong> Clique em "Enviar para WhatsApp"</li>
+                          </ul>
+                          <p className="warning-note">
+                            ⚠️ O administrador só vê suas rifas após a confirmação final do pagamento!
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -1467,25 +1636,33 @@ const Cart = () => {
                     disabled={!isFormValid}
                     type="button"
                   >
-                    <Copy size={20} />
                     <span>Copiar Pedido</span>
                   </button>
                   
                   <button
-                    className="btn btn-primary btn-action"
+                    className="btn btn-secondary btn-action"
+                    onClick={handleSendToWhatsApp}
+                    disabled={!isFormValid}
+                    type="button"
+                  >
+                    <span>Enviar WhatsApp</span>
+                  </button>
+                </div>
+
+                <div className="action-row">
+                  <button
+                    className="btn btn-primary btn-full"
                     onClick={handleFinalizeOrder}
                     disabled={!isFormValid}
                     type="button"
                   >
                     {paymentMethod === 'pix' ? (
                       <>
-                        <CreditCard size={20} />
                         <span>Finalizar com PIX</span>
                       </>
                     ) : (
                       <>
-                        <MessageCircle size={20} />
-                        <span>Enviar para WhatsApp</span>
+                        <span>Finalizar com Dinheiro</span>
                       </>
                     )}
                   </button>
@@ -1517,11 +1694,24 @@ const Cart = () => {
                       <span className="step-num">4</span>
                       <span>
                         {paymentMethod === 'pix' 
-                          ? 'Aguarde a confirmação do seu pedido' 
-                          : 'Envie o pedido pelo WhatsApp para confirmar'}
+                          ? 'CLIQUE EM "JÁ ENVIEI COMPROVANTE" para confirmar' 
+                          : 'CLIQUE EM "ENVIAR PARA WHATSAPP" para reservar'}
                       </span>
                     </li>
                   </ol>
+                  
+                  {/* Aviso específico para Rifas */}
+                  {cart.some(item => item.isRaffle) && (
+                    <div className="raffle-payment-notice">
+                      <AlertCircle size={16} />
+                      <div>
+                        <p><strong>⚠️ ATENÇÃO - RIFAS NO CARRINHO:</strong></p>
+                        <p>As rifas estão <strong>APENAS RESERVADAS NO SEU NAVEGADOR</strong>.</p>
+                        <p>Elas só serão enviadas para o sistema após a confirmação final do pagamento.</p>
+                        <p><strong>O administrador NÃO VÊ suas rifas até você confirmar!</strong></p>
+                      </div>
+                    </div>
+                  )}
                   
                   {deliveryOption === 'entrega' && (
                     <div className="delivery-notice">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Instagram, Mail, MapPin, Phone, ArrowUp } from 'lucide-react';
+import { Heart, Instagram, Phone, MapPin, ChevronUp, MessageCircle } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -8,75 +8,83 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const openWhatsApp = () => {
+    window.open('https://wa.me/5518996349330', '_blank');
+  };
+
   return (
     <footer className="footer">
       <div className="container">
+        {/* Botão fixo WhatsApp */}
+        <button 
+          className="whatsapp-float"
+          onClick={openWhatsApp}
+          aria-label="Conversar no WhatsApp"
+        >
+          <MessageCircle size={24} />
+        </button>
+
         <div className="footer-content">
           {/* Logo e descrição */}
-          <div className="footer-section">
+          <div className="footer-section main-section">
             <div className="footer-brand">
               <div className="footer-logo">
-                <span className="logo-icon">🎓</span>
-                <div className="logo-text">
+                <div className="logo-icon">🎓</div>
+                <div>
                   <h3 className="logo-title">Terceirão 2026</h3>
                   <p className="logo-subtitle">Loja Oficial</p>
                 </div>
               </div>
               <p className="footer-description">
-                Projeto de arrecadação para a formatura do 3º ano. 
-                Cada compra nos ajuda a realizar nosso sonho de formatura!
+                Projeto de arrecadação para a formatura do 3º ano.
               </p>
             </div>
-            
-            <div className="footer-social">
-              <a 
-                href="https://instagram.com/terceirao2026" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="social-link instagram"
-                aria-label="Instagram"
-              >
-                <Instagram size={20} />
-              </a>
+
+            {/* Social e Contato Móveis */}
+            <div className="mobile-contact">
+              <div className="contact-buttons">
+                <a 
+                  href="https://wa.me/5518996349330"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="contact-button whatsapp"
+                >
+                  <Phone size={18} />
+                  <span>WhatsApp</span>
+                </a>
+                <a 
+                  href="https://www.instagram.com/3rao.januzzi2k26/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="contact-button instagram"
+                >
+                  <Instagram size={18} />
+                  <span>Instagram</span>
+                </a>
+              </div>
             </div>
           </div>
 
-          {/* Links rápidos */}
-          <div className="footer-section">
-            <h4 className="footer-heading">Navegação</h4>
-            <nav className="footer-nav">
-              <a href="/" className="footer-link">Início</a>
-              <a href="/produtos" className="footer-link">Produtos</a>
-              <a href="/sobre" className="footer-link">Sobre</a>
-              <a href="/contato" className="footer-link">Contato</a>
-            </nav>
-          </div>
+          {/* Links e informações em coluna única para mobile */}
+          <div className="footer-grid">
+            <div className="footer-column">
+              <h4 className="footer-heading">Navegação</h4>
+              <nav className="footer-nav">
+                <a href="/" className="footer-link">Início</a>
+                <a href="/produtos" className="footer-link">Produtos</a>
+                <a href="/sobre" className="footer-link">Sobre o Projeto</a>
+                <a href="/contato" className="footer-link">Fale Conosco</a>
+              </nav>
+            </div>
 
-          {/* Contato */}
-          <div className="footer-section">
-            <h4 className="footer-heading">Contato</h4>
-            <div className="contact-info">
-              <a 
-                href="https://wa.me/5511999999999" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="contact-item"
-              >
-                <Phone size={16} />
-                <span>(11) 99999-9999</span>
-              </a>
-              
-              <a 
-                href="mailto:terceirao2026@escola.com" 
-                className="contact-item"
-              >
-                <Mail size={16} />
-                <span>terceirao2026@escola.com</span>
-              </a>
-              
-              <div className="contact-item">
-                <MapPin size={16} />
-                <span>Colégio [Nome da Escola]</span>
+            <div className="footer-column">
+              <h4 className="footer-heading">Localização</h4>
+              <div className="location-info">
+                <MapPin size={18} />
+                <div>
+                  <p className="location-title">E.E. Prof. Oswaldo Januzzi</p>
+                  <p className="location-subtitle">Projeto de Formatura</p>
+                </div>
               </div>
             </div>
           </div>
@@ -87,93 +95,115 @@ const Footer = () => {
             onClick={scrollToTop}
             aria-label="Voltar ao topo"
           >
-            <ArrowUp size={20} />
+            <ChevronUp size={24} />
           </button>
         </div>
 
         {/* Divisor */}
         <div className="footer-divider"></div>
 
-        {/* Copyright */}
+        {/* Copyright e informações legais */}
         <div className="footer-bottom">
           <div className="copyright">
-            <p>© {currentYear} Terceirão 2026 – Todos os direitos reservados</p>
+            <p className="copyright-text">
+              © {currentYear} Terceirão 2026
+              <span className="copyright-divider">•</span>
+              Todos os direitos reservados
+            </p>
             <p className="made-with">
-              Feito com <Heart size={14} color="#FF6B6B" /> pelos alunos do 3º ano
+              Desenvolvido com <Heart size={14} /> por Octavio Augusto
             </p>
           </div>
           
           <div className="footer-disclaimer">
-            <p>Este site é parte de um projeto escolar para arrecadação da formatura.</p>
+            <p>Este é um projeto escolar para arrecadação da formatura.</p>
           </div>
         </div>
       </div>
 
       <style jsx>{`
         .footer {
-          background: var(--gradient-dark);
-          color: var(--color-white);
-          padding: var(--space-2xl) 0 var(--space-xl);
+          background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+          color: #ffffff;
+          padding: 2rem 1rem 1.5rem;
           position: relative;
           margin-top: auto;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .footer::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: var(--gradient-primary);
-        }
-
-        .footer-content {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: var(--space-2xl);
-          margin-bottom: var(--space-2xl);
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
           position: relative;
         }
 
-        @media (min-width: 768px) {
-          .footer-content {
-            grid-template-columns: repeat(3, 1fr);
-          }
+        /* Botão WhatsApp flutuante */
+        .whatsapp-float {
+          position: fixed;
+          bottom: 5rem;
+          right: 1rem;
+          width: 56px;
+          height: 56px;
+          background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+          border: none;
+          border-radius: 50%;
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+          z-index: 1000;
+          transition: all 0.3s ease;
+          animation: float 3s ease-in-out infinite;
         }
 
-        .footer-section {
+        .whatsapp-float:hover {
+          transform: scale(1.1);
+          box-shadow: 0 6px 25px rgba(37, 211, 102, 0.6);
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+
+        /* Conteúdo principal */
+        .footer-content {
           display: flex;
           flex-direction: column;
-          gap: var(--space-lg);
+          gap: 2rem;
+          margin-bottom: 2rem;
+        }
+
+        .main-section {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
         }
 
         .footer-brand {
           display: flex;
           flex-direction: column;
-          gap: var(--space-md);
+          gap: 1rem;
         }
 
         .footer-logo {
           display: flex;
           align-items: center;
-          gap: var(--space-sm);
+          gap: 0.75rem;
         }
 
         .logo-icon {
           font-size: 2.5rem;
-          animation: var(--float-animation);
-        }
-
-        .logo-text {
-          line-height: 1.2;
+          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
         }
 
         .logo-title {
           font-size: 1.5rem;
           font-weight: 800;
           margin: 0;
-          background: var(--gradient-primary);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -181,143 +211,270 @@ const Footer = () => {
 
         .logo-subtitle {
           font-size: 0.75rem;
-          opacity: 0.8;
-          margin: 0;
+          color: rgba(255, 255, 255, 0.7);
+          margin: 0.25rem 0 0 0;
           font-weight: 500;
-          letter-spacing: 1px;
+          letter-spacing: 0.5px;
           text-transform: uppercase;
         }
 
         .footer-description {
-          font-size: 0.875rem;
-          opacity: 0.8;
-          line-height: 1.6;
+          font-size: 0.9rem;
+          color: rgba(255, 255, 255, 0.8);
+          line-height: 1.5;
           margin: 0;
         }
 
-        .footer-social {
-          display: flex;
-          gap: var(--space-sm);
+        /* Botões de contato móveis */
+        .mobile-contact {
+          margin-top: 0.5rem;
         }
 
-        .social-link {
+        .contact-buttons {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem;
+        }
+
+        .contact-button {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 40px;
-          height: 40px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: var(--radius-full);
-          color: var(--color-white);
-          transition: all var(--transition-normal);
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          border-radius: 12px;
+          text-decoration: none;
+          font-size: 0.875rem;
+          font-weight: 600;
+          transition: all 0.3s ease;
         }
 
-        .social-link:hover {
-          background: var(--gradient-primary);
-          color: var(--color-dark);
-          transform: translateY(-3px);
+        .contact-button.whatsapp {
+          background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+          color: white;
+        }
+
+        .contact-button.instagram {
+          background: linear-gradient(135deg, #833AB4 0%, #FD1D1D 50%, #F56040 100%);
+          color: white;
+        }
+
+        .contact-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        /* Grid de informações */
+        .footer-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1.5rem;
+        }
+
+        .footer-column {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
         }
 
         .footer-heading {
-          font-size: 1.125rem;
+          font-size: 1rem;
           font-weight: 700;
-          color: var(--color-yellow);
+          color: #667eea;
           margin: 0;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .footer-heading::before {
+          content: '';
+          display: block;
+          width: 4px;
+          height: 16px;
+          background: #667eea;
+          border-radius: 2px;
         }
 
         .footer-nav {
           display: flex;
           flex-direction: column;
-          gap: var(--space-sm);
+          gap: 0.75rem;
         }
 
         .footer-link {
           color: rgba(255, 255, 255, 0.8);
           text-decoration: none;
-          font-size: 0.95rem;
-          transition: all var(--transition-normal);
-          padding: 0.25rem 0;
-          position: relative;
+          font-size: 0.9rem;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
         }
 
-        .footer-link::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 0;
-          height: 1px;
-          background: var(--color-yellow);
-          transition: width var(--transition-normal);
+        .footer-link::before {
+          content: '›';
+          color: #667eea;
+          font-size: 1.2rem;
+          transition: transform 0.3s ease;
         }
 
         .footer-link:hover {
-          color: var(--color-yellow);
-          padding-left: var(--space-sm);
+          color: white;
+          padding-left: 4px;
         }
 
-        .footer-link:hover::after {
-          width: 100%;
+        .footer-link:hover::before {
+          transform: translateX(2px);
         }
 
-        .contact-info {
+        /* Localização */
+        .location-info {
           display: flex;
-          flex-direction: column;
-          gap: var(--space-sm);
+          align-items: flex-start;
+          gap: 0.75rem;
+          padding: 1rem;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          border-left: 3px solid #667eea;
         }
 
-        .contact-item {
-          display: flex;
-          align-items: center;
-          gap: var(--space-sm);
-          color: rgba(255, 255, 255, 0.8);
-          text-decoration: none;
-          font-size: 0.875rem;
-          transition: all var(--transition-normal);
+        .location-info svg {
+          color: #667eea;
+          margin-top: 2px;
+          flex-shrink: 0;
         }
 
-        .contact-item:hover {
-          color: var(--color-yellow);
-          transform: translateX(5px);
+        .location-title {
+          font-size: 0.9rem;
+          font-weight: 600;
+          margin: 0 0 0.25rem 0;
+          color: white;
         }
 
+        .location-subtitle {
+          font-size: 0.8rem;
+          color: rgba(255, 255, 255, 0.7);
+          margin: 0;
+        }
+
+        /* Botão voltar ao topo */
         .back-to-top {
-          position: absolute;
-          bottom: 0;
-          right: 0;
-          width: 50px;
-          height: 50px;
-          background: var(--gradient-primary);
+          position: fixed;
+          bottom: 1rem;
+          right: 1rem;
+          width: 48px;
+          height: 48px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           border: none;
-          border-radius: var(--radius-full);
-          color: var(--color-dark);
+          border-radius: 50%;
+          color: white;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all var(--transition-normal);
-          animation: var(--float-animation);
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+          z-index: 999;
         }
 
         .back-to-top:hover {
-          transform: translateY(-5px) scale(1.1);
-          box-shadow: var(--shadow-lg);
+          transform: translateY(-3px) scale(1.05);
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
+        /* Divisor */
         .footer-divider {
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-          margin: var(--space-xl) 0;
+          background: linear-gradient(90deg, 
+            transparent 0%, 
+            rgba(255, 255, 255, 0.1) 50%, 
+            transparent 100%
+          );
+          margin: 1.5rem 0;
         }
 
+        /* Rodapé inferior */
         .footer-bottom {
           display: flex;
           flex-direction: column;
-          gap: var(--space-lg);
+          gap: 1rem;
           text-align: center;
         }
 
+        .copyright {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .copyright-text {
+          font-size: 0.8rem;
+          color: rgba(255, 255, 255, 0.7);
+          margin: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+
+        .copyright-divider {
+          color: #667eea;
+        }
+
+        .made-with {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          font-size: 0.75rem;
+          color: rgba(255, 255, 255, 0.6);
+          margin: 0;
+        }
+
+        .made-with svg {
+          color: #ff6b6b;
+          animation: heartbeat 1.5s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+
+        .footer-disclaimer {
+          font-size: 0.7rem;
+          color: rgba(255, 255, 255, 0.5);
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        /* Ajustes para telas maiores */
         @media (min-width: 768px) {
+          .footer {
+            padding: 2.5rem 2rem;
+          }
+
+          .footer-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 2rem;
+          }
+
+          .footer-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .whatsapp-float {
+            right: 2rem;
+            bottom: 6rem;
+          }
+
+          .back-to-top {
+            right: 2rem;
+          }
+
           .footer-bottom {
             flex-direction: row;
             justify-content: space-between;
@@ -326,64 +483,18 @@ const Footer = () => {
           }
         }
 
-        .copyright {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-
-        .copyright p {
-          font-size: 0.875rem;
-          opacity: 0.8;
-          margin: 0;
-        }
-
-        .made-with {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-size: 0.75rem;
-          opacity: 0.6;
-        }
-
-        .footer-disclaimer {
-          font-size: 0.75rem;
-          opacity: 0.6;
-          max-width: 400px;
-        }
-
-        .footer-disclaimer p {
-          margin: 0;
-        }
-
-        /* Responsivo */
-        @media (max-width: 767px) {
-          .back-to-top {
-            position: relative;
-            margin-top: var(--space-lg);
-            align-self: center;
+        /* Ajustes para telas muito pequenas */
+        @media (max-width: 360px) {
+          .footer-grid {
+            grid-template-columns: 1fr;
           }
-        }
 
-        @media (max-width: 480px) {
-          .footer-content {
-            gap: var(--space-xl);
+          .contact-buttons {
+            grid-template-columns: 1fr;
           }
-          
-          .footer-section {
-            text-align: center;
-          }
-          
-          .footer-logo {
-            justify-content: center;
-          }
-          
-          .social-link {
-            margin: 0 auto;
-          }
-          
-          .footer-link:hover {
-            padding-left: 0;
+
+          .footer {
+            padding: 1.5rem 0.75rem;
           }
         }
       `}</style>

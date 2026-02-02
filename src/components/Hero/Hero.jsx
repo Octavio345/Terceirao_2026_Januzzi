@@ -1,24 +1,66 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Target, Zap, Sparkles } from 'lucide-react';
 
 const Hero = () => {
+  const fallbackRef = useRef(null);
+  const contentRef = useRef(null);
+
+  useEffect(() => {
+    // Forçar animação do conteúdo após carregamento
+    if (contentRef.current) {
+      const elements = contentRef.current.children;
+      Array.from(elements).forEach((el, index) => {
+        setTimeout(() => {
+          el.style.opacity = '1';
+          el.style.transform = 'translateY(0)';
+        }, index * 100 + 100);
+      });
+    }
+  }, []);
+
+  const handleImageError = (e) => {
+    console.error('❌ ERRO ao carregar imagem');
+    e.target.style.display = 'none';
+    if (fallbackRef.current) {
+      fallbackRef.current.style.display = 'block';
+    }
+  };
+
   return (
     <>
-      {/* Seção do Banner */}
+      {/* Seção Hero */}
       <section className="hero-section">
-        <div className="hero-background">
-          {/* Overlays gradientes */}
-          <div className="gradient-overlay-top"></div>
-          <div className="gradient-overlay-bottom"></div>
+        <div className="hero-container">
           
-          {/* Elementos decorativos */}
+          {/* IMAGEM DE FUNDO - VERSÃO OTIMIZADA */}
+          <div className="image-wrapper">
+            <div 
+              ref={fallbackRef}
+              className="image-fallback"
+              style={{ display: 'none' }}
+            ></div>
+            <img 
+              src="/imagens/banner.jpg" 
+              alt="Terceirão 2026 - Celebrando a formatura"
+              className="hero-background-image"
+              loading="eager"
+              onError={handleImageError}
+              onLoad={() => console.log('✅ Imagem carregada!')}
+            />
+          </div>
+          
+          {/* GRADIENTES ORIGINAIS */}
+          <div className="gradient-overlay top-overlay"></div>
+          <div className="gradient-overlay bottom-overlay"></div>
+          
+          {/* ELEMENTOS FLUTUANTES */}
           <div className="floating-element el-1"></div>
           <div className="floating-element el-2"></div>
           <div className="floating-element el-3"></div>
           
-          {/* Conteúdo principal */}
-          <div className="hero-content">
+          {/* CONTEÚDO PRINCIPAL - REMOVIDAS AS ANIMAÇÕES CSS QUE NÃO FUNCIONAM */}
+          <div className="hero-content" ref={contentRef}>
             <div className="hero-badge">
               <Sparkles size={20} />
               <span>Loja Oficial</span>
@@ -32,21 +74,8 @@ const Hero = () => {
             <p className="hero-subtitle">
               Celebre conosco esta conquista através de produtos exclusivos
             </p>
-            
           </div>
           
-          {/* Banner image com efeito de parallax */}
-          <div className="banner-image-container">
-            <img 
-              src="/imagens/banner.jpg" 
-              alt="Terceirão 2026 - Celebrando a formatura" 
-              className="banner-image"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-              }}
-            />
-          </div>
         </div>
       </section>
 
@@ -54,7 +83,7 @@ const Hero = () => {
       <section className="highlights-section">
         <div className="container">
           <div className="highlights-grid">
-            {/* Card de Missão */}
+            
             <div className="highlight-card">
               <div className="card-decoration"></div>
               <div className="card-icon">
@@ -76,7 +105,6 @@ const Hero = () => {
               </div>
             </div>
             
-            {/* Card de Velocidade */}
             <div className="highlight-card">
               <div className="card-decoration"></div>
               <div className="card-icon">
@@ -97,9 +125,9 @@ const Hero = () => {
                 </ul>
               </div>
             </div>
+            
           </div>
           
-          {/* Seção de Call-to-Action */}
           <div className="cta-section">
             <div className="cta-content">
               <h2 className="cta-title">
@@ -124,240 +152,254 @@ const Hero = () => {
               </div>
             </div>
           </div>
+          
         </div>
       </section>
 
       <style jsx>{`
-        /* Seção Hero */
+        /* ===== RESET ===== */
         .hero-section {
           position: relative;
+          width: 100%;
           height: 85vh;
           min-height: 700px;
           max-height: 900px;
           overflow: hidden;
         }
 
-        .hero-background {
-          position: absolute;
-          inset: 0;
+        .hero-container {
+          position: relative;
+          width: 100%;
+          height: 100%;
           background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
         }
 
-        .gradient-overlay-top {
+        /* ===== IMAGEM DE FUNDO ===== */
+        .image-wrapper {
           position: absolute;
           top: 0;
           left: 0;
-          right: 0;
-          height: 40%;
-          background: linear-gradient(to bottom, rgba(15, 12, 41, 0.9), transparent);
+          width: 100%;
+          height: 100%;
           z-index: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
-        .gradient-overlay-bottom {
+        .hero-background-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center center;
+          opacity: 0.25;
+          display: block;
+          filter: brightness(1.1) contrast(1.05);
+          -webkit-filter: brightness(1.1) contrast(1.05);
+          transform: scale(1.05);
+          transition: all 0.8s ease;
+        }
+
+        .hero-container:hover .hero-background-image {
+          opacity: 0.3;
+          transform: scale(1.08);
+        }
+
+        .image-fallback {
           position: absolute;
-          bottom: 0;
+          top: 0;
           left: 0;
-          right: 0;
-          height: 40%;
-          background: linear-gradient(to top, rgba(15, 12, 41, 0.9), transparent);
-          z-index: 1;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          opacity: 0.25;
+          z-index: 0;
+          display: none;
         }
 
+        /* ===== GRADIENTES ORIGINAIS ===== */
+        .gradient-overlay {
+          position: absolute;
+          left: 0;
+          width: 100%;
+          z-index: 2;
+        }
+
+        .top-overlay {
+          top: 0;
+          height: 45%;
+          background: linear-gradient(to bottom, rgba(15, 12, 41, 0.95), transparent);
+        }
+
+        .bottom-overlay {
+          bottom: 0;
+          height: 45%;
+          background: linear-gradient(to top, rgba(15, 12, 41, 0.95), transparent);
+        }
+
+        /* ===== ELEMENTOS FLUTUANTES ===== */
         .floating-element {
           position: absolute;
           background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
           border-radius: 50%;
           filter: blur(40px);
-          z-index: 0;
+          z-index: 2;
         }
 
         .floating-element.el-1 {
-          width: 300px;
-          height: 300px;
-          top: 10%;
-          left: 10%;
-          animation: float 20s ease-in-out infinite;
+          width: 320px;
+          height: 320px;
+          top: 15%;
+          left: 8%;
+          animation: float 25s ease-in-out infinite;
         }
 
         .floating-element.el-2 {
-          width: 200px;
-          height: 200px;
-          bottom: 20%;
-          right: 10%;
-          animation: float 25s ease-in-out infinite reverse;
+          width: 220px;
+          height: 220px;
+          bottom: 15%;
+          right: 8%;
+          animation: float 30s ease-in-out infinite reverse;
         }
 
         .floating-element.el-3 {
-          width: 150px;
-          height: 150px;
-          top: 50%;
-          left: 80%;
-          animation: float 30s ease-in-out infinite;
+          width: 180px;
+          height: 180px;
+          top: 60%;
+          left: 75%;
+          animation: float 35s ease-in-out infinite;
         }
 
         @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
+          0%, 100% { 
+            transform: translateY(0) rotate(0deg) scale(1); 
+          }
+          50% { 
+            transform: translateY(-25px) rotate(5deg) scale(1.02); 
+          }
         }
 
+        /* ===== CONTEÚDO PRINCIPAL - CORRIGIDO ===== */
         .hero-content {
-          position: relative;
-          z-index: 2;
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 100%;
-          padding: 2rem;
           text-align: center;
-          max-width: 1200px;
-          margin: 0 auto;
+          padding: 2rem;
+          z-index: 3;
+          /* REMOVIDO: opacity: 0 */
         }
 
+        /* BADGE - VISÍVEL POR PADRÃO */
         .hero-badge {
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
-          background: rgba(255, 215, 0, 0.1);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 215, 0, 0.2);
+          background: rgba(255, 215, 0, 0.35);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 215, 0, 0.5);
           color: #FFD700;
-          padding: 0.5rem 1.25rem;
+          padding: 0.6rem 1.5rem;
           border-radius: 50px;
-          font-size: 0.875rem;
+          font-size: 0.9rem;
           font-weight: 600;
           margin-bottom: 3rem;
-          animation: pulse 2s infinite;
+          z-index: 3;
+          /* REMOVIDO: opacity: 0 e transform */
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          
+          /* Animações corrigidas */
+          opacity: 0;
+          transform: translateY(30px);
+          animation: slideUpBadge 0.8s ease-out 0.1s forwards;
         }
 
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-
-        .hero-icon-wrapper {
-          position: relative;
-          margin-bottom: 2rem;
-        }
-
-        .hero-icon-glow {
-          position: absolute;
-          inset: -20px;
-          background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
-          animation: glow 3s ease-in-out infinite;
-        }
-
-        @keyframes glow {
-          0%, 100% { opacity: 0.5; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(1.05); }
-        }
-
-        .hero-icon {
-          font-size: 5rem;
-          position: relative;
-          z-index: 2;
-          animation: float-icon 6s ease-in-out infinite;
-        }
-
-        @keyframes float-icon {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-15px) rotate(5deg); }
-        }
-
+        /* TÍTULO - VISÍVEL POR PADRÃO */
         .hero-title {
           font-size: clamp(3.5rem, 8vw, 6rem);
           font-weight: 900;
-          line-height: 1.1;
-          margin-bottom: 1rem;
+          line-height: 1.05;
+          margin-bottom: 1.2rem;
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
+          gap: 0.3rem;
+          z-index: 3;
+          /* REMOVIDO: opacity: 0 e transform */
+          
+          /* Animações corrigidas */
+          opacity: 0;
+          transform: translateY(30px);
+          animation: slideUpTitle 0.8s ease-out 0.3s forwards;
         }
 
         .title-gradient {
-          background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+          background: linear-gradient(135deg, #FFD700 0%, #FFA500 60%, #FF8C00 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
+          text-shadow: 0 5px 20px rgba(255, 140, 0, 0.4);
         }
 
         .title-accent {
-          color: white;
-          text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+          color: #ffffff;
+          text-shadow: 
+            0 2px 15px rgba(255, 215, 0, 0.6),
+            0 0 40px rgba(255, 215, 0, 0.3);
         }
 
+        /* SUBTÍTULO - VISÍVEL POR PADRÃO */
         .hero-subtitle {
-          font-size: clamp(1.125rem, 2vw, 1.5rem);
-          color: rgba(255, 255, 255, 0.9);
+          font-size: clamp(1.125rem, 2.2vw, 1.5rem);
+          color: rgba(255, 255, 255, 0.92) !important;
           max-width: 600px;
           margin-bottom: 3rem;
-          line-height: 1.6;
-          font-weight: 400;
+          line-height: 1.7;
+          font-weight: 300;
+          letter-spacing: 0.3px;
+          z-index: 3;
+          /* REMOVIDO: opacity: 0 e transform */
+          
+          /* Animações corrigidas */
+          opacity: 0;
+          transform: translateY(30px);
+          animation: slideUpSubtitle 0.8s ease-out 0.4s forwards;
         }
 
-        .hero-stats {
-          display: flex;
-          gap: 2rem;
-          align-items: center;
-          background: rgba(255, 255, 255, 0.05);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 20px;
-          padding: 1.5rem 2rem;
-          margin-top: 2rem;
+        /* ANIMAÇÕES CORRIGIDAS - SEPARADAS PARA CADA ELEMENTO */
+        @keyframes slideUpBadge {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
-        .stat-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.25rem;
+        @keyframes slideUpTitle {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
-        .stat-number {
-          font-size: 2rem;
-          font-weight: 800;
-          color: #FFD700;
-          line-height: 1;
+        @keyframes slideUpSubtitle {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
-        .stat-label {
-          font-size: 0.875rem;
-          color: rgba(255, 255, 255, 0.7);
-        }
-
-        .stat-divider {
-          width: 1px;
-          height: 40px;
-          background: rgba(255, 255, 255, 0.1);
-        }
-
-        .banner-image-container {
-          position: absolute;
-          inset: 0;
-          z-index: 0;
-          overflow: hidden;
-        }
-
-        .banner-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          opacity: 0.3;
-          filter: blur(0px);
-          transition: transform 0.5s ease;
-        }
-
-        .hero-section:hover .banner-image {
-          transform: scale(1.02);
-        }
-
-        /* Seção de Destaques */
+        /* ===== SEÇÃO DE DESTAQUES ===== */
         .highlights-section {
           padding: 6rem 2rem;
           background: linear-gradient(to bottom, #f8f9fa, #ffffff);
           position: relative;
-          z-index: 3;
+          z-index: 4;
         }
 
         .container {
@@ -455,7 +497,7 @@ const Hero = () => {
           border-bottom: none;
         }
 
-        /* Seção CTA */
+        /* ===== SEÇÃO CTA ===== */
         .cta-section {
           background: linear-gradient(135deg, #1a1a2e 0%, #2d3047 100%);
           border-radius: 32px;
@@ -550,76 +592,7 @@ const Hero = () => {
           transform: translateY(-3px);
         }
 
-        .cta-stats {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 20px;
-          padding: 2rem;
-          max-width: 500px;
-          margin: 0 auto;
-        }
-
-        .cta-stat {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-        }
-
-        .cta-stat-icon {
-          font-size: 1.5rem;
-        }
-
-        .cta-stat-text {
-          text-align: left;
-          display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
-        }
-
-        .cta-stat-text strong {
-          color: rgba(255, 255, 255, 0.9);
-          font-size: 0.875rem;
-          font-weight: 600;
-        }
-
-        .cta-stat-text span {
-          color: #FFD700;
-          font-size: 1.5rem;
-          font-weight: 800;
-        }
-
-        .progress-bar {
-          height: 10px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 5px;
-          overflow: hidden;
-          position: relative;
-        }
-
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #FFD700, #FFA500);
-          border-radius: 5px;
-          position: relative;
-          transition: width 1s ease-in-out;
-        }
-
-        .progress-glow {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-          animation: progress-glow 2s infinite;
-        }
-
-        @keyframes progress-glow {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-
-        /* Responsividade */
+        /* ===== RESPONSIVIDADE ===== */
         @media (max-width: 1024px) {
           .hero-section {
             height: 80vh;
@@ -641,19 +614,21 @@ const Hero = () => {
             min-height: 500px;
           }
           
+          .hero-background-image {
+            opacity: 0.2;
+            transform: scale(1.1);
+          }
+          
+          .hero-container:hover .hero-background-image {
+            transform: scale(1.12);
+          }
+          
           .hero-title {
             font-size: 3rem;
           }
           
-          .hero-stats {
-            flex-direction: column;
-            gap: 1rem;
-            text-align: center;
-          }
-          
-          .stat-divider {
-            width: 100px;
-            height: 1px;
+          .hero-subtitle {
+            font-size: 1.125rem;
           }
           
           .highlights-grid {
@@ -673,6 +648,10 @@ const Hero = () => {
             width: 100%;
             max-width: 300px;
             justify-content: center;
+          }
+          
+          .floating-element {
+            filter: blur(25px);
           }
         }
 
@@ -694,10 +673,6 @@ const Hero = () => {
             font-size: 1rem;
           }
           
-          .hero-icon {
-            font-size: 4rem;
-          }
-          
           .cta-section {
             padding: 2rem 1.5rem;
             border-radius: 24px;
@@ -706,40 +681,14 @@ const Hero = () => {
           .cta-title {
             font-size: 1.75rem;
           }
-        }
-
-        /* Animações de entrada */
-        .hero-content > * {
-          animation: slideUp 0.8s ease-out forwards;
-          opacity: 0;
-          transform: translateY(30px);
-        }
-
-        .hero-badge { animation-delay: 0.1s; }
-        .hero-icon-wrapper { animation-delay: 0.2s; }
-        .hero-title { animation-delay: 0.3s; }
-        .hero-subtitle { animation-delay: 0.4s; }
-        .hero-stats { animation-delay: 0.5s; }
-
-        @keyframes slideUp {
-          to {
-            opacity: 1;
-            transform: translateY(0);
+          
+          .floating-element {
+            display: none;
           }
-        }
-
-        /* Efeito de cursor glow */
-        .hero-section::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
-            rgba(255, 215, 0, 0.1) 0%, transparent 50%);
-          pointer-events: none;
-          z-index: 1;
+          
+          .hero-background-image {
+            opacity: 0.18;
+          }
         }
       `}</style>
     </>
