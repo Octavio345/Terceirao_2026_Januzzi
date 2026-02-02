@@ -22,7 +22,6 @@ const RaffleManager = () => {
     updateSaleStatus,
     exportToCSV,
     syncAllPending,
-    getStats,
     firebaseConnected
   } = useRaffleManager();
   
@@ -199,7 +198,6 @@ const RaffleManager = () => {
     
     toast.success(`✅ ${successCount} venda(s) marcadas como PAGAS!`);
     setSelectedRows([]);
-    setShowBulkActions(false);
   };
 
   // 🔥 NOVO: Marcar como reservado em lote
@@ -226,7 +224,6 @@ const RaffleManager = () => {
     
     toast.success(`✅ ${successCount} venda(s) marcadas como RESERVADAS!`);
     setSelectedRows([]);
-    setShowBulkActions(false);
   };
 
   // 🔥 NOVO: Cancelar em lote
@@ -253,7 +250,6 @@ const RaffleManager = () => {
     
     toast.success(`✅ ${successCount} venda(s) canceladas!`);
     setSelectedRows([]);
-    setShowBulkActions(false);
   };
 
   // 🔥 NOVO: Selecionar/deselecionar todas
