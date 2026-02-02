@@ -13,7 +13,10 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   const { addToCart, openCart } = useCart();
   const raffleManager = useRaffleManager();
   
-  const getAvailableNumbers = raffleManager?.getAvailableNumbers || (() => []);
+  const getAvailableNumbers = useMemo(() => 
+  raffleManager?.getAvailableNumbers || (() => []),
+  [raffleManager?.getAvailableNumbers]
+);
   const isSyncing = raffleManager?.isSyncing || false;
   const firebaseConnected = raffleManager?.firebaseConnected || false;
   
@@ -98,10 +101,16 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   }), [classColors]); 
 
   useEffect(() => {
-    if (typeof getAvailableNumbers === 'function') {
+    const updateNumbers = () => {
       setIsLoadingNumbers(true);
       try {
-        const numbers = getAvailableNumbers(selectedClass);
+        let numbers;
+        if (typeof getAvailableNumbers === 'function') {
+          numbers = getAvailableNumbers(selectedClass);
+        } else {
+          numbers = Array.from({ length: 300 }, (_, i) => i + 1);
+        }
+        
         setAvailableNumbers(numbers);
         
         const soldInClass = soldNumbers.filter(s => 
@@ -121,13 +130,11 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         setAvailableNumbers(Array.from({ length: 300 }, (_, i) => i + 1));
         setIsLoadingNumbers(false);
       }
-    } else {
-      setAvailableNumbers(Array.from({ length: 300 }, (_, i) => i + 1));
-      setIsLoadingNumbers(false);
-    }
-  }, [selectedClass, getAvailableNumbers, soldNumbers, classes]);
+    };
+    
+    updateNumbers();
+  }, [selectedClass, soldNumbers, getAvailableNumbers, classes]);
 
-// Para:
   useEffect(() => {
     const updateNumbers = () => {
       setIsLoadingNumbers(true);
