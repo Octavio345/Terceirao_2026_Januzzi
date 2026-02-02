@@ -19,7 +19,8 @@ const Payment = () => {
     closePaymentOnly,
     confirmRafflesInOrder,
     processCashPayment: contextProcessCashPayment,
-    clearCartAfterConfirmation
+    clearCartAfterConfirmation,
+    sendRafflesToFirebase
   } = useCart();
   
   const raffleManager = useRaffleManager();
