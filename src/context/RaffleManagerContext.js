@@ -946,7 +946,7 @@ export const RaffleManagerProvider = ({ children }) => {
     setIsSyncing(false);
     
     if (successCount > 0) {
-      toast.success('✅ ${successCount} vendas sincronizadas');
+        toast.success(`✅ ${successCount} vendas sincronizadas`);
     } else if (unsynced.length > 0) {
       toast.error('❌ Falha ao sincronizar vendas locais');
     }
