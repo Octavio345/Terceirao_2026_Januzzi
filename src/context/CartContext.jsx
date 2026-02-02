@@ -17,10 +17,7 @@ export const CartProvider = ({ children }) => {
     try {
       const savedCart = localStorage.getItem('terceirao_cart');
       if (savedCart) {
-        const parsed = JSON.parse(savedCart);
-        console.log('📦 Carrinho carregado:', parsed.length, 'itens');
-        console.log('⚠️ NOTA: Rifas no carrinho estão APENAS LOCALMENTE');
-        return Array.isArray(parsed) ? parsed : [];
+        return JSON.parse(savedCart);
       }
     } catch (error) {
       console.error('❌ Erro ao carregar carrinho:', error);
@@ -35,7 +32,6 @@ export const CartProvider = ({ children }) => {
   
   const raffleManager = useRaffleManager();
 
-  // Atualizar total sempre que o carrinho mudar
   useEffect(() => {
     const total = cart.reduce((sum, item) => {
       const price = Number(item.price) || 0;
@@ -52,18 +48,12 @@ export const CartProvider = ({ children }) => {
     }
   }, [cart]);
 
-  // ========== FUNÇÃO ADICIONAR AO CARRINHO (NÃO ENVIA PARA FIREBASE) ==========
   const addToCart = useCallback((product) => {
     if (!product || !product.id) return false;
     
     console.log('➕ Adicionando ao carrinho:', product);
     
-    // Verificar se é uma rifa
     if (product.isRaffle) {
-      // IMPORTANTE: Verificar EM TEMPO REAL antes de adicionar ao carrinho
-      console.log('🔍 Verificando em tempo real antes de adicionar ao carrinho...');
-      
-      // Verificar se já existe no carrinho
       const existingIndex = cart.findIndex(item => 
         item.isRaffle && 
         item.selectedClass === product.selectedClass && 
@@ -71,100 +61,33 @@ export const CartProvider = ({ children }) => {
       );
       
       if (existingIndex >= 0) {
-        console.log('⚠️ Esta rifa já está no carrinho');
         window.dispatchEvent(new CustomEvent('showToast', {
-          detail: {
-            type: 'error',
-            message: '⚠️ Esta rifa já está no seu carrinho!',
-            duration: 3000
-          }
+          detail: { type: 'error', message: '⚠️ Esta rifa já está no seu carrinho!', duration: 3000 }
         }));
         return false;
       }
       
-      // Verificar disponibilidade em tempo real
-      if (raffleManager && raffleManager.checkNumberInRealTime) {
-        try {
-          const realTimeCheck = raffleManager.checkNumberInRealTime(
-            product.selectedClass,
-            product.selectedNumber
-          );
-          
-          realTimeCheck.then(result => {
-            if (result.sold) {
-              console.error('❌ Número já vendido!');
-              window.dispatchEvent(new CustomEvent('showToast', {
-                detail: {
-                  type: 'error',
-                  message: `❌ ${product.selectedClass} Nº ${product.selectedNumber} já foi vendido!`,
-                  duration: 4000
-                }
-              }));
-              return false;
-            }
-            
-            if (result.reserved) {
-              console.error('❌ Número já reservado!');
-              window.dispatchEvent(new CustomEvent('showToast', {
-                detail: {
-                  type: 'error',
-                  message: `❌ ${product.selectedClass} Nº ${product.selectedNumber} já está reservado!`,
-                  duration: 4000
-                }
-              }));
-              return false;
-            }
-            
-            // Se disponível, adicionar ao carrinho
-            const tempReservationId = `TEMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            
-            const productWithReservation = {
-              ...product,
-              tempReservationId: tempReservationId,
-              reservationExpiresAt: Date.now() + (30 * 60 * 1000), // 30 minutos LOCAL
-              status: 'no_carrinho',
-              needsPaymentConfirmation: true,
-              paymentPending: true,
-              firebaseStatus: 'not_sent',
-              canBeSoldToOthers: true,
-              addedAt: new Date().toISOString()
-            };
-            
-            console.log('🛒 Rifa adicionada ao carrinho LOCALMENTE');
-            console.log('⚠️ IMPORTANTE: AINDA NÃO FOI RESERVADA NO SISTEMA!');
-            console.log('📋 Só será reservada quando confirmar o pagamento.');
-            console.log('⏰ Expira em:', new Date(productWithReservation.reservationExpiresAt).toLocaleTimeString());
-            
-            setCart(prevCart => {
-              return [...prevCart, productWithReservation];
-            });
-            
-            window.dispatchEvent(new CustomEvent('showToast', {
-              detail: {
-                type: 'success',
-                message: `✅ ${product.selectedClass} Nº ${product.selectedNumber} adicionado ao carrinho!`,
-                duration: 3000
-              }
-            }));
-            
-            return true;
-          }).catch(error => {
-            console.error('❌ Erro na verificação em tempo real:', error);
-            // Adicionar mesmo com erro de verificação
-            return addToCartFallback(product);
-          });
-          
-        } catch (error) {
-          console.error('❌ Erro na verificação:', error);
-          return addToCartFallback(product);
-        }
-      } else {
-        // Fallback se não puder verificar em tempo real
-        return addToCartFallback(product);
-      }
+      const tempReservationId = `TEMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
+      const productWithReservation = {
+        ...product,
+        tempReservationId: tempReservationId,
+        reservationExpiresAt: Date.now() + (30 * 60 * 1000),
+        status: 'no_carrinho',
+        needsPaymentConfirmation: true,
+        paymentPending: true,
+        firebaseStatus: 'not_sent',
+        addedAt: new Date().toISOString()
+      };
+      
+      setCart(prevCart => [...prevCart, productWithReservation]);
+      
+      window.dispatchEvent(new CustomEvent('showToast', {
+        detail: { type: 'success', message: `✅ ${product.selectedClass} Nº ${product.selectedNumber} adicionado ao carrinho!`, duration: 3000 }
+      }));
+      
+      return true;
     } else {
-      // Para produtos normais
       setCart(prevCart => {
         const existingIndex = prevCart.findIndex(item => item.id === product.id);
         
@@ -176,83 +99,25 @@ export const CartProvider = ({ children }) => {
           };
           return updatedCart;
         } else {
-          const newItem = {
-            ...product,
-            quantity: product.quantity || 1
-          };
+          const newItem = { ...product, quantity: product.quantity || 1 };
           return [...prevCart, newItem];
         }
       });
       
       window.dispatchEvent(new CustomEvent('showToast', {
-        detail: {
-          type: 'success',
-          message: '✅ Produto adicionado ao carrinho!',
-          duration: 2000
-        }
+        detail: { type: 'success', message: '✅ Produto adicionado ao carrinho!', duration: 2000 }
       }));
       
       return true;
     }
-  }, [cart, raffleManager]);
+  }, [cart]);
 
-  // Fallback para adicionar ao carrinho sem verificação
-  const addToCartFallback = (product) => {
-    const tempReservationId = `TEMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    const productWithReservation = {
-      ...product,
-      tempReservationId: tempReservationId,
-      reservationExpiresAt: Date.now() + (30 * 60 * 1000),
-      status: 'no_carrinho',
-      needsPaymentConfirmation: true,
-      paymentPending: true,
-      firebaseStatus: 'not_sent',
-      canBeSoldToOthers: true,
-      addedAt: new Date().toISOString()
-    };
-    
-    setCart(prevCart => {
-      return [...prevCart, productWithReservation];
-    });
-    
-    window.dispatchEvent(new CustomEvent('showToast', {
-      detail: {
-        type: 'warning',
-        message: `⚠️ ${product.selectedClass} Nº ${product.selectedNumber} adicionado ao carrinho (sem verificação)`,
-        duration: 3000
-      }
-    }));
-    
-    return true;
-  };
-
-  // ========== FUNÇÃO REMOVER DO CARRINHO (NÃO CANCELA RESERVA) ==========
   const removeFromCart = useCallback((productId) => {
     console.log('❌ Removendo do carrinho:', productId);
     
-    setCart(prevCart => {
-      const itemToRemove = prevCart.find(item => item.id === productId);
-      
-      if (itemToRemove?.isRaffle) {
-        console.log('🗑️ Rifa removida do carrinho LOCAL');
-        console.log('✅ Nada foi cancelado no sistema (nunca foi reservado)');
-        console.log('🎯 O número', itemToRemove.selectedNumber, 'continua disponível para compra');
-        
-        window.dispatchEvent(new CustomEvent('showToast', {
-          detail: {
-            type: 'info',
-            message: `🗑️ ${itemToRemove.selectedClass} Nº ${itemToRemove.selectedNumber} removido do carrinho`,
-            duration: 2000
-          }
-        }));
-      }
-      
-      return prevCart.filter(item => item.id !== productId);
-    });
+    setCart(prevCart => prevCart.filter(item => item.id !== productId));
   }, []);
 
-  // ========== FUNÇÃO ATUALIZAR QUANTIDADE ==========
   const updateQuantity = useCallback((productId, quantity) => {
     if (quantity < 1) {
       removeFromCart(productId);
@@ -269,40 +134,26 @@ export const CartProvider = ({ children }) => {
     );
   }, [removeFromCart]);
 
-  // ========== FUNÇÃO LIMPAR CARRINHO ==========
   const clearCart = useCallback(() => {
     console.log('🧹 Limpando carrinho LOCAL');
-    
-    cart.forEach(item => {
-      if (item.isRaffle) {
-        console.log('📝 Rifa removida (nunca foi reservada):', item.selectedNumber);
-      }
-    });
-    
     setCart([]);
     localStorage.removeItem('terceirao_cart');
     
     window.dispatchEvent(new CustomEvent('showToast', {
-      detail: {
-        type: 'info',
-        message: '🧹 Carrinho limpo!',
-        duration: 2000
-      }
+      detail: { type: 'info', message: '🧹 Carrinho limpo!', duration: 2000 }
     }));
-  }, [cart]);
+  }, []);
 
-  // ========== FUNÇÕES AUXILIARES ==========
   const getCartCount = useCallback(() => {
     return cart.reduce((count, item) => count + (item.quantity || 1), 0);
   }, [cart]);
 
   const getCartTotal = useCallback(() => cartTotal, [cartTotal]);
 
-  // ========== FUNÇÃO PRINCIPAL: ENVIAR RIFAS PARA FIREBASE (EM TEMPO REAL) ==========
   const sendRafflesToFirebase = useCallback(async (orderData, paymentMethod) => {
-    console.log(`🚀 ENVIANDO RIFAS PARA FIREBASE EM TEMPO REAL - ${paymentMethod}`);
+    console.log(`🚀 ENVIANDO RIFAS PARA FIREBASE - ${paymentMethod}`);
     
-    if (!raffleManager) {
+    if (!raffleManager || !raffleManager.sendToFirebase) {
       console.error('❌ RaffleManager não disponível');
       return { success: false, error: 'Sistema de rifas não disponível' };
     }
@@ -314,19 +165,17 @@ export const CartProvider = ({ children }) => {
       return { success: true, results: [], totalSent: 0, totalFailed: 0 };
     }
     
-    console.log(`📤 Processando ${raffleItems.length} rifas para envio EM TEMPO REAL`);
+    console.log(`📤 Processando ${raffleItems.length} rifas para envio`);
     
     const results = [];
     let totalSent = 0;
     let totalFailed = 0;
     let criticalFailures = [];
     
-    // Para cada rifa, verificar EM TEMPO REAL antes de enviar
     for (const raffleItem of raffleItems) {
       try {
-        console.log(`🎯 Verificando ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber} em tempo real...`);
+        console.log(`🎯 Processando ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}...`);
         
-        // VERIFICAÇÃO EM TEMPO REAL ANTES DE ENVIAR
         const realTimeCheck = await raffleManager.checkNumberInRealTime(
           raffleItem.selectedClass, 
           raffleItem.selectedNumber
@@ -338,7 +187,7 @@ export const CartProvider = ({ children }) => {
             success: false,
             turma: raffleItem.selectedClass,
             numero: raffleItem.selectedNumber,
-            error: 'Número já vendido por outra pessoa',
+            error: 'Número já vendido',
             alreadySold: true
           });
           totalFailed++;
@@ -352,7 +201,7 @@ export const CartProvider = ({ children }) => {
             success: false,
             turma: raffleItem.selectedClass,
             numero: raffleItem.selectedNumber,
-            error: 'Número já reservado por outra pessoa',
+            error: 'Número já reservado',
             alreadyReserved: true
           });
           totalFailed++;
@@ -360,7 +209,6 @@ export const CartProvider = ({ children }) => {
           continue;
         }
         
-        // PREPARAR DADOS
         const raffleData = {
           turma: raffleItem.selectedClass,
           numero: raffleItem.selectedNumber,
@@ -375,56 +223,42 @@ export const CartProvider = ({ children }) => {
         
         let result;
         if (paymentMethod === 'pix') {
-          // Para PIX, marca como PAGO
           result = await raffleManager.confirmPaymentAndSendToFirebase(raffleData, {
             method: 'pix',
             orderId: orderData.id
           });
         } else {
-          // Para DINHEIRO, marca como PENDENTE
           result = await raffleManager.createCashReservationInFirebase(raffleData, {
             method: 'dinheiro',
             orderId: orderData.id
           });
         }
         
-        if (result) {
-          console.log(`✅ Rifa enviada com SUCESSO: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
+        if (result && result.success) {
+          console.log(`✅ Rifa enviada: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
           results.push({
             success: true,
             turma: raffleItem.selectedClass,
             numero: raffleItem.selectedNumber,
             status: paymentMethod === 'pix' ? 'pago' : 'pendente',
-            firebaseId: result.firebaseId || result.id,
-            timestamp: new Date().toISOString()
+            firebaseId: result.firebaseId || result.id
           });
           totalSent++;
-          
-          // NOTIFICAR IMEDIATAMENTE OUTROS USUÁRIOS
-          window.dispatchEvent(new CustomEvent('number_sold', {
-            detail: {
-              turma: raffleItem.selectedClass,
-              numero: raffleItem.selectedNumber,
-              status: paymentMethod === 'pix' ? 'pago' : 'pendente'
-            }
-          }));
-          
         } else {
           console.error(`❌ Falha ao enviar: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
           results.push({
             success: false,
             turma: raffleItem.selectedClass,
             numero: raffleItem.selectedNumber,
-            error: 'Falha no envio para Firebase'
+            error: result?.error || 'Falha no envio'
           });
           totalFailed++;
         }
         
-        // Pequena pausa para evitar sobrecarga
         await new Promise(resolve => setTimeout(resolve, 300));
         
       } catch (error) {
-        console.error(`❌ Erro crítico: ${raffleItem.selectedNumber}:`, error);
+        console.error(`❌ Erro: ${raffleItem.selectedNumber}:`, error);
         results.push({
           success: false,
           turma: raffleItem.selectedClass,
@@ -435,32 +269,13 @@ export const CartProvider = ({ children }) => {
       }
     }
     
-    console.log('📊 RESULTADO FINAL DO ENVIO:');
-    console.log(`- ✅ Sucessos: ${totalSent}`);
-    console.log(`- ❌ Falhas: ${totalFailed}`);
+    console.log('📊 RESULTADO:', `Sucessos: ${totalSent}`, `Falhas: ${totalFailed}`);
     
-    // FORÇAR ATUALIZAÇÃO IMEDIATA EM TODAS AS ABAS
-    if (raffleManager.refreshData) {
-      raffleManager.refreshData();
-      
-      // Disparar evento global para atualizar todas as instâncias
-      window.dispatchEvent(new CustomEvent('firebase_force_refresh', {
-        detail: { 
-          timestamp: new Date().toISOString(),
-          totalSent,
-          totalFailed 
-        }
-      }));
-    }
-    
-    // Se houver falhas críticas, mostrar alerta
     if (criticalFailures.length > 0) {
-      console.error('🚨 FALHAS CRÍTICAS - Números já vendidos/reservados:', criticalFailures);
-      
       window.dispatchEvent(new CustomEvent('showToast', {
         detail: { 
           type: 'error', 
-          message: `⚠️ ${criticalFailures.length} número(s) já foram vendidos/reservados: ${criticalFailures.join(', ')}`,
+          message: `⚠️ ${criticalFailures.length} número(s) já vendidos/reservados: ${criticalFailures.join(', ')}`,
           duration: 8000 
         }
       }));
@@ -471,126 +286,73 @@ export const CartProvider = ({ children }) => {
       results,
       totalSent,
       totalFailed,
-      error: totalFailed > 0 ? `${totalFailed} rifa(s) não foram enviadas` : null,
-      hasCriticalFailures: criticalFailures.length > 0,
-      criticalFailures
+      error: totalFailed > 0 ? `${totalFailed} rifa(s) não foram enviadas` : null
     };
     
   }, [cart, raffleManager]);
 
-  // ========== FUNÇÃO: CONFIRMAR PAGAMENTO PIX ==========
   const confirmRafflesInOrder = useCallback(async (orderId) => {
-    if (!raffleManager) {
-      console.error('❌ RaffleManager não disponível');
+  if (!raffleManager) {
+    console.error('❌ RaffleManager não disponível');
+    return false;
+  }
+  
+  try {
+    console.log('🚀 CONFIRMANDO PAGAMENTO PIX');
+    
+    const order = currentOrder;
+    if (!order || order.id !== orderId) {
+      console.error('❌ Pedido não encontrado:', orderId);
       return false;
     }
     
-    try {
-      console.log('🚀 CONFIRMANDO PAGAMENTO PIX - Enviando rifas para Firebase');
+    if (order.rafflesConfirmed) {
+      console.log('ℹ️ Rifas já confirmadas');
+      return true;
+    }
+    
+    // Esta função envia as rifas para o Firebase
+    const result = await sendRafflesToFirebase(order, 'pix');
+    
+    if (result.success) {
+      console.log('✅ Rifas enviadas para Firebase!');
       
-      const order = currentOrder;
-      if (!order || order.id !== orderId) {
-        console.error('❌ Pedido não encontrado:', orderId);
-        return false;
-      }
+      const updatedOrder = {
+        ...order,
+        status: 'confirmed',
+        proofSent: true,
+        proofConfirmedAt: new Date().toISOString(),
+        rafflesConfirmed: true,
+        rafflesSentToFirebase: true,
+        rafflesFirebaseResults: result.results,
+        confirmationTimestamp: new Date().toISOString()
+      };
       
-      // Verificar se já foi confirmado
-      if (order.rafflesConfirmed) {
-        console.log('ℹ️ Rifas já foram confirmadas anteriormente');
-        return true;
-      }
+      setCurrentOrder(updatedOrder);
+      localStorage.setItem('terceirao_last_order', JSON.stringify(updatedOrder));
       
-      // AGORA SIM: Envia as rifas para o Firebase
-      console.log('📦 Iniciando envio das rifas para o sistema...');
-      const result = await sendRafflesToFirebase(order, 'pix');
-      
-      if (result.success) {
-        console.log('✅ TODAS as rifas foram enviadas para o Firebase!');
-        console.log('📋 Status: Agora o admin VÊ as rifas no sistema como PAGAS');
-        console.log('🎯 Números removidos da venda para outras pessoas');
-        
-        // Atualizar status do pedido
-        const updatedOrder = {
-          ...order,
-          status: 'confirmed',
-          proofSent: true,
-          proofConfirmedAt: new Date().toISOString(),
-          rafflesConfirmed: true,
-          rafflesSentToFirebase: true,
-          rafflesFirebaseResults: result.results,
-          confirmationTimestamp: new Date().toISOString(),
-          firebaseSynced: true
-        };
-        
-        setCurrentOrder(updatedOrder);
-        localStorage.setItem('terceirao_last_order', JSON.stringify(updatedOrder));
-        
-        // Limpar carrinho
-        clearCart();
-        
-        window.dispatchEvent(new CustomEvent('showToast', {
-          detail: { 
-            type: 'success', 
-            message: '✅ Rifas confirmadas e enviadas para o sistema! Admin já vê como PAGAS.',
-            duration: 5000 
-          }
-        }));
-        
-        return true;
-      } else {
-        console.warn('⚠️ Algumas rifas não puderam ser enviadas:', result);
-        
-        // Se houver falhas críticas, atualizar o pedido parcialmente
-        if (result.totalSent > 0) {
-          const updatedOrder = {
-            ...order,
-            status: 'partial',
-            rafflesConfirmed: true,
-            rafflesPartial: true,
-            rafflesFirebaseResults: result.results,
-            partialSuccess: result.totalSent,
-            partialFailed: result.totalFailed
-          };
-          
-          setCurrentOrder(updatedOrder);
-          localStorage.setItem('terceirao_last_order', JSON.stringify(updatedOrder));
-          
-          window.dispatchEvent(new CustomEvent('showToast', {
-            detail: { 
-              type: 'warning', 
-              message: `⚠️ ${result.totalSent} rifa(s) enviadas, ${result.totalFailed} falharam. Entre em contato.`,
-              duration: 6000 
-            }
-          }));
-        } else {
-          window.dispatchEvent(new CustomEvent('showToast', {
-            detail: { 
-              type: 'error', 
-              message: '❌ Erro ao enviar rifas. Entre em contato com o administrador.',
-              duration: 6000 
-            }
-          }));
-        }
-        
-        return false;
-      }
-      
-    } catch (error) {
-      console.error('❌ Erro ao confirmar rifas:', error);
+      clearCart();
       
       window.dispatchEvent(new CustomEvent('showToast', {
         detail: { 
-          type: 'error', 
-          message: '❌ Erro ao processar confirmação. Tente novamente.',
+          type: 'success', 
+          message: '✅ Rifas confirmadas e enviadas para o sistema!',
           duration: 5000 
         }
       }));
       
+      return true;
+    } else {
+      // ... tratamento de erro
       return false;
     }
-  }, [raffleManager, currentOrder, sendRafflesToFirebase, clearCart]);
+    
+  } catch (error) {
+    console.error('❌ Erro ao confirmar rifas:', error);
+    return false;
+  }
+}, [raffleManager, currentOrder, sendRafflesToFirebase, clearCart]);
 
-  // ========== FUNÇÃO: PROCESSAR PAGAMENTO EM DINHEIRO (CORRIGIDA) ==========
   const processCashPayment = useCallback(async (orderId) => {
     if (!raffleManager) {
       console.error('❌ RaffleManager não disponível');
@@ -598,7 +360,7 @@ export const CartProvider = ({ children }) => {
     }
     
     try {
-      console.log('💰 PROCESSANDO DINHEIRO - Enviando rifas como PENDENTES');
+      console.log('💰 PROCESSANDO DINHEIRO');
       
       const order = currentOrder;
       if (!order || order.id !== orderId) {
@@ -606,28 +368,15 @@ export const CartProvider = ({ children }) => {
         return false;
       }
       
-      // Verificar se já foi processado
       if (order.rafflesStatus === 'pending_payment') {
-        console.log('ℹ️ Rifas já foram processadas para dinheiro');
+        console.log('ℹ️ Rifas já processadas');
         return true;
       }
       
-      // AGORA SIM: Envia as rifas como PENDENTES para o Firebase
-      console.log('📦 Iniciando envio das rifas para o sistema...');
       const result = await sendRafflesToFirebase(order, 'dinheiro');
       
       if (result.success) {
-        console.log('✅ Rifas enviadas como PENDENTES para o Firebase!');
-        console.log('📋 Status: Admin vê como "aguardando pagamento"');
-        console.log('🎯 Números reservados para você (outros não podem comprar)');
-        
-        // IMPORTANTE: Forçar atualização do contexto local
-        setTimeout(() => {
-          if (raffleManager.refreshData) {
-            raffleManager.refreshData();
-            console.log('🔄 Contexto atualizado após dinheiro');
-          }
-        }, 1000);
+        console.log('✅ Rifas enviadas como PENDENTES');
         
         const updatedOrder = {
           ...order,
@@ -636,20 +385,18 @@ export const CartProvider = ({ children }) => {
           whatsappSentAt: new Date().toISOString(),
           rafflesStatus: 'pending_payment',
           rafflesSentToFirebase: true,
-          rafflesFirebaseResults: result.results,
-          firebaseSynced: true
+          rafflesFirebaseResults: result.results
         };
         
         setCurrentOrder(updatedOrder);
         localStorage.setItem('terceirao_last_order', JSON.stringify(updatedOrder));
         
-        // Limpar carrinho
         clearCart();
         
         window.dispatchEvent(new CustomEvent('showToast', {
           detail: { 
             type: 'success', 
-            message: '✅ Rifas reservadas no sistema! Admin já vê sua reserva.',
+            message: '✅ Rifas reservadas no sistema!',
             duration: 5000 
           }
         }));
@@ -661,7 +408,7 @@ export const CartProvider = ({ children }) => {
         window.dispatchEvent(new CustomEvent('showToast', {
           detail: { 
             type: 'error', 
-            message: '❌ Erro ao reservar rifas. Tente novamente.',
+            message: '❌ Erro ao reservar rifas.',
             duration: 5000 
           }
         }));
@@ -675,7 +422,7 @@ export const CartProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('showToast', {
         detail: { 
           type: 'error', 
-          message: '❌ Erro ao processar pagamento. Tente novamente.',
+          message: '❌ Erro ao processar pagamento.',
           duration: 5000 
         }
       }));
@@ -684,19 +431,13 @@ export const CartProvider = ({ children }) => {
     }
   }, [raffleManager, currentOrder, sendRafflesToFirebase, clearCart]);
 
-  // ========== FUNÇÃO: CRIAR PEDIDO (NÃO ENVIA RIFAS AINDA) ==========
   const createOrder = useCallback((orderData) => {
     try {
-      console.log('🛒 Criando pedido (rifas ainda NÃO enviadas para Firebase)');
+      console.log('🛒 Criando pedido');
       
-      // Cria ID único para o pedido
       const orderId = `PED${Date.now()}${Math.floor(Math.random() * 1000)}`;
       
-      // Processar itens do carrinho para o pedido
-      const orderItems = cart.map(item => ({
-        ...item,
-        // Mantém informações temporárias
-      }));
+      const orderItems = cart.map(item => ({ ...item }));
       
       const hasRaffles = cart.some(item => item.isRaffle);
       const raffleCount = cart.filter(item => item.isRaffle).length;
@@ -713,7 +454,6 @@ export const CartProvider = ({ children }) => {
         raffleCount: raffleCount,
         rafflesStatus: 'no_carrinho',
         rafflesSentToFirebase: false,
-        firebaseSynced: false,
         paymentMethod: orderData.paymentMethod,
         needsConfirmation: orderData.paymentMethod === 'pix',
         customerInfo: orderData.customerInfo || {},
@@ -722,30 +462,17 @@ export const CartProvider = ({ children }) => {
         subtotal: orderData.subtotal || 0
       };
       
-      // Salva no estado
       setCurrentOrder(orderWithId);
-      
-      // Fecha o carrinho
       setIsCartOpen(false);
-      
-      // Salva no localStorage para persistência
       localStorage.setItem('terceirao_last_order', JSON.stringify(orderWithId));
       
-      console.log('✅ Pedido criado com sucesso:', {
+      console.log('✅ Pedido criado:', {
         id: orderWithId.id,
         total: orderWithId.total,
         paymentMethod: orderWithId.paymentMethod,
-        hasRaffles: orderWithId.hasRaffles,
-        raffleCount: orderWithId.raffleCount,
-        rafflesStatus: orderWithId.rafflesStatus
+        raffleCount: orderWithId.raffleCount
       });
       
-      console.log('⚠️ IMPORTANTE: Rifas estão apenas NO CARRINHO LOCAL.');
-      console.log('📋 Para PIX: Serão enviadas para Firebase ao clicar em "Já enviei comprovante"');
-      console.log('💰 Para DINHEIRO: Serão enviadas ao clicar em "Enviar para WhatsApp"');
-      console.log('🚫 Até lá, outras pessoas podem comprar os mesmos números!');
-      
-      // Mostra a tela de pagamento
       setShowPayment(true);
       
       return orderWithId;
@@ -755,67 +482,47 @@ export const CartProvider = ({ children }) => {
     }
   }, [cart]);
 
-  // ========== FUNÇÕES AUXILIARES DO CARRINHO ==========
   const clearCartAfterConfirmation = useCallback(() => {
-    console.log('🧹 Limpando carrinho após confirmação do pagamento');
+    console.log('🧹 Limpando carrinho após confirmação');
     setCart([]);
     localStorage.removeItem('terceirao_cart');
   }, []);
 
   const toggleCart = useCallback(() => {
-    console.log('🔄 Alternando carrinho. Estado atual:', isCartOpen);
     setIsCartOpen(prev => !prev);
-  }, [isCartOpen]);
+  }, []);
 
   const openCart = useCallback(() => {
-    console.log('📂 Abrindo carrinho');
     setIsCartOpen(true);
   }, []);
 
   const closeCart = useCallback(() => {
-    console.log('📪 Fechando carrinho');
     setIsCartOpen(false);
   }, []);
 
   const closePaymentOnly = useCallback(() => {
-    console.log('🔒 Fechando tela de pagamento apenas');
     setShowPayment(false);
   }, []);
 
-  // ========== VERIFICAR E LIMPAR ITENS EXPIRADOS ==========
   useEffect(() => {
     const checkExpiredItems = () => {
       const now = Date.now();
       setCart(prevCart => {
-        const updatedCart = prevCart.filter(item => {
+        return prevCart.filter(item => {
           if (item.isRaffle && item.reservationExpiresAt) {
-            if (item.reservationExpiresAt < now) {
-              console.log(`⏰ Rifa expirada removida do carrinho: ${item.selectedNumber}`);
-              console.log(`🎯 Número ${item.selectedNumber} voltou a ficar disponível`);
-              return false;
-            }
+            return item.reservationExpiresAt > now;
           }
           return true;
         });
-        
-        if (updatedCart.length !== prevCart.length) {
-          console.log(`🧹 ${prevCart.length - updatedCart.length} itens expirados removidos do carrinho`);
-        }
-        
-        return updatedCart;
       });
     };
     
-    // Verificar a cada minuto
     const interval = setInterval(checkExpiredItems, 60000);
-    
-    // Verificar ao carregar
     checkExpiredItems();
     
     return () => clearInterval(interval);
   }, []);
 
-  // ========== CONTEXT VALUE ==========
   const value = {
     cart,
     cartTotal,
@@ -839,6 +546,7 @@ export const CartProvider = ({ children }) => {
     sendRafflesToFirebase,
     setShowPayment,
     closePaymentOnly,
+    confirmRafflesInOrder ,
     vendorInfo: VENDOR_INFO
   };
 

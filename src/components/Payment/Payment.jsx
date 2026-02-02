@@ -18,7 +18,7 @@ const Payment = () => {
     setShowPayment,
     closePaymentOnly,
     clearCartAfterConfirmation,
-    sendRafflesToFirebase
+    confirmRafflesInOrder // ← IMPORTANTE: usar esta função do CartContext
   } = useCart();
   
   const raffleManager = useRaffleManager();
@@ -313,8 +313,63 @@ const Payment = () => {
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
 
-  // ========== FUNÇÃO PRINCIPAL PARA CONFIRMAR PAGAMENTO (DINHEIRO) ==========
+  // ========== FUNÇÃO PARA ENVIAR COMPROVANTE PIX (ABRIR WHATSAPP) ==========
+  const handleSendProof = () => {
+    const url = generateWhatsAppMessage();
+    if (url !== '#') {
+      window.open(url, '_blank');
+      setProofSent(true);
+      savePersistentSession();
+      showToast('info', 'WhatsApp aberto! Envie o comprovante e DEPOIS VOLTE AQUI para clicar em "Já enviei o comprovante".');
+    }
+  };
 
+  // ========== FUNÇÃO PARA CONFIRMAR PAGAMENTO PIX (CORRIGIDA) ==========
+  const handleConfirmPixPayment = async () => {
+    if (!currentOrder) {
+      showToast('error', 'Pedido não encontrado');
+      return;
+    }
+
+    if (loading) return; // Evitar múltiplos cliques
+    
+    setLoading(true);
+    
+    try {
+      console.log('💰 CONFIRMANDO PAGAMENTO PIX - ENVIANDO PARA FIREBASE...');
+      
+      // USAR a função do CartContext que já faz todo o processo
+      const success = await confirmRafflesInOrder(currentOrder.id);
+      
+      if (success) {
+        setRafflesConfirmed(true);
+        setProofSent(true);
+        
+        // Limpar sessão persistente
+        clearPersistentSession();
+        
+        console.log('✅ PAGAMENTO PIX CONFIRMADO! Rifas enviadas para Firebase como PAGAS.');
+        
+        // Mostrar sucesso e fechar
+        setTimeout(() => {
+          showToast('success', '✅ Rifas confirmadas no sistema! Admin já vê como PAGAS.');
+          handleCloseModal();
+        }, 2000);
+        
+      } else {
+        console.error('❌ Erro ao confirmar pagamento via confirmRafflesInOrder');
+        showToast('error', '❌ Erro ao confirmar pagamento. Tente novamente.');
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro ao confirmar pagamento:', error);
+      showToast('error', '❌ Erro ao processar confirmação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== FUNÇÃO PRINCIPAL PARA CONFIRMAR PAGAMENTO (DINHEIRO) ==========
   const handleConfirmCashPayment = async () => {
     if (!currentOrder) {
       showToast('error', 'Pedido não encontrado');
@@ -322,38 +377,23 @@ const Payment = () => {
     }
 
     setLoading(true);
-    console.log('💵 INICIANDO PAGAMENTO DINHEIRO - ENVIANDO PARA FIREBASE...');
+    console.log('💵 INICIANDO PAGAMENTO DINHEIRO...');
     
     try {
-      console.log('📤 1. Preparando dados para envio ao Firebase...');
-      
-      // PASSO 1: Chamar a função que envia para Firebase
-      const result = await sendRafflesToFirebase(currentOrder, 'dinheiro');
+      // PASSO 1: Enviar para Firebase (usando a função do CartContext)
+      const success = await confirmRafflesInOrder(currentOrder.id);
         
-      if (!result.success) {
-        console.error('❌ Falha ao enviar para Firebase:', result.error);
+      if (!success) {
+        console.error('❌ Falha ao enviar para Firebase');
         showToast('error', '❌ Erro ao reservar rifas no sistema. Tente novamente.');
         setLoading(false);
         return;
       }
       
       console.log('✅ Rifas enviadas para Firebase com sucesso!');
-      console.log('📊 Resultado:', {
-        enviadas: result.totalSent,
-        falhas: result.totalFailed,
-        resultados: result.results
-      });
       
-      // PASSO 2: Forçar atualização do contexto
-      if (raffleManager && raffleManager.refreshData) {
-        setTimeout(() => {
-          raffleManager.refreshData();
-          console.log('✅ Contexto atualizado após Firebase');
-        }, 1000);
-      }
-      
-      // PASSO 3: Gerar link do WhatsApp
-      console.log('📱 2. Gerando link do WhatsApp...');
+      // PASSO 2: Gerar link do WhatsApp
+      console.log('📱 Gerando link do WhatsApp...');
       const url = generateWhatsAppMessage();
       
       if (url === '#') {
@@ -362,8 +402,8 @@ const Payment = () => {
         return;
       }
       
-      // PASSO 4: Abrir WhatsApp
-      console.log('📤 3. Abrindo WhatsApp...');
+      // PASSO 3: Abrir WhatsApp
+      console.log('📤 Abrindo WhatsApp...');
       const newWindow = window.open(url, '_blank');
       
       if (!newWindow) {
@@ -372,7 +412,7 @@ const Payment = () => {
         return;
       }
       
-      // PASSO 5: Atualizar estado
+      // PASSO 4: Atualizar estado
       setProofSent(true);
       savePersistentSession();
       
@@ -382,7 +422,7 @@ const Payment = () => {
       
       showToast('success', '✅ Rifas enviadas para o sistema! Admin já vê sua reserva.');
       
-      // PASSO 6: Limpar carrinho e fechar modal
+      // PASSO 5: Limpar carrinho e fechar modal
       setTimeout(() => {
         if (clearCartAfterConfirmation) {
           clearCartAfterConfirmation();
@@ -398,83 +438,9 @@ const Payment = () => {
     }
   };
 
-  // ========== FUNÇÃO PARA ENVIAR COMPROVANTE PIX (ABRIR WHATSAPP) ==========
-  const handleSendProof = () => {
-    const url = generateWhatsAppMessage();
-    if (url !== '#') {
-      window.open(url, '_blank');
-      setProofSent(true);
-      savePersistentSession();
-      showToast('info', 'WhatsApp aberto! Envie o comprovante e DEPOIS VOLTE AQUI para clicar em "Já enviei o comprovante".');
-    }
-  };
-
-  // ========== FUNÇÃO PARA CONFIRMAR PAGAMENTO PIX ==========
-  const handleConfirmPixPayment = async () => {
-    if (!currentOrder) {
-      showToast('error', 'Pedido não encontrado');
-      return;
-    }
-
-    setLoading(true);
-    
-    try {
-      console.log('💰 CONFIRMANDO PAGAMENTO PIX - ENVIANDO PARA FIREBASE...');
-      
-      // Confirmar rifas no sistema (marca como PAGAS e ENVIA para Firebase)
-      const result = await sendRafflesToFirebase(currentOrder, 'pix');
-      
-      if (result.success) {
-        setRafflesConfirmed(true);
-        setProofSent(true);
-        
-        // Atualizar pedido
-        const updatedOrder = {
-          ...currentOrder,
-          status: 'confirmed',
-          proofSent: true,
-          proofConfirmedAt: new Date().toISOString(),
-          rafflesConfirmed: true,
-          firebaseSynced: true,
-          confirmedAt: new Date().toISOString(),
-          rafflesFirebaseResults: result.results
-        };
-        
-        localStorage.setItem('terceirao_last_order', JSON.stringify(updatedOrder));
-        
-        // Limpar carrinho
-        if (clearCartAfterConfirmation) {
-          clearCartAfterConfirmation();
-        }
-        
-        // Limpar sessão persistente
-        clearPersistentSession();
-        
-        console.log('✅ PAGAMENTO PIX CONFIRMADO! Rifas enviadas para Firebase como PAGAS.');
-        console.log('📊 Resultado Firebase:', result.results);
-        
-        // Mostrar sucesso e fechar
-        setTimeout(() => {
-          showToast('success', `✅ ${result.totalSent} rifa(s) confirmadas no sistema!`);
-          handleCloseModal();
-        }, 2000);
-        
-      } else {
-        console.error('❌ Erro ao enviar para Firebase:', result.error);
-        showToast('error', `❌ Erro: ${result.error || 'Falha ao enviar rifas para o sistema'}`);
-      }
-      
-    } catch (error) {
-      console.error('❌ Erro ao confirmar pagamento:', error);
-      showToast('error', '❌ Erro ao processar confirmação');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // ========== FUNÇÃO DE EMERGÊNCIA PARA ENVIO MANUAL ==========
   const handleEmergencyManualSend = async () => {
-    if (!currentOrder) return;
+    if (!currentOrder || !raffleManager) return;
     
     setLoading(true);
     setManualSendResults([]);
