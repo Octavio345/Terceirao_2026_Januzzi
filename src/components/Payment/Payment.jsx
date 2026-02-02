@@ -110,8 +110,7 @@ const Payment = () => {
     );
     
     if (isNaN(inputValue) || inputValue < total) return [];
-    
-    const change = inputValue - total;
+  
     
     // Sugestões baseadas no valor do pedido
     const suggestions = [];
