@@ -1006,6 +1006,41 @@ export const RaffleManagerProvider = ({ children }) => {
       }));
   }, [soldNumbers]);
 
+  // ========== FUNÇÃO DE DEBUG PARA PRODUÇÃO ==========
+  const debugFirebaseConnection = useCallback(async () => {
+    console.log('🔍 DEBUG Firebase Connection');
+    console.log('- Firebase inicializado:', firebaseInitialized);
+    console.log('- Firebase db:', db ? 'Disponível' : 'Indisponível');
+    console.log('- Online:', isOnline);
+    console.log('- Última sincronização:', lastSync);
+    console.log('- Total vendas local:', soldNumbers.length);
+    console.log('- Vendas sincronizadas:', soldNumbers.filter(s => s.synced).length);
+    
+    if (db) {
+      try {
+        // Testar número específico que sabemos que existe
+        const testTurma = '3° A';
+        const testNumero = 1; // Testar com número baixo
+        
+        console.log(`🧪 Testando verificação em tempo real: ${testTurma} Nº ${testNumero}`);
+        const realTimeCheck = await checkNumberInRealTime(testTurma, testNumero);
+        console.log('📊 Resultado verificação:', realTimeCheck);
+        
+        if (realTimeCheck.error) {
+          toast.error(`❌ Verificação falhou: ${realTimeCheck.error}`);
+        } else {
+          toast.success(`✅ Verificação OK! Status: ${realTimeCheck.status || 'disponível'}`);
+        }
+        
+      } catch (error) {
+        console.error('❌ Erro no teste:', error);
+        toast.error('❌ Erro no teste Firebase');
+      }
+    } else {
+      toast.error('❌ Firebase não disponível para teste');
+    }
+  }, [db, firebaseInitialized, isOnline, lastSync, soldNumbers, checkNumberInRealTime]);
+
   // ========== SINCRONIZAÇÃO PERIÓDICA ==========
   useEffect(() => {
     let interval;
