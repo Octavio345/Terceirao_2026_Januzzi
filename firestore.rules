@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ========== REGRAS PARA VENDAS (COLEÇÃO 'sales') ==========
+    match /sales/{saleId} {
+      // ✅ PERMITE LEITURA PARA TODOS (necessário para mostrar números vendidos)
+      allow read: if true;
+      
+      // ✅ PERMITE ESCRITA COM VALIDAÇÃO DE DADOS
+      allow create: if 
+        // Campos obrigatórios
+        request.resource.data.turma is string &&
+        request.resource.data.numero is number &&
+        request.resource.data.nome is string &&
+        request.resource.data.status is string &&
+        request.resource.data.timestamp is timestamp &&
+        
+        // Valores válidos para campos
+        request.resource.data.turma in ['3° A', '3° B', '3° TECH'] &&
+        request.resource.data.numero >= 1 &&
+        request.resource.data.numero <= 300 &&
+        request.resource.data.status in ['pago', 'pendente', 'reservado'] &&
+        request.resource.data.paymentMethod in ['pix', 'dinheiro'] &&
+        request.resource.data.price == 15.00 &&
+        
+        // Verificar se número não está vendido (pago) na mesma turma
+        !exists(/databases/$(database)/documents/sales/$(saleId)) &&
+        !exists(
+          get(/databases/$(database)/documents/sales/$(saleId)).data.turma == request.resource.data.turma &&
+          get(/databases/$(database)/documents/sales/$(saleId)).data.numero == request.resource.data.numero &&
+          get(/databases/$(database)/documents/sales/$(saleId)).data.status == 'pago'
+        );
+      
+      // ✅ PERMITE ATUALIZAÇÃO APENAS PARA STATUS E MÉTODO DE PAGAMENTO
+      allow update: if 
+        // Campos que podem ser atualizados
+        request.resource.diff(resource).affectedKeys().hasOnly(['status', 'paymentMethod', 'updatedAt']) &&
+        
+        // Status válido
+        request.resource.data.status in ['pago', 'pendente', 'reservado'] &&
+        
+        // Apenas transições válidas
+        (
+          // De pendente para pago (confirmação de pagamento)
+          (resource.data.status == 'pendente' && request.resource.data.status == 'pago') ||
+          // De reservado para pago
+          (resource.data.status == 'reservado' && request.resource.data.status == 'pago') ||
+          // Manter mesmo status
+          (resource.data.status == request.resource.data.status)
+        );
+      
+      // ❌ NÃO PERMITE EXCLUSÃO (apenas admin via console)
+      allow delete: if false;
+    }
+    
+    // ========== REGRAS PARA LOGS ADMIN (OPCIONAL) ==========
+    match /admin_logs/{logId} {
+      allow read: if request.auth != null; // Apenas admin autenticado
+      allow write: if false; // Escrita apenas via código admin
+    }
+    
+    // ========== REGRAS PARA CONFIGURAÇÕES ==========
+    match /config/{documentId} {
+      allow read: if true; // Todos podem ler configurações
+      allow write: if false; // Apenas admin via console
+    }
+  }
+}
