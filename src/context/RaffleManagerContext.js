@@ -861,7 +861,7 @@ useEffect(() => {
         
         return confirmedSale;
       }
-    }, [firebase.connected, firebase.db, isNumberSold]);
+    }, [firebase.connected, firebase.db,firebase.error, isNumberSold]);
     
 
   const createCashReservationInFirebase = useCallback(async (raffleData, paymentInfo = {}) => {
