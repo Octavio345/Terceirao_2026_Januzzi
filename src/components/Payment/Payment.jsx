@@ -70,27 +70,9 @@ const Payment = () => {
 
   // ========== FUNÇÕES PARA INPUT DE DINHEIRO ==========
   
-  const formatCashInput = (value) => {
-    // Remove tudo que não é número
-    let numbers = value.replace(/\D/g, '');
-    
-    // Se for vazio, retorna vazio
-    if (!numbers) return '';
-    
-    // Converte para número com centavos
-    const numericValue = parseFloat(numbers) / 100;
-    
-    if (isNaN(numericValue)) return '';
-    
-    return numericValue.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
-
-  const generateChangeSuggestions = () => {
+  // Removi a função formatCashInput que não estava sendo usada
+  
+  const generateChangeSuggestions = useCallback(() => {
     const total = currentOrder?.total || 0;
     if (!total) return [];
     
@@ -182,7 +164,7 @@ const Payment = () => {
     }
     
     return suggestions;
-  };
+  }, [currentOrder?.total, cashInput]);
 
   const handleCashInputChange = useCallback((e) => {
     const rawValue = e.target.value;
@@ -230,7 +212,7 @@ const Payment = () => {
     if (newSuggestions.length > 0) {
       setShowCashSuggestions(true);
     }
-  }, [currentOrder]);
+  }, [currentOrder, generateChangeSuggestions]);
 
   const handleCashInputKeyDown = useCallback((e) => {
     // Permite apenas números e teclas de controle
@@ -248,7 +230,7 @@ const Payment = () => {
       e.preventDefault();
       handleConfirmCashPayment();
     }
-  }, []);
+  }, [handleConfirmCashPayment]); // Adicionada dependência
 
   const handleSuggestionSelect = useCallback((suggestion) => {
     setCashInput(`R$ ${suggestion.value.toFixed(2)}`);
@@ -700,7 +682,7 @@ const Payment = () => {
   };
 
   // ========== FUNÇÃO PRINCIPAL PARA CONFIRMAR PAGAMENTO (DINHEIRO) ==========
-  const handleConfirmCashPayment = async () => {
+  const handleConfirmCashPayment = useCallback(async () => {
     if (!currentOrder) {
       showToast('error', 'Pedido não encontrado');
       return;
@@ -771,7 +753,7 @@ const Payment = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrder, validateCashInput, confirmRafflesInOrder, generateWhatsAppMessage, savePersistentSession, clearCartAfterConfirmation, handleCloseModal]); // Adicionadas dependências
 
   // ========== FUNÇÃO DE EMERGÊNCIA PARA ENVIO MANUAL ==========
   const handleEmergencyManualSend = async () => {
