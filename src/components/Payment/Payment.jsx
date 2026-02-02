@@ -68,119 +68,29 @@ const Payment = () => {
     }
   }, [currentOrder?.id]);
 
-  // ========== FUNÇÃO savePersistentSession ==========
-  const savePersistentSession = useCallback(() => {
-    if (!currentOrder) return;
-    
-    const sessionData = {
-      orderId: currentOrder.id,
-      orderData: currentOrder,
-      timestamp: new Date().toISOString(),
-      hasSentProof: proofSent,
-      paymentTimestamp: paymentTimestamp
-    };
-    
-    localStorage.setItem('terceirao_payment_session', JSON.stringify(sessionData));
-  }, [currentOrder, proofSent, paymentTimestamp]);
-
-  // ========== FUNÇÃO generateWhatsAppMessage ==========
-  const generateWhatsAppMessage = useCallback(() => {
-    if (!vendorInfo?.whatsapp) {
-        console.error('WhatsApp não configurado');
-        showToast('error', 'WhatsApp não configurado');
-        return '#';
-    }
-    
-    const phone = vendorInfo.whatsapp.replace(/\D/g, '');
-    const deliveryOption = currentOrder.deliveryOption || 'retirada';
-    const deliveryAddress = currentOrder.deliveryAddress || null;
-    const paymentMethod = currentOrder.paymentMethod || 'pix';
-    
-    const customerName = getCustomerName();
-    const customerPhone = currentOrder.customer?.phone || currentOrder.customerInfo?.phone || '';
-    
-    const hasRaffles = currentOrder.items?.some(item => item.isRaffle) || false;
-    
-    let message = `*${paymentMethod === 'pix' ? '📋 COMPROVANTE PIX ENVIADO' : '💵 PAGAMENTO EM DINHEIRO'}*\n\n`;
-    
-    message += `*🧾 PEDIDO:* ${currentOrder.id}\n`;
-    message += `*👤 CLIENTE:* ${customerName}\n`;
-    message += `*📞 TELEFONE:* ${customerPhone}\n`;
-    message += `*💰 VALOR:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
-    
-    if (hasRaffles) {
-        const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
-        message += `*🎟️ RIFAS:*\n`;
-        raffleItems.forEach((item, index) => {
-            if (index < 5) {
-                message += `• ${item.selectedClass || ''} Nº ${item.selectedNumber?.toString().padStart(3, '0') || ''}\n`;
-            }
-        });
-        if (raffleItems.length > 5) {
-            message += `• ... e mais ${raffleItems.length - 5} rifa(s)\n`;
-        }
-        message += `\n`;
-        
-        if (paymentMethod === 'pix') {
-            if (!rafflesConfirmed) {
-                message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
-                message += `As rifas estão APENAS NO CARRINHO e NÃO foram reservadas no sistema ainda.\n`;
-                message += `Elas só serão enviadas para o sistema quando você clicar em "Já enviei o comprovante".\n\n`;
-            } else {
-                message += `*✅ CONFIRMADO:*\n`;
-                message += `Rifas já foram enviadas para o sistema como PAGAS.\n\n`;
-            }
-        } else {
-            message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
-            message += `As rifas foram enviadas para o sistema como RESERVADAS PENDENTES.\n`;
-            message += `Status: Aguardando pagamento em dinheiro.\n\n`;
-        }
-    }
-    
-    if (paymentMethod === 'dinheiro') {
-        const cashAmount = currentOrder.cashAmount || null;
-        const cashChange = currentOrder.cashChange || 0;
-        
-        message += `*💵 PAGAMENTO EM DINHEIRO*\n`;
-        if (cashAmount) {
-            message += `• Valor informado: R$ ${cashAmount.toFixed(2)}\n`;
-            if (cashChange > 0) {
-                message += `• Troco necessário: R$ ${cashChange.toFixed(2)}\n`;
-            }
-        }
-        message += `\n`;
-    }
-    
-    message += `*📦 ENTREGA:* ${deliveryOption === 'retirada' ? '🏫 Retirada na Escola' : '🚚 Entrega a Domicílio'}\n`;
-    
-    if (deliveryOption === 'entrega' && deliveryAddress) {
-        message += `📍 ${deliveryAddress.street || ''}, ${deliveryAddress.number || ''}\n`;
-        if (deliveryAddress.complement) {
-            message += `🏠 Complemento: ${deliveryAddress.complement}\n`;
-        }
-        message += `🏘️ Bairro: ${deliveryAddress.neighborhood || ''}\n`;
-    }
-    
-    message += `\n`;
-    message += `*📞 CONTATO DO CLIENTE:*\n`;
-    message += `👤 ${customerName}\n`;
-    message += `📱 ${customerPhone}\n\n`;
-    
-    message += `*📋 INFORMAÇÕES DO PEDIDO:*\n`;
-    message += `🔢 Pedido: ${currentOrder.id}\n`;
-    message += `⏰ Data: ${currentOrder.date || new Date().toLocaleDateString('pt-BR')}\n`;
-    message += `💳 Forma: ${paymentMethod === 'pix' ? 'PIX' : 'Dinheiro'}\n`;
-    message += `💰 Total: R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
-    
-    message += `*📱 CONTATO DA LOJA:*\n`;
-    message += `📞 WhatsApp: ${vendorInfo.whatsapp}\n`;
-
-    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-  }, [currentOrder, vendorInfo?.whatsapp, rafflesConfirmed, getCustomerName]);
-
   // ========== FUNÇÕES PARA INPUT DE DINHEIRO ==========
   
-  const generateChangeSuggestions = useCallback(() => {
+  const formatCashInput = (value) => {
+    // Remove tudo que não é número
+    let numbers = value.replace(/\D/g, '');
+    
+    // Se for vazio, retorna vazio
+    if (!numbers) return '';
+    
+    // Converte para número com centavos
+    const numericValue = parseFloat(numbers) / 100;
+    
+    if (isNaN(numericValue)) return '';
+    
+    return numericValue.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  const generateChangeSuggestions = () => {
     const total = currentOrder?.total || 0;
     if (!total) return [];
     
@@ -272,89 +182,7 @@ const Payment = () => {
     }
     
     return suggestions;
-  }, [currentOrder?.total, cashInput]);
-
-  // ========== FUNÇÃO handleConfirmCashPayment ==========
-  const handleConfirmCashPayment = useCallback(async () => {
-    if (!currentOrder) {
-      showToast('error', 'Pedido não encontrado');
-      return;
-    }
-
-    // Validar input de dinheiro
-    if (!validateCashInput()) {
-      return;
-    }
-
-    setLoading(true);
-    console.log('💵 INICIANDO PAGAMENTO DINHEIRO...');
-    
-    try {
-      // PASSO 1: Enviar para Firebase (usando a função do CartContext)
-      const success = await confirmRafflesInOrder(currentOrder.id);
-        
-      if (!success) {
-        console.error('❌ Falha ao enviar para Firebase');
-        showToast('error', '❌ Erro ao reservar rifas no sistema. Tente novamente.');
-        setLoading(false);
-        return;
-      }
-      
-      console.log('✅ Rifas enviadas para Firebase com sucesso!');
-      
-      // PASSO 2: Gerar link do WhatsApp
-      console.log('📱 Gerando link do WhatsApp...');
-      const url = generateWhatsAppMessage();
-      
-      if (url === '#') {
-        showToast('error', 'Erro: WhatsApp não configurado');
-        setLoading(false);
-        return;
-      }
-      
-      // PASSO 3: Abrir WhatsApp
-      console.log('📤 Abrindo WhatsApp...');
-      const newWindow = window.open(url, '_blank');
-      
-      if (!newWindow) {
-        showToast('error', 'Por favor, permita pop-ups para abrir o WhatsApp');
-        setLoading(false);
-        return;
-      }
-      
-      // PASSO 4: Atualizar estado
-      setProofSent(true);
-      savePersistentSession();
-      
-      console.log('🎉 PROCESSO DINHEIRO CONCLUÍDO!');
-      console.log('✅ Rifas enviadas para Firebase como PENDENTES');
-      console.log('✅ WhatsApp aberto para confirmação');
-      
-      showToast('success', '✅ Rifas enviadas para o sistema! Admin já vê sua reserva.');
-      
-      // PASSO 5: Limpar carrinho e fechar modal
-      setTimeout(() => {
-        if (clearCartAfterConfirmation) {
-          clearCartAfterConfirmation();
-        }
-        handleCloseModal();
-      }, 2000);
-      
-    } catch (error) {
-      console.error('❌ Erro crítico no processo dinheiro:', error);
-      showToast('error', '❌ Erro ao processar pagamento. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    currentOrder, 
-    validateCashInput, 
-    confirmRafflesInOrder, 
-    generateWhatsAppMessage, 
-    savePersistentSession, 
-    clearCartAfterConfirmation, 
-    handleCloseModal
-  ]);
+  };
 
   const handleCashInputChange = useCallback((e) => {
     const rawValue = e.target.value;
@@ -402,7 +230,7 @@ const Payment = () => {
     if (newSuggestions.length > 0) {
       setShowCashSuggestions(true);
     }
-  }, [currentOrder, generateChangeSuggestions]);
+  }, [currentOrder]);
 
   const handleCashInputKeyDown = useCallback((e) => {
     // Permite apenas números e teclas de controle
@@ -420,7 +248,7 @@ const Payment = () => {
       e.preventDefault();
       handleConfirmCashPayment();
     }
-  }, [handleConfirmCashPayment]);
+  }, []);
 
   const handleSuggestionSelect = useCallback((suggestion) => {
     setCashInput(`R$ ${suggestion.value.toFixed(2)}`);
@@ -612,6 +440,20 @@ const Payment = () => {
     }
   }, [showPayment, currentOrder, loadPersistentSession]);
 
+  const savePersistentSession = () => {
+    if (!currentOrder) return;
+    
+    const sessionData = {
+      orderId: currentOrder.id,
+      orderData: currentOrder,
+      timestamp: new Date().toISOString(),
+      hasSentProof: proofSent,
+      paymentTimestamp: paymentTimestamp
+    };
+    
+    localStorage.setItem('terceirao_payment_session', JSON.stringify(sessionData));
+  };
+
   // Fechar modal com ESC
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -646,7 +488,7 @@ const Payment = () => {
 
   // ========== FUNÇÕES DE DADOS ==========
 
-  const getCustomerName = useCallback(() => {
+  const getCustomerName = () => {
     if (!currentOrder) return 'Não informado';
     
     if (currentOrder.customer?.name) {
@@ -671,7 +513,7 @@ const Payment = () => {
     }
     
     return 'Não informado';
-  }, [currentOrder]);
+  };
 
   // ========== FUNÇÕES DE PAGAMENTO ==========
 
@@ -703,6 +545,102 @@ const Payment = () => {
         duration: type === 'error' ? 5000 : 4000 
       }
     }));
+  };
+
+  // ========== WHATSAPP MESSAGE ==========
+
+  const generateWhatsAppMessage = () => {
+    if (!vendorInfo?.whatsapp) {
+        console.error('WhatsApp não configurado');
+        showToast('error', 'WhatsApp não configurado');
+        return '#';
+    }
+    
+    const phone = vendorInfo.whatsapp.replace(/\D/g, '');
+    const deliveryOption = currentOrder.deliveryOption || 'retirada';
+    const deliveryAddress = currentOrder.deliveryAddress || null;
+    const paymentMethod = currentOrder.paymentMethod || 'pix';
+    
+    const customerName = getCustomerName();
+    const customerPhone = currentOrder.customer?.phone || currentOrder.customerInfo?.phone || '';
+    
+    const hasRaffles = currentOrder.items?.some(item => item.isRaffle) || false;
+    
+    let message = `*${paymentMethod === 'pix' ? '📋 COMPROVANTE PIX ENVIADO' : '💵 PAGAMENTO EM DINHEIRO'}*\n\n`;
+    
+    message += `*🧾 PEDIDO:* ${currentOrder.id}\n`;
+    message += `*👤 CLIENTE:* ${customerName}\n`;
+    message += `*📞 TELEFONE:* ${customerPhone}\n`;
+    message += `*💰 VALOR:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
+    
+    if (hasRaffles) {
+        const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
+        message += `*🎟️ RIFAS:*\n`;
+        raffleItems.forEach((item, index) => {
+            if (index < 5) {
+                message += `• ${item.selectedClass || ''} Nº ${item.selectedNumber?.toString().padStart(3, '0') || ''}\n`;
+            }
+        });
+        if (raffleItems.length > 5) {
+            message += `• ... e mais ${raffleItems.length - 5} rifa(s)\n`;
+        }
+        message += `\n`;
+        
+        if (paymentMethod === 'pix') {
+            if (!rafflesConfirmed) {
+                message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
+                message += `As rifas estão APENAS NO CARRINHO e NÃO foram reservadas no sistema ainda.\n`;
+                message += `Elas só serão enviadas para o sistema quando você clicar em "Já enviei o comprovante".\n\n`;
+            } else {
+                message += `*✅ CONFIRMADO:*\n`;
+                message += `Rifas já foram enviadas para o sistema como PAGAS.\n\n`;
+            }
+        } else {
+            message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
+            message += `As rifas foram enviadas para o sistema como RESERVADAS PENDENTES.\n`;
+            message += `Status: Aguardando pagamento em dinheiro.\n\n`;
+        }
+    }
+    
+    if (paymentMethod === 'dinheiro') {
+        const cashAmount = currentOrder.cashAmount || null;
+        const cashChange = currentOrder.cashChange || 0;
+        
+        message += `*💵 PAGAMENTO EM DINHEIRO*\n`;
+        if (cashAmount) {
+            message += `• Valor informado: R$ ${cashAmount.toFixed(2)}\n`;
+            if (cashChange > 0) {
+                message += `• Troco necessário: R$ ${cashChange.toFixed(2)}\n`;
+            }
+        }
+        message += `\n`;
+    }
+    
+    message += `*📦 ENTREGA:* ${deliveryOption === 'retirada' ? '🏫 Retirada na Escola' : '🚚 Entrega a Domicílio'}\n`;
+    
+    if (deliveryOption === 'entrega' && deliveryAddress) {
+        message += `📍 ${deliveryAddress.street || ''}, ${deliveryAddress.number || ''}\n`;
+        if (deliveryAddress.complement) {
+            message += `🏠 Complemento: ${deliveryAddress.complement}\n`;
+        }
+        message += `🏘️ Bairro: ${deliveryAddress.neighborhood || ''}\n`;
+    }
+    
+    message += `\n`;
+    message += `*📞 CONTATO DO CLIENTE:*\n`;
+    message += `👤 ${customerName}\n`;
+    message += `📱 ${customerPhone}\n\n`;
+    
+    message += `*📋 INFORMAÇÕES DO PEDIDO:*\n`;
+    message += `🔢 Pedido: ${currentOrder.id}\n`;
+    message += `⏰ Data: ${currentOrder.date || new Date().toLocaleDateString('pt-BR')}\n`;
+    message += `💳 Forma: ${paymentMethod === 'pix' ? 'PIX' : 'Dinheiro'}\n`;
+    message += `💰 Total: R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
+    
+    message += `*📱 CONTATO DA LOJA:*\n`;
+    message += `📞 WhatsApp: ${vendorInfo.whatsapp}\n`;
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
 
   // ========== FUNÇÃO PARA ENVIAR COMPROVANTE PIX (ABRIR WHATSAPP) ==========
@@ -756,6 +694,80 @@ const Payment = () => {
     } catch (error) {
       console.error('❌ Erro ao confirmar pagamento:', error);
       showToast('error', '❌ Erro ao processar confirmação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== FUNÇÃO PRINCIPAL PARA CONFIRMAR PAGAMENTO (DINHEIRO) ==========
+  const handleConfirmCashPayment = async () => {
+    if (!currentOrder) {
+      showToast('error', 'Pedido não encontrado');
+      return;
+    }
+
+    // Validar input de dinheiro
+    if (!validateCashInput()) {
+      return;
+    }
+
+    setLoading(true);
+    console.log('💵 INICIANDO PAGAMENTO DINHEIRO...');
+    
+    try {
+      // PASSO 1: Enviar para Firebase (usando a função do CartContext)
+      const success = await confirmRafflesInOrder(currentOrder.id);
+        
+      if (!success) {
+        console.error('❌ Falha ao enviar para Firebase');
+        showToast('error', '❌ Erro ao reservar rifas no sistema. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('✅ Rifas enviadas para Firebase com sucesso!');
+      
+      // PASSO 2: Gerar link do WhatsApp
+      console.log('📱 Gerando link do WhatsApp...');
+      const url = generateWhatsAppMessage();
+      
+      if (url === '#') {
+        showToast('error', 'Erro: WhatsApp não configurado');
+        setLoading(false);
+        return;
+      }
+      
+      // PASSO 3: Abrir WhatsApp
+      console.log('📤 Abrindo WhatsApp...');
+      const newWindow = window.open(url, '_blank');
+      
+      if (!newWindow) {
+        showToast('error', 'Por favor, permita pop-ups para abrir o WhatsApp');
+        setLoading(false);
+        return;
+      }
+      
+      // PASSO 4: Atualizar estado
+      setProofSent(true);
+      savePersistentSession();
+      
+      console.log('🎉 PROCESSO DINHEIRO CONCLUÍDO!');
+      console.log('✅ Rifas enviadas para Firebase como PENDENTES');
+      console.log('✅ WhatsApp aberto para confirmação');
+      
+      showToast('success', '✅ Rifas enviadas para o sistema! Admin já vê sua reserva.');
+      
+      // PASSO 5: Limpar carrinho e fechar modal
+      setTimeout(() => {
+        if (clearCartAfterConfirmation) {
+          clearCartAfterConfirmation();
+        }
+        handleCloseModal();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ Erro crítico no processo dinheiro:', error);
+      showToast('error', '❌ Erro ao processar pagamento. Tente novamente.');
     } finally {
       setLoading(false);
     }
