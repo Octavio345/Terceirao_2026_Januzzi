@@ -10,7 +10,8 @@ import {
   addDoc, 
   updateDoc,
   doc,
-  getDocs
+  getDocs,
+  where
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
@@ -73,7 +74,7 @@ export const RaffleManagerProvider = ({ children }) => {
     
     const initializeFirebase = async () => {
       try {
-        console.log('🔥 INICIANDO FIREBASE EM PRODUÇÃO - v2.0');
+        console.log('🔥 INICIANDO FIREBASE EM PRODUÇÃO - v3.0');
         
         // Configuração do Firebase
         const firebaseConfig = {
@@ -285,6 +286,52 @@ export const RaffleManagerProvider = ({ children }) => {
     }
   };
 
+  // ========== FUNÇÃO QUE VERIFICA EM TEMPO REAL ==========
+  const checkNumberInRealTime = useCallback(async (turma, numero) => {
+    if (!db) {
+      console.error('❌ Firebase não disponível para verificação em tempo real');
+      return { sold: false, reserved: false, available: true };
+    }
+
+    try {
+      console.log(`🔍 Verificando em tempo real: ${turma} Nº ${numero}`);
+      
+      const salesRef = collection(db, 'sales');
+      const q = query(
+        salesRef, 
+        where('turma', '==', turma),
+        where('numero', '==', parseInt(numero))
+      );
+      
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        const docData = snapshot.docs[0].data();
+        const status = docData.status || 'pendente';
+        const isSold = status === 'pago';
+        const isReserved = status === 'pendente' || status === 'reservado';
+        
+        console.log(`📊 Status em tempo real: ${turma} Nº ${numero} -> ${status}`);
+        
+        return {
+          sold: isSold,
+          reserved: isReserved,
+          available: !isSold,
+          status: status,
+          data: docData,
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      console.log(`✅ Disponível em tempo real: ${turma} Nº ${numero}`);
+      return { sold: false, reserved: false, available: true };
+      
+    } catch (error) {
+      console.error('❌ Erro na verificação em tempo real:', error);
+      return { sold: false, reserved: false, available: true, error: error.message };
+    }
+  }, [db]);
+
   // ========== FUNÇÃO PRINCIPAL: ENVIAR VENDA (CORRIGIDA) ==========
   const sendToFirebase = useCallback(async (saleData) => {
     console.log('🚀 INICIANDO ENVIO PARA FIREBASE:', saleData);
@@ -372,20 +419,28 @@ export const RaffleManagerProvider = ({ children }) => {
         };
       }
       
-      // 5. Verificar duplicidade
-      const isAlreadySold = soldNumbers.some(s => 
-        s.turma === saleData.turma && 
-        s.numero === numero && 
-        s.status === 'pago' &&
-        s.synced
-      );
+      // 5. VERIFICAR EM TEMPO REAL ANTES DE ENVIAR
+      console.log('⏱️ Verificando em tempo real antes de enviar...');
+      const realTimeCheck = await checkNumberInRealTime(saleData.turma, numero);
       
-      if (isAlreadySold) {
-        console.error('❌ Número já vendido:', { turma: saleData.turma, numero });
-        toast.error('❌ Este número já foi vendido!');
+      if (realTimeCheck.sold) {
+        console.error('❌ Número já vendido (verificado em tempo real)!');
+        toast.error('❌ Este número já foi vendido por outra pessoa!');
         return {
           success: false,
-          error: 'Número já vendido',
+          error: 'Número já vendido (verificação em tempo real)',
+          alreadySold: true,
+          data: null
+        };
+      }
+      
+      if (realTimeCheck.reserved) {
+        console.error('❌ Número já reservado (verificado em tempo real)!');
+        toast.error('❌ Este número já está reservado!');
+        return {
+          success: false,
+          error: 'Número já reservado (verificação em tempo real)',
+          alreadyReserved: true,
           data: null
         };
       }
@@ -447,9 +502,19 @@ export const RaffleManagerProvider = ({ children }) => {
       setSoldNumbers(newSoldNumbers);
       localStorage.setItem('terceirao-sold-numbers', JSON.stringify(newSoldNumbers));
       
-      // Disparar evento para atualizar UI
+      // Disparar evento para atualizar UI e outras abas
       window.dispatchEvent(new CustomEvent('new_sale_added', {
         detail: syncedSale
+      }));
+      
+      // Disparar evento GLOBAL para atualizar TODOS os usuários
+      window.dispatchEvent(new CustomEvent('firebase_new_sale', {
+        detail: {
+          turma: saleData.turma,
+          numero: numero,
+          status: status,
+          timestamp: new Date().toISOString()
+        }
       }));
       
       toast.success('✅ Venda registrada no sistema!');
@@ -502,7 +567,125 @@ export const RaffleManagerProvider = ({ children }) => {
         data: localSale
       };
     }
-  }, [db, soldNumbers]);
+  }, [db, soldNumbers, checkNumberInRealTime]);
+
+  // ========== FUNÇÃO QUE GARANTE ENVIO PARA FIREBASE (EMERGÊNCIA) ==========
+  const forceSendToFirebase = useCallback(async (saleData) => {
+    console.log('🚀 FORÇANDO ENVIO PARA FIREBASE (BYPASS DE VALIDAÇÃO):', saleData);
+    
+    if (!db) {
+      console.error('❌ Firebase não disponível');
+      return { success: false, error: 'Firebase não disponível' };
+    }
+
+    try {
+      // VALIDAÇÕES ESSENCIAIS
+      const validTurmas = ['3° A', '3° B', '3° TECH'];
+      if (!saleData.turma || !validTurmas.includes(saleData.turma)) {
+        throw new Error(`Turma inválida: ${saleData.turma}`);
+      }
+      
+      const numero = parseInt(saleData.numero);
+      if (isNaN(numero) || numero < 1 || numero > 300) {
+        throw new Error(`Número inválido: ${saleData.numero}`);
+      }
+      
+      // VERIFICAR SE JÁ EXISTE (EM TEMPO REAL)
+      const realTimeCheck = await checkNumberInRealTime(saleData.turma, numero);
+      
+      if (realTimeCheck.sold) {
+        console.error('❌ Número já vendido (verificado em tempo real)');
+        return {
+          success: false,
+          error: 'Este número já foi vendido por outra pessoa',
+          alreadySold: true
+        };
+      }
+      
+      if (realTimeCheck.reserved) {
+        console.error('❌ Número já reservado (verificado em tempo real)');
+        return {
+          success: false,
+          error: 'Este número já está reservado',
+          alreadyReserved: true
+        };
+      }
+      
+      // PREPARAR DADOS PARA FIREBASE
+      const firebaseData = {
+        turma: saleData.turma,
+        numero: numero,
+        nome: (saleData.nome || 'Comprador').toString().substring(0, 100),
+        telefone: (saleData.telefone || '').toString().substring(0, 20),
+        status: saleData.status || 'pendente',
+        paymentMethod: saleData.paymentMethod || 'pix',
+        orderId: saleData.orderId || null,
+        source: saleData.source || 'emergency',
+        price: parseFloat(saleData.price || 15.00),
+        timestamp: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        deviceId: localStorage.getItem('deviceId') || 'web_emergency',
+        confirmedAt: saleData.confirmedAt || null,
+        expiresAt: saleData.expiresAt || null
+      };
+      
+      console.log('📤 Enviando para Firebase com bypass...');
+      const docRef = await addDoc(collection(db, 'sales'), firebaseData);
+      const firebaseId = docRef.id;
+      
+      console.log('✅ ENVIADO COM SUCESSO! ID:', firebaseId);
+      
+      // FORÇAR ATUALIZAÇÃO IMEDIATA DO CONTEXTO
+      const newSale = {
+        id: firebaseId,
+        firebaseId: firebaseId,
+        ...firebaseData,
+        synced: true,
+        timestamp: new Date().toISOString()
+      };
+      
+      setSoldNumbers(prev => {
+        const newArray = [...prev, newSale];
+        localStorage.setItem('terceirao-sold-numbers', JSON.stringify(newArray));
+        return newArray;
+      });
+      
+      // DISPARAR EVENTO GLOBAL PARA ATUALIZAR TODAS AS ABAS
+      window.dispatchEvent(new CustomEvent('firebase_new_sale', {
+        detail: newSale
+      }));
+      
+      // DISPARAR EVENTO PARA ATUALIZAR OUTROS USUÁRIOS
+      window.dispatchEvent(new CustomEvent('number_sold', {
+        detail: {
+          turma: saleData.turma,
+          numero: numero,
+          status: saleData.status || 'pendente'
+        }
+      }));
+      
+      // FORÇAR REFRESH DOS DADOS
+      setTimeout(() => {
+        refreshData();
+      }, 500);
+      
+      toast.success('✅ Rifa enviada com sucesso (emergência)!');
+      
+      return {
+        success: true,
+        firebaseId: firebaseId,
+        data: newSale
+      };
+      
+    } catch (error) {
+      console.error('❌ ERRO CRÍTICO NO FORCE SEND:', error);
+      toast.error('❌ Erro ao enviar via emergência');
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }, [db, checkNumberInRealTime, refreshData]);
 
   // ========== FUNÇÕES ESPECÍFICAS ==========
   const confirmPaymentAndSendToFirebase = useCallback(async (raffleData, paymentInfo = {}) => {
@@ -652,6 +835,16 @@ export const RaffleManagerProvider = ({ children }) => {
         setSoldNumbers(updatedSoldNumbers);
         localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updatedSoldNumbers));
         
+        // Disparar evento para atualizar outros usuários
+        window.dispatchEvent(new CustomEvent('sale_status_updated', {
+          detail: {
+            firebaseId: sale.firebaseId,
+            status: newStatus,
+            turma: sale.turma,
+            numero: sale.numero
+          }
+        }));
+        
         return true;
       } else {
         console.error('❌ Venda local sem firebaseId:', sale);
@@ -709,6 +902,11 @@ export const RaffleManagerProvider = ({ children }) => {
       console.error('❌ Firebase não disponível para refresh');
       toast.error('Servidor não disponível');
     }
+    
+    // Disparar evento para outras abas
+    window.dispatchEvent(new CustomEvent('firebase_force_refresh', {
+      detail: { timestamp: new Date().toISOString() }
+    }));
     
     toast.success('Dados atualizados');
     window.dispatchEvent(new CustomEvent('data_refreshed'));
@@ -815,34 +1013,25 @@ export const RaffleManagerProvider = ({ children }) => {
     console.log('- Firebase db:', db ? 'Disponível' : 'Indisponível');
     console.log('- Online:', isOnline);
     console.log('- Última sincronização:', lastSync);
+    console.log('- Total vendas local:', soldNumbers.length);
+    console.log('- Vendas sincronizadas:', soldNumbers.filter(s => s.synced).length);
     
     if (db) {
       try {
-        const testDoc = {
-          turma: '3° A',
-          numero: 999, // Número de teste
-          nome: 'Teste Debug',
-          status: 'pendente',
-          paymentMethod: 'pix',
-          price: 15.00
-        };
+        // Testar número específico que sabemos que existe
+        const testTurma = '3° A';
+        const testNumero = 1; // Testar com número baixo
         
-        console.log('🧪 Testando envio...');
-        const result = await sendToFirebase(testDoc);
-        console.log('📊 Resultado do teste:', result);
+        console.log(`🧪 Testando verificação em tempo real: ${testTurma} Nº ${testNumero}`);
+        const realTimeCheck = await checkNumberInRealTime(testTurma, testNumero);
+        console.log('📊 Resultado verificação:', realTimeCheck);
         
-        if (result.success) {
-          toast.success('✅ Teste Firebase OK!');
-          // Remover o documento de teste
-          if (result.firebaseId) {
-            setTimeout(() => {
-              console.log('🧹 Limpando documento de teste');
-              // Aqui você poderia adicionar lógica para remover o doc de teste
-            }, 3000);
-          }
+        if (realTimeCheck.error) {
+          toast.error(`❌ Verificação falhou: ${realTimeCheck.error}`);
         } else {
-          toast.error(`❌ Teste falhou: ${result.error}`);
+          toast.success(`✅ Verificação OK! Status: ${realTimeCheck.status || 'disponível'}`);
         }
+        
       } catch (error) {
         console.error('❌ Erro no teste:', error);
         toast.error('❌ Erro no teste Firebase');
@@ -850,7 +1039,7 @@ export const RaffleManagerProvider = ({ children }) => {
     } else {
       toast.error('❌ Firebase não disponível para teste');
     }
-  }, [db, firebaseInitialized, isOnline, lastSync, sendToFirebase]);
+  }, [db, firebaseInitialized, isOnline, lastSync, soldNumbers, checkNumberInRealTime]);
 
   // ========== SINCRONIZAÇÃO PERIÓDICA ==========
   useEffect(() => {
@@ -902,6 +1091,8 @@ export const RaffleManagerProvider = ({ children }) => {
       isNumberSold,
       isNumberReserved,
       getAvailableNumbers,
+      checkNumberInRealTime,
+      immediateCheckNumber: checkNumberInRealTime,
       
       // Operações
       markNumbersAsReserved,
@@ -912,6 +1103,7 @@ export const RaffleManagerProvider = ({ children }) => {
       confirmPaymentAndSendToFirebase,
       createCashReservationInFirebase,
       sendToFirebase,
+      forceSendToFirebase,
       
       // Sincronização
       syncAllLocalSales,
