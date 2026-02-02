@@ -135,6 +135,7 @@ function AppContent() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState(null); // Estado adicionado
 
   // ===== 1. DETECTAR SE PODE INSTALAR PWA =====
   useEffect(() => {
@@ -393,7 +394,15 @@ function AppContent() {
   }, [updateAvailable]);
 
   // ===== 4. FUNÇÕES DE ATUALIZAÇÃO =====
-
+  const handleUpdateApp = () => {
+    if (waitingWorker) {
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      localStorage.removeItem('appUpdatePending');
+      setUpdateAvailable(false);
+      window.location.reload();
+    }
+  };
 
   // ===== 5. VERIFICAR CONEXÃO =====
   useEffect(() => {
@@ -433,13 +442,23 @@ function AppContent() {
       <Toast />
       <RealTimeSync />
       
+      {/* Botão de ATUALIZAÇÃO do App (quando disponível) */}
+      {updateAvailable && (
+        <div className="update-prompt">
+          <button onClick={handleUpdateApp} className="update-button">
+            <span role="img" aria-label="update">🔄</span>
+            Atualizar App Terceirão 2026
+            <small>Clique para aplicar a nova versão</small>
+          </button>
+        </div>
+      )}
+      
       {/* Payment DEVE ESTAR FORA DO ROUTER */}
       <Payment />
       
       <Router>
         <ScrollManager />
         <ScrollToTop />
-        
         
         <Routes>
           {/* Rotas públicas (com Header e Footer) */}
@@ -562,9 +581,10 @@ function AppContent() {
         />
       </Router>
       
-      {/* Estilos para o prompt de instalação */}
+      {/* Estilos para os prompts */}
       <style jsx>{`
-        .install-prompt {
+        .install-prompt,
+        .update-prompt {
           position: fixed;
           bottom: 20px;
           right: 20px;
@@ -583,6 +603,13 @@ function AppContent() {
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
+        .update-prompt {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          left: 20px;
+          right: auto;
+          bottom: 90px;
+        }
+        
         @keyframes slideIn {
           from {
             transform: translateX(100%);
@@ -594,7 +621,8 @@ function AppContent() {
           }
         }
         
-        .install-button {
+        .install-button,
+        .update-button {
           background: white;
           color: #667eea;
           border: none;
@@ -610,12 +638,18 @@ function AppContent() {
           flex: 1;
         }
         
-        .install-button:hover {
+        .update-button {
+          color: #d97706;
+        }
+        
+        .install-button:hover,
+        .update-button:hover {
           transform: translateY(-2px);
           box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
         
-        .install-button small {
+        .install-button small,
+        .update-button small {
           font-size: 11px;
           opacity: 0.8;
           font-weight: 500;
@@ -642,27 +676,35 @@ function AppContent() {
         }
         
         @media (max-width: 768px) {
-          .install-prompt {
+          .install-prompt,
+          .update-prompt {
             bottom: 70px;
             left: 20px;
             right: 20px;
             max-width: none;
           }
           
-          .install-button {
+          .update-prompt {
+            bottom: 140px;
+          }
+          
+          .install-button,
+          .update-button {
             font-size: 14px;
             padding: 12px 16px;
           }
         }
         
         @media (max-width: 480px) {
-          .install-prompt {
+          .install-prompt,
+          .update-prompt {
             flex-direction: column;
             gap: 10px;
             text-align: center;
           }
           
-          .install-button {
+          .install-button,
+          .update-button {
             width: 100%;
           }
           

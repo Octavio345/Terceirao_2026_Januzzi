@@ -18,7 +18,7 @@ const Payment = () => {
     setShowPayment,
     closePaymentOnly,
     clearCartAfterConfirmation,
-    confirmRafflesInOrder // ← IMPORTANTE: usar esta função do CartContext
+    confirmRafflesInOrder
   } = useCart();
   
   const raffleManager = useRaffleManager();
@@ -34,6 +34,13 @@ const Payment = () => {
   const [hasPendingPayment, setHasPendingPayment] = useState(false);
   const [paymentTimestamp, setPaymentTimestamp] = useState(null);
   const [manualSendResults, setManualSendResults] = useState([]);
+
+  // ========== NOVOS STATES PARA DINHEIRO ==========
+  const [cashInput, setCashInput] = useState('');
+  const [cashError, setCashError] = useState('');
+  const [cashSuggestions, setCashSuggestions] = useState([]);
+  const [showCashSuggestions, setShowCashSuggestions] = useState(false);
+  const cashInputRef = useRef(null);
 
   // ========== FUNÇÃO loadPersistentSession ==========
   const loadPersistentSession = useCallback(() => {
@@ -59,6 +66,255 @@ const Payment = () => {
       console.error('Erro ao carregar sessão:', error);
     }
   }, [currentOrder?.id]);
+
+  // ========== FUNÇÕES PARA INPUT DE DINHEIRO ==========
+  
+  const formatCashInput = (value) => {
+    // Remove tudo que não é número
+    let numbers = value.replace(/\D/g, '');
+    
+    // Se for vazio, retorna vazio
+    if (!numbers) return '';
+    
+    // Converte para número inteiro (centavos)
+    let cents = parseInt(numbers, 10);
+    
+    // Limita a 6 dígitos (até R$ 9.999,99)
+    if (numbers.length > 6) {
+      numbers = numbers.slice(0, 6);
+      cents = parseInt(numbers, 10);
+    }
+    
+    // Formata como moeda brasileira
+    const formatted = (cents / 100).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    return formatted;
+  };
+
+  const generateChangeSuggestions = () => {
+    const total = currentOrder?.total || 0;
+    if (!total || !cashInput) return [];
+    
+    // Pega o valor digitado (remove formatação)
+    const inputValue = parseFloat(
+      cashInput
+        .replace(/R\$/g, '')
+        .replace(/\./g, '')
+        .replace(/,/g, '.')
+        .trim()
+    );
+    
+    if (isNaN(inputValue) || inputValue < total) return [];
+    
+    const change = inputValue - total;
+    
+    // Sugestões baseadas no valor do pedido
+    const suggestions = [];
+    
+    // Sugere o próximo valor "redondo"
+    const nextRoundUp = Math.ceil(total);
+    if (nextRoundUp > total && nextRoundUp <= inputValue) {
+      suggestions.push({
+        value: nextRoundUp,
+        label: `R$ ${nextRoundUp.toFixed(2)} (Redondo)`,
+        change: nextRoundUp - total
+      });
+    }
+    
+    // Sugere múltiplos de 5
+    const nextMultipleOf5 = Math.ceil(total / 5) * 5;
+    if (nextMultipleOf5 > total && nextMultipleOf5 <= inputValue && nextMultipleOf5 !== nextRoundUp) {
+      suggestions.push({
+        value: nextMultipleOf5,
+        label: `R$ ${nextMultipleOf5.toFixed(2)} (Múltiplo de 5)`,
+        change: nextMultipleOf5 - total
+      });
+    }
+    
+    // Sugere múltiplos de 10
+    const nextMultipleOf10 = Math.ceil(total / 10) * 10;
+    if (nextMultipleOf10 > total && nextMultipleOf10 <= inputValue && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
+      suggestions.push({
+        value: nextMultipleOf10,
+        label: `R$ ${nextMultipleOf10.toFixed(2)} (Múltiplo de 10)`,
+        change: nextMultipleOf10 - total
+      });
+    }
+    
+    return suggestions;
+  };
+
+  const handleCashInputChange = (e) => {
+    const rawValue = e.target.value;
+    const formatted = formatCashInput(rawValue);
+    
+    // Salvar a posição do cursor antes de atualizar
+    const cursorPosition = e.target.selectionStart;
+    const originalLength = e.target.value.length;
+    
+    setCashInput(formatted);
+    setCashError('');
+    
+    // Atualiza no contexto se for válido
+    const numericValue = parseFloat(
+      formatted
+        .replace(/R\$/g, '')
+        .replace(/\./g, '')
+        .replace(/,/g, '.')
+        .trim()
+    );
+    
+    if (!isNaN(numericValue)) {
+      if (currentOrder) {
+        currentOrder.cashAmount = numericValue;
+        // Calcular troco
+        currentOrder.cashChange = Math.max(0, (numericValue - (currentOrder.total || 0)));
+      }
+    }
+    
+    // Gerar sugestões
+    const newSuggestions = generateChangeSuggestions();
+    setCashSuggestions(newSuggestions);
+    setShowCashSuggestions(newSuggestions.length > 0);
+    
+    // Restaurar posição do cursor após atualização
+    setTimeout(() => {
+      if (cashInputRef.current) {
+        // Calcular diferença de comprimento
+        const newLength = cashInputRef.current.value.length;
+        const lengthDiff = newLength - originalLength;
+        
+        // Ajustar posição do cursor baseado na diferença
+        let newCursorPosition = cursorPosition + lengthDiff;
+        
+        // Garantir que o cursor não vá além do texto
+        newCursorPosition = Math.max(0, Math.min(newCursorPosition, newLength));
+        
+        cashInputRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
+        cashInputRef.current.focus();
+      }
+    }, 0);
+  };
+
+  const handleCashInputKeyDown = (e) => {
+    // Permitir apenas teclas úteis
+    const allowedKeys = [
+      'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+      'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+      'Numpad0', 'Numpad1', 'Numpad2', 'Numpad3', 'Numpad4', 
+      'Numpad5', 'Numpad6', 'Numpad7', 'Numpad8', 'Numpad9'
+    ];
+    
+    // Permitir combinações de teclas como Ctrl+A, Ctrl+C, Ctrl+V
+    if (e.ctrlKey || e.metaKey) {
+      return; // Permitir todas as combinações de controle
+    }
+    
+    // Permitir navegação com teclas de seta
+    if (e.key.startsWith('Arrow')) {
+      return;
+    }
+    
+    if (!allowedKeys.includes(e.key)) {
+      e.preventDefault();
+    }
+    
+    // Se for Enter, submeter
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleConfirmCashPayment();
+    }
+  };
+
+  const handleSuggestionSelect = (suggestion) => {
+    setCashInput(`R$ ${suggestion.value.toFixed(2)}`);
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = suggestion.value;
+      currentOrder.cashChange = suggestion.change;
+    }
+    
+    // Focar no input e colocar cursor no final
+    setTimeout(() => {
+      if (cashInputRef.current) {
+        cashInputRef.current.focus();
+        const length = cashInputRef.current.value.length;
+        cashInputRef.current.setSelectionRange(length, length);
+      }
+    }, 10);
+  };
+
+  const validateCashInput = () => {
+    if (!cashInput) {
+      setCashError('Por favor, informe o valor em dinheiro que você tem.');
+      return false;
+    }
+    
+    const numericValue = parseFloat(
+      cashInput
+        .replace(/R\$/g, '')
+        .replace(/\./g, '')
+        .replace(/,/g, '.')
+        .trim()
+    );
+    
+    if (isNaN(numericValue)) {
+      setCashError('Valor inválido. Use apenas números.');
+      return false;
+    }
+    
+    if (numericValue < (currentOrder?.total || 0)) {
+      setCashError(`Valor insuficiente. O total é R$ ${(currentOrder?.total || 0).toFixed(2)}`);
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleQuickAmount = (amount) => {
+    setCashInput(`R$ ${amount.toFixed(2)}`);
+    setCashError('');
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = amount;
+      currentOrder.cashChange = Math.max(0, amount - (currentOrder.total || 0));
+    }
+    
+    // Focar no input após selecionar valor rápido
+    setTimeout(() => {
+      if (cashInputRef.current) {
+        cashInputRef.current.focus();
+        const length = cashInputRef.current.value.length;
+        cashInputRef.current.setSelectionRange(length, length);
+      }
+    }, 10);
+  };
+
+  const handleClearCashInput = () => {
+    setCashInput('');
+    setCashError('');
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = null;
+      currentOrder.cashChange = 0;
+    }
+    
+    // Focar no input após limpar
+    setTimeout(() => {
+      if (cashInputRef.current) {
+        cashInputRef.current.focus();
+      }
+    }, 10);
+  };
 
   // ========== VERIFICAÇÃO DAS RIFAS ==========
   useEffect(() => {
@@ -96,6 +352,11 @@ const Payment = () => {
   useEffect(() => {
     if (showPayment && currentOrder) {
       loadPersistentSession();
+      
+      // Inicializar input de dinheiro se houver valor salvo
+      if (currentOrder.paymentMethod === 'dinheiro' && currentOrder.cashAmount) {
+        setCashInput(`R$ ${currentOrder.cashAmount.toFixed(2)}`);
+      }
       
       // Verificar se já confirmou as rifas
       const savedOrder = JSON.parse(localStorage.getItem('terceirao_last_order') || '{}');
@@ -231,98 +492,99 @@ const Payment = () => {
 
   // ========== WHATSAPP MESSAGE ==========
 
-    const generateWhatsAppMessage = () => {
-      if (!vendorInfo?.whatsapp) {
-          console.error('WhatsApp não configurado');
-          showToast('error', 'WhatsApp não configurado');
-          return '#';
-      }
-      
-      const phone = vendorInfo.whatsapp.replace(/\D/g, '');
-      const deliveryOption = currentOrder.deliveryOption || 'retirada';
-      const deliveryAddress = currentOrder.deliveryAddress || null;
-      const paymentMethod = currentOrder.paymentMethod || 'pix';
-      const cashAmount = currentOrder.cashAmount || null;
-      const cashChange = currentOrder.cashChange || 0;
-      
-      const customerName = getCustomerName();
-      const customerPhone = currentOrder.customer?.phone || currentOrder.customerInfo?.phone || '';
-      
-      const hasRaffles = currentOrder.items?.some(item => item.isRaffle) || false;
-      
-      let message = `*${paymentMethod === 'pix' ? '📋 COMPROVANTE PIX ENVIADO' : '💵 PAGAMENTO EM DINHEIRO'}*\n\n`;
-      
-      message += `*🧾 PEDIDO:* ${currentOrder.id}\n`;
-      message += `*👤 CLIENTE:* ${customerName}\n`;
-      message += `*📞 TELEFONE:* ${customerPhone}\n`;
-      message += `*💰 VALOR:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
-      
-      if (hasRaffles) {
-          const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
-          message += `*🎟️ RIFAS:*\n`;
-          raffleItems.forEach((item, index) => {
-              if (index < 5) {
-                  message += `• ${item.selectedClass || ''} Nº ${item.selectedNumber?.toString().padStart(3, '0') || ''}\n`;
-              }
-          });
-          if (raffleItems.length > 5) {
-              message += `• ... e mais ${raffleItems.length - 5} rifa(s)\n`;
-          }
-          message += `\n`;
-          
-          if (paymentMethod === 'pix') {
-              if (!rafflesConfirmed) {
-                  message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
-                  message += `As rifas estão APENAS NO CARRINHO e NÃO foram reservadas no sistema ainda.\n`;
-                  message += `Elas só serão enviadas para o sistema quando você clicar em "Já enviei o comprovante".\n\n`;
-              } else {
-                  message += `*✅ CONFIRMADO:*\n`;
-                  message += `Rifas já foram enviadas para o sistema como PAGAS.\n\n`;
-              }
-          } else {
-              message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
-              message += `As rifas foram enviadas para o sistema como RESERVADAS PENDENTES.\n`;
-              message += `Status: Aguardando pagamento em dinheiro.\n\n`;
-          }
-      }
-      
-      if (paymentMethod === 'dinheiro') {
-          message += `*💵 PAGAMENTO EM DINHEIRO*\n`;
-          if (cashAmount) {
-              message += `• Valor informado: R$ ${cashAmount.toFixed(2)}\n`;
-              if (cashChange > 0) {
-                  message += `• Troco necessário: R$ ${cashChange.toFixed(2)}\n`;
-              }
-          }
-          message += `\n`;
-      }
-      
-      message += `*📦 ENTREGA:* ${deliveryOption === 'retirada' ? '🏫 Retirada na Escola' : '🚚 Entrega a Domicílio'}\n`;
-      
-      if (deliveryOption === 'entrega' && deliveryAddress) {
-          message += `📍 ${deliveryAddress.street || ''}, ${deliveryAddress.number || ''}\n`;
-          if (deliveryAddress.complement) {
-              message += `🏠 Complemento: ${deliveryAddress.complement}\n`;
-          }
-          message += `🏘️ Bairro: ${deliveryAddress.neighborhood || ''}\n`;
-      }
-      
-      message += `\n`;
-      message += `*📞 CONTATO DO CLIENTE:*\n`;
-      message += `👤 ${customerName}\n`;
-      message += `📱 ${customerPhone}\n\n`;
-      
-      message += `*📋 INFORMAÇÕES DO PEDIDO:*\n`;
-      message += `🔢 Pedido: ${currentOrder.id}\n`;
-      message += `⏰ Data: ${currentOrder.date || new Date().toLocaleDateString('pt-BR')}\n`;
-      message += `💳 Forma: ${paymentMethod === 'pix' ? 'PIX' : 'Dinheiro'}\n`;
-      message += `💰 Total: R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
-      
-      message += `*📱 CONTATO DA LOJA:*\n`;
-      message += `📞 WhatsApp: ${vendorInfo.whatsapp}\n`;
+  const generateWhatsAppMessage = () => {
+    if (!vendorInfo?.whatsapp) {
+        console.error('WhatsApp não configurado');
+        showToast('error', 'WhatsApp não configurado');
+        return '#';
+    }
+    
+    const phone = vendorInfo.whatsapp.replace(/\D/g, '');
+    const deliveryOption = currentOrder.deliveryOption || 'retirada';
+    const deliveryAddress = currentOrder.deliveryAddress || null;
+    const paymentMethod = currentOrder.paymentMethod || 'pix';
+    const cashAmount = currentOrder.cashAmount || null;
+    const cashChange = currentOrder.cashChange || 0;
+    
+    const customerName = getCustomerName();
+    const customerPhone = currentOrder.customer?.phone || currentOrder.customerInfo?.phone || '';
+    
+    const hasRaffles = currentOrder.items?.some(item => item.isRaffle) || false;
+    
+    let message = `*${paymentMethod === 'pix' ? '📋 COMPROVANTE PIX ENVIADO' : '💵 PAGAMENTO EM DINHEIRO'}*\n\n`;
+    
+    message += `*🧾 PEDIDO:* ${currentOrder.id}\n`;
+    message += `*👤 CLIENTE:* ${customerName}\n`;
+    message += `*📞 TELEFONE:* ${customerPhone}\n`;
+    message += `*💰 VALOR:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
+    
+    if (hasRaffles) {
+        const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
+        message += `*🎟️ RIFAS:*\n`;
+        raffleItems.forEach((item, index) => {
+            if (index < 5) {
+                message += `• ${item.selectedClass || ''} Nº ${item.selectedNumber?.toString().padStart(3, '0') || ''}\n`;
+            }
+        });
+        if (raffleItems.length > 5) {
+            message += `• ... e mais ${raffleItems.length - 5} rifa(s)\n`;
+        }
+        message += `\n`;
+        
+        if (paymentMethod === 'pix') {
+            if (!rafflesConfirmed) {
+                message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
+                message += `As rifas estão APENAS NO CARRINHO e NÃO foram reservadas no sistema ainda.\n`;
+                message += `Elas só serão enviadas para o sistema quando você clicar em "Já enviei o comprovante".\n\n`;
+            } else {
+                message += `*✅ CONFIRMADO:*\n`;
+                message += `Rifas já foram enviadas para o sistema como PAGAS.\n\n`;
+            }
+        } else {
+            message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
+            message += `As rifas foram enviadas para o sistema como RESERVADAS PENDENTES.\n`;
+            message += `Status: Aguardando pagamento em dinheiro.\n\n`;
+        }
+    }
+    
+    if (paymentMethod === 'dinheiro') {
+        message += `*💵 PAGAMENTO EM DINHEIRO*\n`;
+        if (cashAmount) {
+            message += `• Valor informado: R$ ${cashAmount.toFixed(2)}\n`;
+            if (cashChange > 0) {
+                message += `• Troco necessário: R$ ${cashChange.toFixed(2)}\n`;
+            }
+        }
+        message += `\n`;
+    }
+    
+    message += `*📦 ENTREGA:* ${deliveryOption === 'retirada' ? '🏫 Retirada na Escola' : '🚚 Entrega a Domicílio'}\n`;
+    
+    if (deliveryOption === 'entrega' && deliveryAddress) {
+        message += `📍 ${deliveryAddress.street || ''}, ${deliveryAddress.number || ''}\n`;
+        if (deliveryAddress.complement) {
+            message += `🏠 Complemento: ${deliveryAddress.complement}\n`;
+        }
+        message += `🏘️ Bairro: ${deliveryAddress.neighborhood || ''}\n`;
+    }
+    
+    message += `\n`;
+    message += `*📞 CONTATO DO CLIENTE:*\n`;
+    message += `👤 ${customerName}\n`;
+    message += `📱 ${customerPhone}\n\n`;
+    
+    message += `*📋 INFORMAÇÕES DO PEDIDO:*\n`;
+    message += `🔢 Pedido: ${currentOrder.id}\n`;
+    message += `⏰ Data: ${currentOrder.date || new Date().toLocaleDateString('pt-BR')}\n`;
+    message += `💳 Forma: ${paymentMethod === 'pix' ? 'PIX' : 'Dinheiro'}\n`;
+    message += `💰 Total: R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
+    
+    message += `*📱 CONTATO DA LOJA:*\n`;
+    message += `📞 WhatsApp: ${vendorInfo.whatsapp}\n`;
 
-      return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
+
   // ========== FUNÇÃO PARA ENVIAR COMPROVANTE PIX (ABRIR WHATSAPP) ==========
   const handleSendProof = () => {
     const url = generateWhatsAppMessage();
@@ -383,6 +645,11 @@ const Payment = () => {
   const handleConfirmCashPayment = async () => {
     if (!currentOrder) {
       showToast('error', 'Pedido não encontrado');
+      return;
+    }
+
+    // Validar input de dinheiro
+    if (!validateCashInput()) {
       return;
     }
 
@@ -750,19 +1017,6 @@ const Payment = () => {
       onClick={handleOverlayClick}
       ref={modalRef}
       tabIndex="-1"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 999999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.95)',
-        padding: '20px'
-      }}
     >
       <div className="payment-container" onClick={e => e.stopPropagation()}>
         {/* Cabeçalho */}
@@ -1033,7 +1287,7 @@ const Payment = () => {
             </div>
           )}
 
-          {/* Seção de Pagamento em Dinheiro */}
+          {/* Seção de Pagamento em Dinheiro (ATUALIZADA) */}
           {paymentMethod === 'dinheiro' && (
             <div className="cash-payment-section">
               <div className="cash-header">
@@ -1045,47 +1299,126 @@ const Payment = () => {
                 <div className="cash-detail-card">
                   <div className="cash-detail-header">
                     <Calculator size={20} />
-                    <h4>Detalhes do Pagamento</h4>
+                    <h4>Informe o Valor em Dinheiro</h4>
                   </div>
                   
-                  <div className="cash-detail-content">
-                    <div className="cash-detail-item">
-                      <div className="cash-detail-label">
-                        <DollarSign size={16} />
-                        <span>Valor a pagar:</span>
+                  <div className="cash-input-section">
+                    <div className="cash-input-group">
+                      <div className="cash-input-wrapper">
+                        <DollarSign size={20} className="cash-input-icon" />
+                        <input
+                          ref={cashInputRef}
+                          type="text"
+                          className={`cash-input ${cashError ? 'error' : ''}`}
+                          value={cashInput}
+                          onChange={handleCashInputChange}
+                          onKeyDown={handleCashInputKeyDown}
+                          onFocus={() => setShowCashSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowCashSuggestions(false), 200)}
+                          placeholder="Ex: 50,00"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          spellCheck="false"
+                        />
+                        <button
+                          type="button"
+                          className="clear-cash-btn"
+                          onClick={handleClearCashInput}
+                          aria-label="Limpar valor"
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                      <div className="cash-detail-value total">R$ {currentOrder.total?.toFixed(2)}</div>
+                      
+                      {/* Botões de valor rápido */}
+                      <div className="quick-amount-buttons">
+                        {[10, 20, 50, 100].map(amount => (
+                          <button
+                            key={amount}
+                            type="button"
+                            className="quick-amount-btn"
+                            onClick={() => handleQuickAmount(amount)}
+                          >
+                            R$ {amount}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      {/* Sugestões de troco */}
+                      {showCashSuggestions && cashSuggestions.length > 0 && (
+                        <div className="cash-suggestions">
+                          <div className="suggestions-header">
+                            <span>💡 Sugestões para facilitar o troco:</span>
+                          </div>
+                          <div className="suggestions-list">
+                            {cashSuggestions.map((suggestion, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                className="suggestion-item"
+                                onClick={() => handleSuggestionSelect(suggestion)}
+                              >
+                                <div className="suggestion-label">
+                                  {suggestion.label}
+                                </div>
+                                <div className="suggestion-change">
+                                  Troco: R$ {suggestion.change.toFixed(2)}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Mensagem de erro */}
+                      {cashError && (
+                        <div className="cash-error-message">
+                          <AlertCircle size={16} />
+                          <span>{cashError}</span>
+                        </div>
+                      )}
                     </div>
                     
-                    {cashAmount && (
-                      <>
-                        <div className="cash-detail-item">
-                          <div className="cash-detail-label">
-                            <Wallet size={16} />
-                            <span>Valor informado:</span>
+                    {/* Resumo do cálculo */}
+                    <div className="cash-summary">
+                      <div className="summary-item">
+                        <span>Total do Pedido:</span>
+                        <span className="summary-value">R$ {currentOrder?.total?.toFixed(2) || '0.00'}</span>
+                      </div>
+                      
+                      {cashInput && !isNaN(parseFloat(
+                        cashInput
+                          .replace(/R\$/g, '')
+                          .replace(/\./g, '')
+                          .replace(/,/g, '.')
+                          .trim()
+                      )) && (
+                        <>
+                          <div className="summary-item">
+                            <span>Valor Informado:</span>
+                            <span className="summary-value cash-amount">{cashInput}</span>
                           </div>
-                          <div className="cash-detail-value given">R$ {cashAmount.toFixed(2)}</div>
-                        </div>
-                        
-                        <div className="cash-detail-item change">
-                          <div className="cash-detail-label">
-                            <Calculator size={16} />
-                            <span>Troco necessário:</span>
+                          
+                          <div className="summary-item change-item">
+                            <span>Troco Necessário:</span>
+                            <span className={`summary-value change ${currentOrder?.cashChange > 0 ? 'needs-change' : 'exact'}`}>
+                              {currentOrder?.cashChange > 0 
+                                ? `R$ ${currentOrder.cashChange.toFixed(2)}`
+                                : '✅ Valor exato'}
+                            </span>
                           </div>
-                          <div className="cash-detail-value change">
-                            {cashChange > 0 ? `R$ ${cashChange.toFixed(2)}` : '✅ Valor exato'}
-                          </div>
-                        </div>
-                      </>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
                 <div className="cash-instructions">
                   <h4>📋 COMO PROCEDER (LEIA COM ATENÇÃO):</h4>
                   <ol>
-                    <li>Prepare o valor correto em dinheiro</li>
-                    <li><strong>Clique em "Enviar para WhatsApp"</strong></li>
+                    <li><strong>Informe o valor em dinheiro</strong> que você tem (use o campo acima)</li>
+                    <li>Veja automaticamente o <strong>troco necessário</strong></li>
+                    <li><strong>Clique em "Enviar para WhatsApp"</strong> abaixo</li>
                     <li><strong>IMPORTANTE:</strong> As rifas serão enviadas para o sistema como <strong>RESERVADAS PENDENTES</strong></li>
                     <li>O administrador já verá sua reserva (aguardando pagamento)</li>
                     <li>WhatsApp abrirá com mensagem pronta para enviar</li>
@@ -1261,7 +1594,7 @@ const Payment = () => {
                   </>
                 ) : !rafflesConfirmed ? (
                   <>
-                    <li><strong>Último passo OBRIGATÓRIO:</strong> Clique em "Já enviei o comprovante" AGORA</li>
+                    <li><strong>Último passo OBRIGATÓRIA:</strong> Clique em "Já enviei o comprovante" AGORA</li>
                     <li><strong>Confirmação manual:</strong> Você precisa confirmar explicitamente o pagamento</li>
                     <li><strong>Admin ainda não vê:</strong> Rifas ainda NÃO foram para o sistema</li>
                     <li><strong>Evite erros:</strong> Só confirme se realmente enviou o comprovante</li>
