@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   X, Trash2, Plus, Minus,
-  Package, ShoppingCart, ChevronRight, User,
+  Package, ShoppingCart, ChevronRight, User, 
   Home, School, Truck, CheckCircle,
   CreditCard, Wallet, AlertCircle, Clock, Calendar,
   Banknote, Check, Sparkles

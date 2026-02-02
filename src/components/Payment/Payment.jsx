@@ -35,14 +35,6 @@ const Payment = () => {
   const [hasPendingPayment, setHasPendingPayment] = useState(false);
   const [paymentTimestamp, setPaymentTimestamp] = useState(null);
 
-  // ========== DEBUG ==========
-  useEffect(() => {
-    console.log('🔄 Payment - DEBUG INFO:');
-    console.log('📦 currentOrder:', currentOrder);
-    console.log('🛒 Cart has raffles?', cart?.some(item => item.isRaffle));
-    console.log('💰 Payment method:', currentOrder?.paymentMethod);
-    console.log('📤 processCashPayment available?', typeof processCashPayment);
-  }, [currentOrder, cart]);
 
   // ========== VERIFICAÇÃO DAS RIFAS ==========
   useEffect(() => {
@@ -98,7 +90,7 @@ const Payment = () => {
         }
       }
     }
-  }, [showPayment, currentOrder]);
+  }, [showPayment, currentOrder, loadPersistentSession]);
 
   const savePersistentSession = () => {
     if (!currentOrder) return;

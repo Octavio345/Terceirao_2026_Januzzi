@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Calendar, AlertCircle, CheckCircle,
   ChevronRight,
@@ -82,8 +82,9 @@ const Dashboard = () => {
     }
   };
 
-  // Função para obter vendas recentes
-  const getFilteredRecentSales = () => {
+
+// PARA:
+  const getFilteredRecentSales = useCallback(() => {
     let filtered = [...soldNumbers];
     
     // Garantir que todas as vendas têm timestamp
@@ -136,7 +137,7 @@ const Dashboard = () => {
         }
       })
       .slice(0, 10);
-  };
+  }, [soldNumbers, activeFilter]); // ← Adicione as dependências aqui
 
   // Função para atualizar dados
   const handleRefresh = () => {

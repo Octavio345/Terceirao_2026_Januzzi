@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo} from 'react';
+import React, { useState, useEffect, useMemo, useCallback} from 'react';
 import { 
   ShoppingBag, Heart, Check, 
   Ticket, Search, AlertCircle, CheckCircle, 
@@ -16,7 +16,10 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   const getAvailableNumbers = raffleManager?.getAvailableNumbers || (() => []);
   const isSyncing = raffleManager?.isSyncing || false;
   const firebaseConnected = raffleManager?.firebaseConnected || false;
-  const soldNumbers = raffleManager?.soldNumbers || [];
+  const soldNumbers = useMemo(() => 
+  raffleManager?.soldNumbers || [], 
+  [raffleManager?.soldNumbers]
+);
   
   const [isLiked, setIsLiked] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
@@ -90,7 +93,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
       availableCount: 300,
       status: '300 números disponíveis'
     }
-  }), []);
+  }), [classColors]); 
 
   useEffect(() => {
     if (typeof getAvailableNumbers === 'function') {
@@ -120,9 +123,9 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
       setAvailableNumbers(Array.from({ length: 300 }, (_, i) => i + 1));
       setIsLoadingNumbers(false);
     }
-  }, [selectedClass, getAvailableNumbers, soldNumbers]);
+  }, [selectedClass, getAvailableNumbers, soldNumbers, classes]);
 
-  const getSaleDetails = (number) => {
+  const getSaleDetails = useCallback((number) => {
     const sale = soldNumbers.find(s => 
       s.turma === selectedClass && 
       s.numero === number &&
@@ -155,7 +158,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
     }
     
     return null;
-  };
+  }, [soldNumbers, selectedClass, raffleManager?.pendingReservations]);
 
   const filteredNumbers = useMemo(() => {
     const allNumbers = Array.from({ length: 300 }, (_, i) => i + 1);
