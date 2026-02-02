@@ -70,66 +70,102 @@ const Payment = () => {
 
   // ========== FUNÇÕES PARA INPUT DE DINHEIRO ==========
   
-  const formatCashInput = (value) => {
-    // Remove tudo que não é número
-    let numbers = value.replace(/\D/g, '');
-    
-    // Se for vazio, retorna vazio
-    if (!numbers) return '';
-    
-    // Converte para número com centavos
-    const numericValue = parseFloat(numbers) / 100;
-    
-    if (isNaN(numericValue)) return '';
-    
-    return numericValue.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
 
-  const generateChangeSuggestions = () => {
-    const total = currentOrder?.total || 0;
-    if (!total) return [];
+  // ========== FUNÇÕES PARA INPUT DE DINHEIRO ==========
+
+const generateChangeSuggestions = useCallback(() => {
+  const total = currentOrder?.total || 0;
+  if (!total) return [];
+  
+  // Se não houver input, mostra sugestões baseadas no total
+  if (!cashInput) {
+    const suggestions = [];
     
-    // Se não houver input, mostra sugestões baseadas no total
-    if (!cashInput) {
-      const suggestions = [];
-      
-      // Sugere o próximo valor "redondo"
-      const nextRoundUp = Math.ceil(total);
-      if (nextRoundUp > total) {
-        suggestions.push({
-          value: nextRoundUp,
-          label: `R$ ${nextRoundUp.toFixed(2)} (Valor redondo)`,
-          change: nextRoundUp - total
-        });
-      }
-      
-      // Sugere múltiplos de 5
-      const nextMultipleOf5 = Math.ceil(total / 5) * 5;
-      if (nextMultipleOf5 > total && nextMultipleOf5 !== nextRoundUp) {
-        suggestions.push({
-          value: nextMultipleOf5,
-          label: `R$ ${nextMultipleOf5.toFixed(2)} (Múltiplo de 5)`,
-          change: nextMultipleOf5 - total
-        });
-      }
-      
-      // Sugere múltiplos de 10
-      const nextMultipleOf10 = Math.ceil(total / 10) * 10;
-      if (nextMultipleOf10 > total && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
-        suggestions.push({
-          value: nextMultipleOf10,
-          label: `R$ ${nextMultipleOf10.toFixed(2)} (Múltiplo de 10)`,
-          change: nextMultipleOf10 - total
-        });
-      }
-      
-      return suggestions;
+    // Sugere o próximo valor "redondo"
+    const nextRoundUp = Math.ceil(total);
+    if (nextRoundUp > total) {
+      suggestions.push({
+        value: nextRoundUp,
+        label: `R$ ${nextRoundUp.toFixed(2)} (Valor redondo)`,
+        change: nextRoundUp - total
+      });
     }
+    
+    // Sugere múltiplos de 5
+    const nextMultipleOf5 = Math.ceil(total / 5) * 5;
+    if (nextMultipleOf5 > total && nextMultipleOf5 !== nextRoundUp) {
+      suggestions.push({
+        value: nextMultipleOf5,
+        label: `R$ ${nextMultipleOf5.toFixed(2)} (Múltiplo de 5)`,
+        change: nextMultipleOf5 - total
+      });
+    }
+    
+    // Sugere múltiplos de 10
+    const nextMultipleOf10 = Math.ceil(total / 10) * 10;
+    if (nextMultipleOf10 > total && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
+      suggestions.push({
+        value: nextMultipleOf10,
+        label: `R$ ${nextMultipleOf10.toFixed(2)} (Múltiplo de 10)`,
+        change: nextMultipleOf10 - total
+      });
+    }
+    
+    return suggestions;
+  }
+  
+  // Se houver input, mostra sugestões baseadas no valor digitado
+  const inputValue = parseFloat(
+    cashInput
+      .replace(/R\$/g, '')
+      .replace(/\./g, '')
+      .replace(/,/g, '.')
+      .trim()
+  );
+  
+  if (isNaN(inputValue) || inputValue < total) return [];
+  
+  const suggestions = [];
+  const change = inputValue - total;
+  
+  // Se já for um valor bom, não precisa sugerir outros
+  if (change === 0) return []; // Valor exato
+  
+  // Se o troco for "bonito" (múltiplo de 5 ou 10), não sugere
+  if (change % 5 === 0 || change % 10 === 0) {
+    return [];
+  }
+  
+  // Senão, sugere valores melhores
+  const nextRoundUp = Math.ceil(total);
+  if (nextRoundUp > total && nextRoundUp !== inputValue) {
+    suggestions.push({
+      value: nextRoundUp,
+      label: `R$ ${nextRoundUp.toFixed(2)} (Valor redondo)`,
+      change: nextRoundUp - total
+    });
+  }
+  
+  const nextMultipleOf5 = Math.ceil(total / 5) * 5;
+  if (nextMultipleOf5 > total && nextMultipleOf5 !== inputValue && nextMultipleOf5 !== nextRoundUp) {
+    suggestions.push({
+      value: nextMultipleOf5,
+      label: `R$ ${nextMultipleOf5.toFixed(2)} (Múltiplo de 5)`,
+      change: nextMultipleOf5 - total
+    });
+  }
+  
+  const nextMultipleOf10 = Math.ceil(total / 10) * 10;
+  if (nextMultipleOf10 > total && nextMultipleOf10 !== inputValue && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
+    suggestions.push({
+      value: nextMultipleOf10,
+      label: `R$ ${nextMultipleOf10.toFixed(2)} (Múltiplo de 10)`,
+      change: nextMultipleOf10 - total
+    });
+  }
+  
+  return suggestions;
+}, [currentOrder?.total, cashInput]); 
     
     // Se houver input, mostra sugestões baseadas no valor digitado
     const inputValue = parseFloat(
@@ -185,70 +221,70 @@ const Payment = () => {
   };
 
   const handleCashInputChange = useCallback((e) => {
-    const rawValue = e.target.value;
-    
-    // Mantém apenas números
-    const numbers = rawValue.replace(/\D/g, '');
-    
-    // Se for vazio, limpa tudo
-    if (!numbers) {
-      setCashInput('');
-      setCashError('');
-      setShowCashSuggestions(false);
-      return;
-    }
-    
-    // Converte para número com centavos
-    const numericValue = parseFloat(numbers) / 100;
-    
-    if (isNaN(numericValue)) {
-      setCashInput('');
-      return;
-    }
-    
-    // Formata como moeda
-    const formatted = numericValue.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    
-    // Atualiza estado
-    setCashInput(formatted);
+  const rawValue = e.target.value;
+  
+  // Mantém apenas números
+  const numbers = rawValue.replace(/\D/g, '');
+  
+  // Se for vazio, limpa tudo
+  if (!numbers) {
+    setCashInput('');
     setCashError('');
-    
-    // Atualiza no contexto se for válido
-    if (currentOrder && !isNaN(numericValue)) {
-      currentOrder.cashAmount = numericValue;
-      currentOrder.cashChange = Math.max(0, (numericValue - (currentOrder.total || 0)));
-    }
-    
-    // Gerar sugestões
-    const newSuggestions = generateChangeSuggestions();
-    setCashSuggestions(newSuggestions);
-    if (newSuggestions.length > 0) {
-      setShowCashSuggestions(true);
-    }
-  }, [currentOrder]);
+    setShowCashSuggestions(false);
+    return;
+  }
+  
+  // Converte para número com centavos
+  const numericValue = parseFloat(numbers) / 100;
+  
+  if (isNaN(numericValue)) {
+    setCashInput('');
+    return;
+  }
+  
+  // Formata como moeda
+  const formatted = numericValue.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  
+  // Atualiza estado
+  setCashInput(formatted);
+  setCashError('');
+  
+  // Atualiza no contexto se for válido
+  if (currentOrder && !isNaN(numericValue)) {
+    currentOrder.cashAmount = numericValue;
+    currentOrder.cashChange = Math.max(0, (numericValue - (currentOrder.total || 0)));
+  }
+  
+  // Gerar sugestões
+  const newSuggestions = generateChangeSuggestions();
+  setCashSuggestions(newSuggestions);
+  if (newSuggestions.length > 0) {
+    setShowCashSuggestions(true);
+  }
+}, [currentOrder, generateChangeSuggestions]); 
 
   const handleCashInputKeyDown = useCallback((e) => {
-    // Permite apenas números e teclas de controle
-    if (
-      e.key.length === 1 && // Caractere único
-      !/\d/.test(e.key) && // Não é número
-      e.key !== ',' && e.key !== '.' // Não é separador decimal
-    ) {
-      e.preventDefault();
-      return;
-    }
-    
-    // Se for Enter, submeter
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleConfirmCashPayment();
-    }
-  }, []);
+  // Permite apenas números e teclas de controle
+  if (
+    e.key.length === 1 && // Caractere único
+    !/\d/.test(e.key) && // Não é número
+    e.key !== ',' && e.key !== '.' // Não é separador decimal
+  ) {
+    e.preventDefault();
+    return;
+  }
+  
+  // Se for Enter, submeter
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    handleConfirmCashPayment();
+  }
+}, [handleConfirmCashPayment]); // Dependência: função de confirmação
 
   const handleSuggestionSelect = useCallback((suggestion) => {
     setCashInput(`R$ ${suggestion.value.toFixed(2)}`);
@@ -264,7 +300,7 @@ const Payment = () => {
       const actionButton = document.querySelector('.main-actions button');
       if (actionButton) actionButton.focus();
     }, 10);
-  }, [currentOrder]);
+  }, [currentOrder, handleConfirmCashPayment]);
 
   const validateCashInput = useCallback(() => {
     if (!cashInput) {
@@ -1843,6 +1879,6 @@ const Payment = () => {
     </div>,
     document.body
   );
-};
+
 
 export default Payment;
