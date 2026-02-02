@@ -10,8 +10,7 @@ import {
   addDoc, 
   updateDoc,
   doc,
-  getDocs,
-  Timestamp
+  getDocs
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 

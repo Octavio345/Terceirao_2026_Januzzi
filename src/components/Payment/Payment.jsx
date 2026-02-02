@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { 
   Copy, Check, QrCode, Smartphone, Clock, 
   Download, X, Wallet, Calculator, DollarSign, AlertCircle, RefreshCw,
-  Send, MessageCircle, Loader2, ExternalLink, Shield
+  Send, MessageCircle, Loader2, Shield
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useRaffleManager } from '../../context/RaffleManagerContext';
