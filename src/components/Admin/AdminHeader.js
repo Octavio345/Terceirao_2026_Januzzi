@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Settings, Bell, User, Menu} from 'lucide-react';
+import { LogOut, Settings, Bell, User, Menu } from 'lucide-react';
 import { useRaffleManager } from '../../context/RaffleManagerContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';

@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Search, Filter, Plus, Download, RefreshCw, 
-   CheckCircle, XCircle, 
-   Users, AlertCircle,
-   Clock, CheckSquare,
+  CheckCircle, XCircle, 
+  Users, AlertCircle,
+  Clock, CheckSquare,
   ChevronDown, Edit3, Save, X,
   Calendar, Phone, Hash, User, 
-  Shield,  TrendingUp,
+  Shield, TrendingUp,
 } from 'lucide-react';
 import { useRaffleManager } from '../../context/RaffleManagerContext';
 import './RaffleManager.css';
@@ -42,7 +42,6 @@ const RaffleManager = () => {
     status: 'reservado'
   });
 
-  
   // 🔥 NOVO: Estatísticas em tempo real
   const getRealTimeStats = () => ({
     total: soldNumbers.length,

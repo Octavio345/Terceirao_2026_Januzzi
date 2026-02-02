@@ -1,4 +1,3 @@
-// src/components/Admin/SalesManager.jsx
 import React, { useState, useMemo } from 'react';
 import { 
   Search, XCircle, Clock, 

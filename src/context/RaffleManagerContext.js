@@ -125,6 +125,56 @@ export const RaffleManagerProvider = ({ children }) => {
     checkAdminAuth();
   }, [logoutAdmin]);
 
+  // ========== FUNÇÕES AUXILIARES ==========
+
+  // Nova função: mesclar vendas com todos os status
+  const mergeSalesWithAllStatus = useCallback((localSales, firebaseSales) => {
+    const salesMap = new Map();
+    
+    // Primeiro, adicionar todas as vendas do Firebase (incluindo pendentes)
+    firebaseSales.forEach(sale => {
+      const key = `${sale.turma}-${sale.numero}`;
+      salesMap.set(key, { 
+        ...sale, 
+        synced: true,
+        isFromFirebase: true 
+      });
+    });
+    
+    // Depois, adicionar vendas locais que não estão no Firebase
+    localSales.forEach(sale => {
+      const key = `${sale.turma}-${sale.numero}`;
+      if (!salesMap.has(key)) {
+        salesMap.set(key, sale);
+      }
+    });
+    
+    return Array.from(salesMap.values());
+  }, []);
+
+  // Função para mesclar reservas
+  const mergeReservations = useCallback((localReservations, firebaseReservations) => {
+    const reservationsMap = new Map();
+    
+    firebaseReservations.forEach(res => {
+      const key = res.id || `${res.turma}-${res.numero}`;
+      reservationsMap.set(key, { 
+        ...res, 
+        synced: true,
+        isFromFirebase: true 
+      });
+    });
+    
+    localReservations.forEach(res => {
+      const key = res.id || `${res.turma}-${res.numero}`;
+      if (!reservationsMap.has(key)) {
+        reservationsMap.set(key, res);
+      }
+    });
+    
+    return Array.from(reservationsMap.values());
+  }, []);
+
   // ========== INICIALIZAÇÃO DO FIREBASE ==========
   
   useEffect(() => {
@@ -255,57 +305,7 @@ export const RaffleManagerProvider = ({ children }) => {
         }
       });
     };
-  }, []);
-
-  // ========== FUNÇÕES AUXILIARES ==========
-
-  // Nova função: mesclar vendas com todos os status
-  const mergeSalesWithAllStatus = (localSales, firebaseSales) => {
-    const salesMap = new Map();
-    
-    // Primeiro, adicionar todas as vendas do Firebase (incluindo pendentes)
-    firebaseSales.forEach(sale => {
-      const key = `${sale.turma}-${sale.numero}`;
-      salesMap.set(key, { 
-        ...sale, 
-        synced: true,
-        isFromFirebase: true 
-      });
-    });
-    
-    // Depois, adicionar vendas locais que não estão no Firebase
-    localSales.forEach(sale => {
-      const key = `${sale.turma}-${sale.numero}`;
-      if (!salesMap.has(key)) {
-        salesMap.set(key, sale);
-      }
-    });
-    
-    return Array.from(salesMap.values());
-  };
-
-  // Função para mesclar reservas
-  const mergeReservations = (localReservations, firebaseReservations) => {
-    const reservationsMap = new Map();
-    
-    firebaseReservations.forEach(res => {
-      const key = res.id || `${res.turma}-${res.numero}`;
-      reservationsMap.set(key, { 
-        ...res, 
-        synced: true,
-        isFromFirebase: true 
-      });
-    });
-    
-    localReservations.forEach(res => {
-      const key = res.id || `${res.turma}-${res.numero}`;
-      if (!reservationsMap.has(key)) {
-        reservationsMap.set(key, res);
-      }
-    });
-    
-    return Array.from(reservationsMap.values());
-  };
+  }, [soldNumbers, pendingReservations, mergeSalesWithAllStatus, mergeReservations]);
 
   // ========== VERIFICAÇÕES ==========
 
@@ -1331,7 +1331,7 @@ export const RaffleManagerProvider = ({ children }) => {
     const interval = setInterval(cleanupExpiredReservations, 60000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [pendingReservations, soldNumbers]); // Adicionadas as dependências
 
   // ========== FUNÇÃO GETSTATS CORRIGIDA ==========
 

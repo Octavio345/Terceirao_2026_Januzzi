@@ -82,8 +82,6 @@ const Dashboard = () => {
     }
   };
 
-
-// PARA:
   const getFilteredRecentSales = useCallback(() => {
     let filtered = [...soldNumbers];
     
@@ -137,7 +135,7 @@ const Dashboard = () => {
         }
       })
       .slice(0, 10);
-  }, [soldNumbers, activeFilter]); // ← Adicione as dependências aqui
+  }, [soldNumbers, activeFilter]);
 
   // Função para atualizar dados
   const handleRefresh = () => {
@@ -196,12 +194,12 @@ const Dashboard = () => {
       window.removeEventListener('data_refreshed', handleNewSale);
       window.removeEventListener('firebase_data_updated', handleNewSale);
     };
-  }, [soldNumbers, activeFilter, getStats]);
+  }, [soldNumbers, activeFilter, getStats, getFilteredRecentSales]); // Adicionadas dependências
 
   // Atualizar quando o filtro mudar
   useEffect(() => {
     setRecentSales(getFilteredRecentSales());
-  }, [activeFilter, soldNumbers]);
+  }, [activeFilter, soldNumbers, getFilteredRecentSales]); // Adicionada dependência
 
   // Obter status formatado para exibição - CORRIGIDO PARA RESERVADO
   const getStatusBadge = (status, paymentMethod) => {

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback} from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   ShoppingBag, Heart, Check, 
   Ticket, Search, AlertCircle, CheckCircle, 
- Users, X, RefreshCw, Eye, EyeOff,
-  Tag, Shield, Clock, Award,  Grid
+  Users, X, RefreshCw, Eye, EyeOff,
+  Tag, Shield, Clock, Award, Grid
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useRaffleManager } from '../../context/RaffleManagerContext';
@@ -16,10 +16,12 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   const getAvailableNumbers = raffleManager?.getAvailableNumbers || (() => []);
   const isSyncing = raffleManager?.isSyncing || false;
   const firebaseConnected = raffleManager?.firebaseConnected || false;
+  
+  // Corrigido: soldNumbers memoizado
   const soldNumbers = useMemo(() => 
-  raffleManager?.soldNumbers || [], 
-  [raffleManager?.soldNumbers]
-);
+    raffleManager?.soldNumbers || [], 
+    [raffleManager?.soldNumbers]
+  );
   
   const [isLiked, setIsLiked] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
@@ -35,7 +37,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   
   const numbersPerPage = 36;
 
-  const classColors = {
+  const classColors = useMemo(() => ({
     '3A': {
       primary: '#FF6B6B',
       secondary: '#FFF5F5',
@@ -54,7 +56,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
       gradient: 'linear-gradient(135deg, #FFD166 0%, #FFE082 100%)',
       light: '#FFF9E6'
     }
-  };
+  }), []);
 
   const classes = useMemo(() => ({
     '3A': {
@@ -125,43 +127,45 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
     }
   }, [selectedClass, getAvailableNumbers, soldNumbers, classes]);
 
-  const getSaleDetails = useCallback((number) => {
-    const sale = soldNumbers.find(s => 
-      s.turma === selectedClass && 
-      s.numero === number &&
-      s.status !== 'cancelado'
-    );
-    
-    if (sale) {
-      return {
-        status: sale.status || 'pago',
-        nome: sale.nome || 'Comprador',
-        timestamp: sale.timestamp ? new Date(sale.timestamp).toLocaleDateString('pt-BR') : '',
-        isPaid: sale.status === 'pago'
-      };
-    }
-    
-    const reservation = raffleManager?.pendingReservations?.find(r => 
-      r.turma === selectedClass && 
-      r.numero === number &&
-      !r.expired
-    );
-    
-    if (reservation) {
-      return {
-        status: 'reservado',
-        nome: reservation.nome || 'Comprador',
-        timestamp: reservation.timestamp ? new Date(reservation.timestamp).toLocaleDateString('pt-BR') : '',
-        isPaid: false,
-        expiresAt: reservation.expiresAt
-      };
-    }
-    
-    return null;
-  }, [soldNumbers, selectedClass, raffleManager?.pendingReservations]);
-
+  // Movido getSaleDetails para dentro do useMemo
   const filteredNumbers = useMemo(() => {
     const allNumbers = Array.from({ length: 300 }, (_, i) => i + 1);
+    
+    // Função local para obter detalhes da venda
+    const getSaleDetails = (number) => {
+      const sale = soldNumbers.find(s => 
+        s.turma === selectedClass && 
+        s.numero === number &&
+        s.status !== 'cancelado'
+      );
+      
+      if (sale) {
+        return {
+          status: sale.status || 'pago',
+          nome: sale.nome || 'Comprador',
+          timestamp: sale.timestamp ? new Date(sale.timestamp).toLocaleDateString('pt-BR') : '',
+          isPaid: sale.status === 'pago'
+        };
+      }
+      
+      const reservation = raffleManager?.pendingReservations?.find(r => 
+        r.turma === selectedClass && 
+        r.numero === number &&
+        !r.expired
+      );
+      
+      if (reservation) {
+        return {
+          status: 'reservado',
+          nome: reservation.nome || 'Comprador',
+          timestamp: reservation.timestamp ? new Date(reservation.timestamp).toLocaleDateString('pt-BR') : '',
+          isPaid: false,
+          expiresAt: reservation.expiresAt
+        };
+      }
+      
+      return null;
+    };
     
     let filtered = allNumbers.map(num => {
       const saleDetails = getSaleDetails(num);
@@ -205,7 +209,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
     }
 
     return filtered;
-  }, [availableNumbers, searchNumber, selectedNumbers, selectedClass, filterMode, getSaleDetails, soldNumbers]);
+  }, [availableNumbers, searchNumber, selectedNumbers, selectedClass, filterMode, soldNumbers, raffleManager?.pendingReservations]);
 
   const totalPages = Math.ceil(filteredNumbers.length / numbersPerPage);
   const startIndex = (page - 1) * numbersPerPage;
