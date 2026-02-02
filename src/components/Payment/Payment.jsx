@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { 
   Copy, Check, QrCode, Smartphone, Clock, 
   Download, X, Wallet, Calculator, DollarSign, AlertCircle, RefreshCw,
-  Send, MessageCircle, Loader2
+  Send, MessageCircle, Loader2, ExternalLink, Shield
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useRaffleManager } from '../../context/RaffleManagerContext';
@@ -27,11 +27,13 @@ const Payment = () => {
   const [loading, setLoading] = useState(false);
   const [proofSent, setProofSent] = useState(false);
   const [rafflesConfirmed, setRafflesConfirmed] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   const modalRef = useRef(null);
   
   const [persistentSession, setPersistentSession] = useState(null);
   const [hasPendingPayment, setHasPendingPayment] = useState(false);
   const [paymentTimestamp, setPaymentTimestamp] = useState(null);
+  const [manualSendResults, setManualSendResults] = useState([]);
 
   // ========== FUNÇÃO loadPersistentSession ==========
   const loadPersistentSession = useCallback(() => {
@@ -40,7 +42,7 @@ const Payment = () => {
       if (savedSession) {
         const sessionData = JSON.parse(savedSession);
         
-        if (sessionData.orderId === currentOrder.id) {
+        if (sessionData.orderId === currentOrder?.id) {
           setPersistentSession(sessionData);
           
           if (sessionData.hasSentProof) {
@@ -111,6 +113,12 @@ const Payment = () => {
           setProofSent(false);
         }
       }
+      
+      // Verificar debug mode pela URL
+      if (window.location.search.includes('debug=true')) {
+        setDebugMode(true);
+        console.log('🔍 Modo debug ativado');
+      }
     }
   }, [showPayment, currentOrder, loadPersistentSession]);
 
@@ -144,6 +152,9 @@ const Payment = () => {
   useEffect(() => {
     if (showPayment) {
       document.body.style.overflow = 'hidden';
+      if (modalRef.current) {
+        modalRef.current.focus();
+      }
     }
     
     return () => {
@@ -258,9 +269,14 @@ const Payment = () => {
       message += `\n`;
       
       if (paymentMethod === 'pix') {
-        message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
-        message += `As rifas estão APENAS NO CARRINHO e NÃO foram reservadas no sistema ainda.\n`;
-        message += `Elas só serão enviadas para o sistema quando você clicar em "Já enviei o comprovante".\n\n`;
+        if (!rafflesConfirmed) {
+          message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
+          message += `As rifas estão APENAS NO CARRINHO e NÃO foram reservadas no sistema ainda.\n`;
+          message += `Elas só serão enviadas para o sistema quando você clicar em "Já enviei o comprovante".\n\n`;
+        } else {
+          message += `*✅ CONFIRMADO:*\n`;
+          message += `Rifas já foram enviadas para o sistema como PAGAS.\n\n`;
+        }
       } else {
         message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
         message += `As rifas foram enviadas para o sistema como RESERVADAS PENDENTES.\n`;
@@ -297,29 +313,23 @@ const Payment = () => {
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
 
-  // ========== FUNÇÃO PRINCIPAL PARA CONFIRMAR PAGAMENTO (DINHEIRO) - CORRIGIDA ==========
+  // ========== FUNÇÃO PRINCIPAL PARA CONFIRMAR PAGAMENTO (DINHEIRO) ==========
 
   const handleConfirmCashPayment = async () => {
-  if (!currentOrder) {
-    showToast('error', 'Pedido não encontrado');
-    return;
-  }
+    if (!currentOrder) {
+      showToast('error', 'Pedido não encontrado');
+      return;
+    }
 
-  setLoading(true);
-  console.log('💵 INICIANDO PAGAMENTO DINHEIRO - ENVIANDO PARA FIREBASE...');
-  
-  try {
-    console.log('📤 1. Preparando dados para envio ao Firebase...');
+    setLoading(true);
+    console.log('💵 INICIANDO PAGAMENTO DINHEIRO - ENVIANDO PARA FIREBASE...');
     
-    // VARIÁVEIS NÃO UTILIZADAS - COMENTAR OU REMOVER
-    // eslint-disable-next-line no-unused-vars
-    // const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
-    // eslint-disable-next-line no-unused-vars
-    // const customerName = getCustomerName();
-    
-    // PASSO 1: Chamar a função que envia para Firebase
-    const result = await sendRafflesToFirebase(currentOrder, 'dinheiro');
+    try {
+      console.log('📤 1. Preparando dados para envio ao Firebase...');
       
+      // PASSO 1: Chamar a função que envia para Firebase
+      const result = await sendRafflesToFirebase(currentOrder, 'dinheiro');
+        
       if (!result.success) {
         console.error('❌ Falha ao enviar para Firebase:', result.error);
         showToast('error', '❌ Erro ao reservar rifas no sistema. Tente novamente.');
@@ -364,6 +374,7 @@ const Payment = () => {
       
       // PASSO 5: Atualizar estado
       setProofSent(true);
+      savePersistentSession();
       
       console.log('🎉 PROCESSO DINHEIRO CONCLUÍDO!');
       console.log('✅ Rifas enviadas para Firebase como PENDENTES');
@@ -398,7 +409,7 @@ const Payment = () => {
     }
   };
 
-  // ========== FUNÇÃO PARA CONFIRMAR PAGAMENTO PIX (NÃO MEXIDA) ==========
+  // ========== FUNÇÃO PARA CONFIRMAR PAGAMENTO PIX ==========
   const handleConfirmPixPayment = async () => {
     if (!currentOrder) {
       showToast('error', 'Pedido não encontrado');
@@ -456,6 +467,104 @@ const Payment = () => {
     } catch (error) {
       console.error('❌ Erro ao confirmar pagamento:', error);
       showToast('error', '❌ Erro ao processar confirmação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== FUNÇÃO DE EMERGÊNCIA PARA ENVIO MANUAL ==========
+  const handleEmergencyManualSend = async () => {
+    if (!currentOrder) return;
+    
+    setLoading(true);
+    setManualSendResults([]);
+    
+    const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
+    const results = [];
+    
+    try {
+      for (const item of raffleItems) {
+        try {
+          const saleData = {
+            turma: item.selectedClass,
+            numero: item.selectedNumber,
+            nome: getCustomerName(),
+            telefone: currentOrder.customer?.phone || '',
+            status: currentOrder.paymentMethod === 'pix' ? 'pago' : 'pendente',
+            paymentMethod: currentOrder.paymentMethod || 'pix',
+            orderId: currentOrder.id,
+            price: 15.00,
+            source: 'emergency_manual'
+          };
+          
+          console.log('🚨 ENVIO MANUAL DE EMERGÊNCIA:', saleData);
+          
+          const result = await raffleManager.sendToFirebase(saleData);
+          
+          results.push({
+            item: `${item.selectedClass} Nº ${item.selectedNumber}`,
+            success: result.success,
+            error: result.error,
+            firebaseId: result.firebaseId
+          });
+          
+          if (result.success) {
+            console.log('✅ Enviado com sucesso:', result.firebaseId);
+            showToast('success', `✅ ${item.selectedClass} Nº ${item.selectedNumber} enviado!`);
+          } else {
+            console.error('❌ Falha:', result.error);
+            showToast('error', `❌ ${item.selectedClass} Nº ${item.selectedNumber}: ${result.error}`);
+          }
+          
+          // Aguardar entre envios
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (error) {
+          console.error('❌ Erro no item:', error);
+          results.push({
+            item: `${item.selectedClass} Nº ${item.selectedNumber}`,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+      
+      setManualSendResults(results);
+      
+      // Verificar resultados
+      const successCount = results.filter(r => r.success).length;
+      const failedCount = results.filter(r => !r.success).length;
+      
+      if (successCount > 0) {
+        setRafflesConfirmed(true);
+        showToast('success', `✅ ${successCount} rifa(s) enviadas manualmente!`);
+        
+        // Atualizar pedido
+        const updatedOrder = {
+          ...currentOrder,
+          status: 'confirmed',
+          rafflesConfirmed: true,
+          emergencyManualSent: true,
+          manualResults: results
+        };
+        
+        localStorage.setItem('terceirao_last_order', JSON.stringify(updatedOrder));
+        
+        // Limpar carrinho
+        setTimeout(() => {
+          if (clearCartAfterConfirmation) {
+            clearCartAfterConfirmation();
+          }
+        }, 2000);
+      }
+      
+      if (failedCount > 0) {
+        showToast('error', `❌ ${failedCount} rifa(s) falharam. Verifique console.`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro crítico no envio manual:', error);
+      showToast('error', '❌ Erro crítico no envio manual');
     } finally {
       setLoading(false);
     }
@@ -629,6 +738,20 @@ const Payment = () => {
     setPaymentTimestamp(null);
   };
 
+  // ========== DEBUG FUNCTIONS ==========
+  const testFirebaseConnection = async () => {
+    setLoading(true);
+    try {
+      if (raffleManager.debugFirebaseConnection) {
+        await raffleManager.debugFirebaseConnection();
+      } else {
+        showToast('error', 'Função de debug não disponível');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ========== RENDERIZAÇÃO ==========
 
   if (!currentOrder || !showPayment) {
@@ -682,6 +805,12 @@ const Payment = () => {
                 <span> • {deliveryAddress.neighborhood}</span>
               )}
             </p>
+            
+            {/* Status do Firebase */}
+            <div className="firebase-status-indicator">
+              <div className={`status-dot ${raffleManager.firebaseConnected ? 'connected' : 'disconnected'}`}></div>
+              <span>Sistema: {raffleManager.firebaseConnected ? '✅ Conectado' : '❌ Offline'}</span>
+            </div>
             
             {/* Banner de recuperação de sessão */}
             {persistentSession && !hasPendingPayment && (
@@ -1018,23 +1147,38 @@ const Payment = () => {
                   <span>1. Enviar Comprovante pelo WhatsApp</span>
                 </button>
               ) : !rafflesConfirmed ? (
-                <button 
-                  className="btn btn-success btn-large final-confirmation-btn"
-                  onClick={handleConfirmPixPayment}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={20} className="loading-spinner" />
-                      <span>Confirmando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check size={20} />
-                      <span>2. JÁ ENVIEI O COMPROVANTE - CONFIRMAR RIFAS</span>
-                    </>
+                <>
+                  <button 
+                    className="btn btn-success btn-large final-confirmation-btn"
+                    onClick={handleConfirmPixPayment}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 size={20} className="loading-spinner" />
+                        <span>Confirmando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={20} />
+                        <span>2. JÁ ENVIEI O COMPROVANTE - CONFIRMAR RIFAS</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Botão de emergência para PIX */}
+                  {debugMode && (
+                    <button 
+                      className="btn btn-emergency btn-large"
+                      onClick={handleEmergencyManualSend}
+                      disabled={loading}
+                      style={{ marginTop: '10px' }}
+                    >
+                      <Shield size={20} />
+                      <span>🚨 ENVIO MANUAL DE EMERGÊNCIA (Use se o botão acima não funcionar)</span>
+                    </button>
                   )}
-                </button>
+                </>
               ) : (
                 <div className="confirmed-message">
                   <Check size={24} />
@@ -1075,6 +1219,23 @@ const Payment = () => {
             ) : null}
           </div>
 
+          {/* Resultados do envio manual */}
+          {manualSendResults.length > 0 && (
+            <div className="manual-results-section">
+              <h4>📊 Resultados do Envio Manual:</h4>
+              <div className="results-list">
+                {manualSendResults.map((result, index) => (
+                  <div key={index} className={`result-item ${result.success ? 'success' : 'error'}`}>
+                    <span className="result-item-name">{result.item}</span>
+                    <span className="result-status">
+                      {result.success ? '✅ Enviado' : `❌ ${result.error}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Ações Extras */}
           <div className="extra-actions">
             <button 
@@ -1093,6 +1254,19 @@ const Payment = () => {
             >
               Fechar
             </button>
+            
+            {/* Botão de debug (apenas em desenvolvimento ou com debug mode) */}
+            {(process.env.NODE_ENV === 'development' || debugMode) && (
+              <button 
+                className="btn btn-warning"
+                onClick={testFirebaseConnection}
+                disabled={loading}
+                type="button"
+              >
+                <RefreshCw size={18} />
+                Testar Firebase
+              </button>
+            )}
           </div>
 
           {/* Informações Importantes */}
@@ -1141,6 +1315,17 @@ const Payment = () => {
               <p><strong>Informe o número do pedido:</strong> #{currentOrder.id}</p>
             </div>
           </div>
+
+          {/* Status técnico (debug) */}
+          {debugMode && (
+            <div className="technical-status">
+              <h5>🔧 Status Técnico:</h5>
+              <p><strong>Firebase:</strong> {raffleManager.firebaseConnected ? '✅ Conectado' : '❌ Offline'}</p>
+              <p><strong>Online:</strong> {raffleManager.isOnline ? '✅' : '❌'}</p>
+              <p><strong>Vendas sincronizadas:</strong> {raffleManager.soldNumbers?.filter(s => s.synced).length || 0}</p>
+              <p><strong>Última sincronização:</strong> {raffleManager.lastSync || 'Nunca'}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>,
