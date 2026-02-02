@@ -43,6 +43,79 @@ const Payment = () => {
   const cashInputRef = useRef(null);
   const blurTimeoutRef = useRef(null);
 
+  // ========== FUNÇÃO TOAST ==========
+  const showToast = useCallback((type, message) => {
+    window.dispatchEvent(new CustomEvent('showToast', {
+      detail: { 
+        type, 
+        message, 
+        duration: type === 'error' ? 5000 : 4000 
+      }
+    }));
+  }, []);
+
+  // ========== FUNÇÃO PARA FECHAR MODAL ==========
+  const handleCloseModal = useCallback(() => {
+    console.log('🔒 Fechando modal de pagamento');
+    
+    if (typeof closePaymentOnly === 'function') {
+      closePaymentOnly();
+    } else if (typeof setShowPayment === 'function') {
+      setShowPayment(false);
+    }
+  }, [closePaymentOnly, setShowPayment]);
+
+  // ========== FUNÇÃO PARA OBTER NOME DO CLIENTE ==========
+  const getCustomerName = useCallback(() => {
+    if (!currentOrder) return 'Não informado';
+    
+    if (currentOrder.customer?.name) {
+      return currentOrder.customer.name;
+    }
+    
+    if (currentOrder.customerName) {
+      return currentOrder.customerName;
+    }
+    
+    if (currentOrder.customerInfo?.name) {
+      return currentOrder.customerInfo.name;
+    }
+    
+    try {
+      const savedInfo = JSON.parse(localStorage.getItem('terceirao_customer_info') || '{}');
+      if (savedInfo.name) {
+        return savedInfo.name;
+      }
+    } catch (error) {
+      console.error('Erro ao ler do localStorage:', error);
+    }
+    
+    return 'Não informado';
+  }, [currentOrder]);
+
+  // ========== FUNÇÃO SALVAR SESSÃO PERSISTENTE ==========
+  const savePersistentSession = useCallback(() => {
+    if (!currentOrder) return;
+    
+    const sessionData = {
+      orderId: currentOrder.id,
+      orderData: currentOrder,
+      timestamp: new Date().toISOString(),
+      hasSentProof: proofSent,
+      paymentTimestamp: paymentTimestamp
+    };
+    
+    localStorage.setItem('terceirao_payment_session', JSON.stringify(sessionData));
+  }, [currentOrder, proofSent, paymentTimestamp]);
+
+  // ========== FUNÇÃO PARA LIMPAR SESSÃO PERSISTENTE ==========
+  const clearPersistentSession = useCallback(() => {
+    localStorage.removeItem('terceirao_payment_session');
+    setPersistentSession(null);
+    setHasPendingPayment(false);
+    setPaymentTimestamp(null);
+  }, []);
+
   // ========== FUNÇÃO loadPersistentSession ==========
   const loadPersistentSession = useCallback(() => {
     try {
@@ -68,7 +141,36 @@ const Payment = () => {
     }
   }, [currentOrder?.id]);
 
-  // ========== FUNÇÕES PARA INPUT DE DINHEIRO ==========
+  // ========== FUNÇÃO PARA VALIDAR INPUT DE DINHEIRO ==========
+  const validateCashInput = useCallback(() => {
+    if (!cashInput) {
+      setCashError('Por favor, informe o valor em dinheiro que você tem.');
+      cashInputRef.current?.focus();
+      return false;
+    }
+    
+    const numericValue = parseFloat(
+      cashInput
+        .replace(/R\$/g, '')
+        .replace(/\./g, '')
+        .replace(/,/g, '.')
+        .trim()
+    );
+    
+    if (isNaN(numericValue)) {
+      setCashError('Valor inválido. Use apenas números.');
+      cashInputRef.current?.focus();
+      return false;
+    }
+    
+    if (numericValue < (currentOrder?.total || 0)) {
+      setCashError(`Valor insuficiente. O total é R$ ${(currentOrder?.total || 0).toFixed(2)}`);
+      cashInputRef.current?.focus();
+      return false;
+    }
+    
+    return true;
+  }, [cashInput, currentOrder]);
 
   // ========== FUNÇÃO PARA GERAR SUGESTÕES DE TROCO ==========
   const generateChangeSuggestions = useCallback(() => {
@@ -165,305 +267,6 @@ const Payment = () => {
     return suggestions;
   }, [currentOrder?.total, cashInput]);
 
-  // ========== FUNÇÃO PARA CONFIRMAR PAGAMENTO EM DINHEIRO ==========
-  const handleConfirmCashPayment = useCallback(async () => {
-    if (!currentOrder) {
-      showToast('error', 'Pedido não encontrado');
-      return;
-    }
-
-    // Validar input de dinheiro
-    if (!validateCashInput()) {
-      return;
-    }
-
-    setLoading(true);
-    console.log('💵 INICIANDO PAGAMENTO DINHEIRO...');
-    
-    try {
-      // PASSO 1: Enviar para Firebase (usando a função do CartContext)
-      const success = await confirmRafflesInOrder(currentOrder.id);
-        
-      if (!success) {
-        console.error('❌ Falha ao enviar para Firebase');
-        showToast('error', '❌ Erro ao reservar rifas no sistema. Tente novamente.');
-        setLoading(false);
-        return;
-      }
-      
-      console.log('✅ Rifas enviadas para Firebase com sucesso!');
-      
-      // PASSO 2: Gerar link do WhatsApp
-      console.log('📱 Gerando link do WhatsApp...');
-      const url = generateWhatsAppMessage();
-      
-      if (url === '#') {
-        showToast('error', 'Erro: WhatsApp não configurado');
-        setLoading(false);
-        return;
-      }
-      
-      // PASSO 3: Abrir WhatsApp
-      console.log('📤 Abrindo WhatsApp...');
-      const newWindow = window.open(url, '_blank');
-      
-      if (!newWindow) {
-        showToast('error', 'Por favor, permita pop-ups para abrir o WhatsApp');
-        setLoading(false);
-        return;
-      }
-      
-      // PASSO 4: Atualizar estado
-      setProofSent(true);
-      savePersistentSession();
-      
-      console.log('🎉 PROCESSO DINHEIRO CONCLUÍDO!');
-      console.log('✅ Rifas enviadas para Firebase como PENDENTES');
-      console.log('✅ WhatsApp aberto para confirmação');
-      
-      showToast('success', '✅ Rifas enviadas para o sistema! Admin já vê sua reserva.');
-      
-      // PASSO 5: Limpar carrinho e fechar modal
-      setTimeout(() => {
-        if (clearCartAfterConfirmation) {
-          clearCartAfterConfirmation();
-        }
-        handleCloseModal();
-      }, 2000);
-      
-    } catch (error) {
-      console.error('❌ Erro crítico no processo dinheiro:', error);
-      showToast('error', '❌ Erro ao processar pagamento. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentOrder, validateCashInput, confirmRafflesInOrder, generateWhatsAppMessage, clearCartAfterConfirmation, handleCloseModal]);
-
-  // ========== FUNÇÃO PARA ALTERAÇÃO DO INPUT DE DINHEIRO ==========
-  const handleCashInputChange = useCallback((e) => {
-    const rawValue = e.target.value;
-    
-    // Mantém apenas números
-    const numbers = rawValue.replace(/\D/g, '');
-    
-    // Se for vazio, limpa tudo
-    if (!numbers) {
-      setCashInput('');
-      setCashError('');
-      setShowCashSuggestions(false);
-      return;
-    }
-    
-    // Converte para número com centavos
-    const numericValue = parseFloat(numbers) / 100;
-    
-    if (isNaN(numericValue)) {
-      setCashInput('');
-      return;
-    }
-    
-    // Formata como moeda
-    const formatted = numericValue.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    
-    // Atualiza estado
-    setCashInput(formatted);
-    setCashError('');
-    
-    // Atualiza no contexto se for válido
-    if (currentOrder && !isNaN(numericValue)) {
-      currentOrder.cashAmount = numericValue;
-      currentOrder.cashChange = Math.max(0, (numericValue - (currentOrder.total || 0)));
-    }
-    
-    // Gerar sugestões
-    const newSuggestions = generateChangeSuggestions();
-    setCashSuggestions(newSuggestions);
-    if (newSuggestions.length > 0) {
-      setShowCashSuggestions(true);
-    }
-  }, [currentOrder, generateChangeSuggestions]);
-
-  // ========== FUNÇÃO PARA TECLAS NO INPUT DE DINHEIRO ==========
-  const handleCashInputKeyDown = useCallback((e) => {
-    // Permite apenas números e teclas de controle
-    if (
-      e.key.length === 1 && // Caractere único
-      !/\d/.test(e.key) && // Não é número
-      e.key !== ',' && e.key !== '.' // Não é separador decimal
-    ) {
-      e.preventDefault();
-      return;
-    }
-    
-    // Se for Enter, submeter
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleConfirmCashPayment();
-    }
-  }, [handleConfirmCashPayment]);
-
-  // ========== FUNÇÃO PARA SELECIONAR SUGESTÃO ==========
-  const handleSuggestionSelect = useCallback((suggestion) => {
-    setCashInput(`R$ ${suggestion.value.toFixed(2)}`);
-    setShowCashSuggestions(false);
-    
-    if (currentOrder) {
-      currentOrder.cashAmount = suggestion.value;
-      currentOrder.cashChange = suggestion.change;
-    }
-    
-    // Focar no botão de ação
-    setTimeout(() => {
-      const actionButton = document.querySelector('.main-actions button');
-      if (actionButton) actionButton.focus();
-    }, 10);
-  }, [currentOrder]);
-
-  // ========== FUNÇÃO PARA VALIDAR INPUT DE DINHEIRO ==========
-  const validateCashInput = useCallback(() => {
-    if (!cashInput) {
-      setCashError('Por favor, informe o valor em dinheiro que você tem.');
-      cashInputRef.current?.focus();
-      return false;
-    }
-    
-    const numericValue = parseFloat(
-      cashInput
-        .replace(/R\$/g, '')
-        .replace(/\./g, '')
-        .replace(/,/g, '.')
-        .trim()
-    );
-    
-    if (isNaN(numericValue)) {
-      setCashError('Valor inválido. Use apenas números.');
-      cashInputRef.current?.focus();
-      return false;
-    }
-    
-    if (numericValue < (currentOrder?.total || 0)) {
-      setCashError(`Valor insuficiente. O total é R$ ${(currentOrder?.total || 0).toFixed(2)}`);
-      cashInputRef.current?.focus();
-      return false;
-    }
-    
-    return true;
-  }, [cashInput, currentOrder]);
-
-  // ========== FUNÇÃO PARA VALOR RÁPIDO ==========
-  const handleQuickAmount = useCallback((amount) => {
-    setCashInput(`R$ ${amount.toFixed(2)}`);
-    setCashError('');
-    setShowCashSuggestions(false);
-    
-    if (currentOrder) {
-      currentOrder.cashAmount = amount;
-      currentOrder.cashChange = Math.max(0, amount - (currentOrder.total || 0));
-    }
-  }, [currentOrder]);
-
-  // ========== FUNÇÃO PARA AJUSTAR VALOR ==========
-  const handleAdjustAmount = useCallback((operation) => {
-    const currentValue = parseFloat(
-      cashInput
-        .replace(/R\$/g, '')
-        .replace(/\./g, '')
-        .replace(/,/g, '.')
-        .trim()
-    ) || 0;
-    
-    let newValue = currentValue;
-    
-    if (operation === 'add-1') newValue += 1;
-    else if (operation === 'subtract-1') newValue = Math.max(0, currentValue - 1);
-    else if (operation === 'add-5') newValue += 5;
-    else if (operation === 'subtract-5') newValue = Math.max(0, currentValue - 5);
-    
-    setCashInput(`R$ ${newValue.toFixed(2)}`);
-    setCashError('');
-    setShowCashSuggestions(false);
-    
-    if (currentOrder) {
-      currentOrder.cashAmount = newValue;
-      currentOrder.cashChange = Math.max(0, newValue - (currentOrder.total || 0));
-    }
-  }, [cashInput, currentOrder]);
-
-  // ========== FUNÇÃO PARA VALOR EXATO ==========
-  const handleExactAmount = useCallback(() => {
-    const total = currentOrder?.total || 0;
-    setCashInput(`R$ ${total.toFixed(2)}`);
-    setCashError('');
-    setShowCashSuggestions(false);
-    
-    if (currentOrder) {
-      currentOrder.cashAmount = total;
-      currentOrder.cashChange = 0;
-    }
-  }, [currentOrder]);
-
-  // ========== FUNÇÃO PARA LIMPAR INPUT ==========
-  const handleClearCashInput = useCallback(() => {
-    setCashInput('');
-    setCashError('');
-    setShowCashSuggestions(false);
-    
-    if (currentOrder) {
-      currentOrder.cashAmount = null;
-      currentOrder.cashChange = 0;
-    }
-    
-    // Focar no input após limpar
-    setTimeout(() => {
-      if (cashInputRef.current) {
-        cashInputRef.current.focus();
-        cashInputRef.current.select();
-      }
-    }, 10);
-  }, [currentOrder]);
-
-  // ========== FUNÇÃO SALVAR SESSÃO PERSISTENTE ==========
-  const savePersistentSession = useCallback(() => {
-    if (!currentOrder) return;
-    
-    const sessionData = {
-      orderId: currentOrder.id,
-      orderData: currentOrder,
-      timestamp: new Date().toISOString(),
-      hasSentProof: proofSent,
-      paymentTimestamp: paymentTimestamp
-    };
-    
-    localStorage.setItem('terceirao_payment_session', JSON.stringify(sessionData));
-  }, [currentOrder, proofSent, paymentTimestamp]);
-
-  // ========== FUNÇÃO PARA FECHAR MODAL ==========
-  const handleCloseModal = useCallback(() => {
-    console.log('🔒 Fechando modal de pagamento');
-    
-    if (typeof closePaymentOnly === 'function') {
-      closePaymentOnly();
-    } else if (typeof setShowPayment === 'function') {
-      setShowPayment(false);
-    }
-  }, [closePaymentOnly, setShowPayment]);
-
-  // ========== FUNÇÃO TOAST ==========
-  const showToast = useCallback((type, message) => {
-    window.dispatchEvent(new CustomEvent('showToast', {
-      detail: { 
-        type, 
-        message, 
-        duration: type === 'error' ? 5000 : 4000 
-      }
-    }));
-  }, []);
-
   // ========== FUNÇÃO PARA MENSAGEM DO WHATSAPP ==========
   const generateWhatsAppMessage = useCallback(() => {
     if (!vendorInfo?.whatsapp) {
@@ -557,34 +360,246 @@ const Payment = () => {
     message += `📞 WhatsApp: ${vendorInfo.whatsapp}\n`;
 
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-  }, [currentOrder, vendorInfo, rafflesConfirmed, showToast]);
+  }, [currentOrder, vendorInfo, rafflesConfirmed, showToast, getCustomerName]);
 
-  // ========== FUNÇÃO PARA OBTER NOME DO CLIENTE ==========
-  const getCustomerName = useCallback(() => {
-    if (!currentOrder) return 'Não informado';
-    
-    if (currentOrder.customer?.name) {
-      return currentOrder.customer.name;
+  // ========== FUNÇÃO PARA CONFIRMAR PAGAMENTO EM DINHEIRO ==========
+  const handleConfirmCashPayment = useCallback(async () => {
+    if (!currentOrder) {
+      showToast('error', 'Pedido não encontrado');
+      return;
     }
-    
-    if (currentOrder.customerName) {
-      return currentOrder.customerName;
+
+    // Validar input de dinheiro
+    if (!validateCashInput()) {
+      return;
     }
-    
-    if (currentOrder.customerInfo?.name) {
-      return currentOrder.customerInfo.name;
-    }
+
+    setLoading(true);
+    console.log('💵 INICIANDO PAGAMENTO DINHEIRO...');
     
     try {
-      const savedInfo = JSON.parse(localStorage.getItem('terceirao_customer_info') || '{}');
-      if (savedInfo.name) {
-        return savedInfo.name;
+      // PASSO 1: Enviar para Firebase (usando a função do CartContext)
+      const success = await confirmRafflesInOrder(currentOrder.id);
+        
+      if (!success) {
+        console.error('❌ Falha ao enviar para Firebase');
+        showToast('error', '❌ Erro ao reservar rifas no sistema. Tente novamente.');
+        setLoading(false);
+        return;
       }
+      
+      console.log('✅ Rifas enviadas para Firebase com sucesso!');
+      
+      // PASSO 2: Gerar link do WhatsApp
+      console.log('📱 Gerando link do WhatsApp...');
+      const url = generateWhatsAppMessage();
+      
+      if (url === '#') {
+        showToast('error', 'Erro: WhatsApp não configurado');
+        setLoading(false);
+        return;
+      }
+      
+      // PASSO 3: Abrir WhatsApp
+      console.log('📤 Abrindo WhatsApp...');
+      const newWindow = window.open(url, '_blank');
+      
+      if (!newWindow) {
+        showToast('error', 'Por favor, permita pop-ups para abrir o WhatsApp');
+        setLoading(false);
+        return;
+      }
+      
+      // PASSO 4: Atualizar estado
+      setProofSent(true);
+      savePersistentSession();
+      
+      console.log('🎉 PROCESSO DINHEIRO CONCLUÍDO!');
+      console.log('✅ Rifas enviadas para Firebase como PENDENTES');
+      console.log('✅ WhatsApp aberto para confirmação');
+      
+      showToast('success', '✅ Rifas enviadas para o sistema! Admin já vê sua reserva.');
+      
+      // PASSO 5: Limpar carrinho e fechar modal
+      setTimeout(() => {
+        if (clearCartAfterConfirmation) {
+          clearCartAfterConfirmation();
+        }
+        handleCloseModal();
+      }, 2000);
+      
     } catch (error) {
-      console.error('Erro ao ler do localStorage:', error);
+      console.error('❌ Erro crítico no processo dinheiro:', error);
+      showToast('error', '❌ Erro ao processar pagamento. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    currentOrder, 
+    validateCashInput, 
+    confirmRafflesInOrder, 
+    generateWhatsAppMessage, 
+    clearCartAfterConfirmation, 
+    handleCloseModal,
+    showToast,
+    savePersistentSession
+  ]);
+
+  // ========== FUNÇÃO PARA ALTERAÇÃO DO INPUT DE DINHEIRO ==========
+  const handleCashInputChange = useCallback((e) => {
+    const rawValue = e.target.value;
+    
+    // Mantém apenas números
+    const numbers = rawValue.replace(/\D/g, '');
+    
+    // Se for vazio, limpa tudo
+    if (!numbers) {
+      setCashInput('');
+      setCashError('');
+      setShowCashSuggestions(false);
+      return;
     }
     
-    return 'Não informado';
+    // Converte para número com centavos
+    const numericValue = parseFloat(numbers) / 100;
+    
+    if (isNaN(numericValue)) {
+      setCashInput('');
+      return;
+    }
+    
+    // Formata como moeda
+    const formatted = numericValue.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    // Atualiza estado
+    setCashInput(formatted);
+    setCashError('');
+    
+    // Atualiza no contexto se for válido
+    if (currentOrder && !isNaN(numericValue)) {
+      currentOrder.cashAmount = numericValue;
+      currentOrder.cashChange = Math.max(0, (numericValue - (currentOrder.total || 0)));
+    }
+    
+    // Gerar sugestões
+    const newSuggestions = generateChangeSuggestions();
+    setCashSuggestions(newSuggestions);
+    if (newSuggestions.length > 0) {
+      setShowCashSuggestions(true);
+    }
+  }, [currentOrder, generateChangeSuggestions]);
+
+  // ========== FUNÇÃO PARA TECLAS NO INPUT DE DINHEIRO ==========
+  const handleCashInputKeyDown = useCallback((e) => {
+    // Permite apenas números e teclas de controle
+    if (
+      e.key.length === 1 && // Caractere único
+      !/\d/.test(e.key) && // Não é número
+      e.key !== ',' && e.key !== '.' // Não é separador decimal
+    ) {
+      e.preventDefault();
+      return;
+    }
+    
+    // Se for Enter, submeter
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleConfirmCashPayment();
+    }
+  }, [handleConfirmCashPayment]);
+
+  // ========== FUNÇÃO PARA SELECIONAR SUGESTÃO ==========
+  const handleSuggestionSelect = useCallback((suggestion) => {
+    setCashInput(`R$ ${suggestion.value.toFixed(2)}`);
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = suggestion.value;
+      currentOrder.cashChange = suggestion.change;
+    }
+    
+    // Focar no botão de ação
+    setTimeout(() => {
+      const actionButton = document.querySelector('.main-actions button');
+      if (actionButton) actionButton.focus();
+    }, 10);
+  }, [currentOrder]);
+
+  // ========== FUNÇÃO PARA VALOR RÁPIDO ==========
+  const handleQuickAmount = useCallback((amount) => {
+    setCashInput(`R$ ${amount.toFixed(2)}`);
+    setCashError('');
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = amount;
+      currentOrder.cashChange = Math.max(0, amount - (currentOrder.total || 0));
+    }
+  }, [currentOrder]);
+
+  // ========== FUNÇÃO PARA AJUSTAR VALOR ==========
+  const handleAdjustAmount = useCallback((operation) => {
+    const currentValue = parseFloat(
+      cashInput
+        .replace(/R\$/g, '')
+        .replace(/\./g, '')
+        .replace(/,/g, '.')
+        .trim()
+    ) || 0;
+    
+    let newValue = currentValue;
+    
+    if (operation === 'add-1') newValue += 1;
+    else if (operation === 'subtract-1') newValue = Math.max(0, currentValue - 1);
+    else if (operation === 'add-5') newValue += 5;
+    else if (operation === 'subtract-5') newValue = Math.max(0, currentValue - 5);
+    
+    setCashInput(`R$ ${newValue.toFixed(2)}`);
+    setCashError('');
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = newValue;
+      currentOrder.cashChange = Math.max(0, newValue - (currentOrder.total || 0));
+    }
+  }, [cashInput, currentOrder]);
+
+  // ========== FUNÇÃO PARA VALOR EXATO ==========
+  const handleExactAmount = useCallback(() => {
+    const total = currentOrder?.total || 0;
+    setCashInput(`R$ ${total.toFixed(2)}`);
+    setCashError('');
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = total;
+      currentOrder.cashChange = 0;
+    }
+  }, [currentOrder]);
+
+  // ========== FUNÇÃO PARA LIMPAR INPUT ==========
+  const handleClearCashInput = useCallback(() => {
+    setCashInput('');
+    setCashError('');
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = null;
+      currentOrder.cashChange = 0;
+    }
+    
+    // Focar no input após limpar
+    setTimeout(() => {
+      if (cashInputRef.current) {
+        cashInputRef.current.focus();
+        cashInputRef.current.select();
+      }
+    }, 10);
   }, [currentOrder]);
 
   // ========== FUNÇÃO PARA COPIAR CHAVE PIX ==========
@@ -661,7 +676,14 @@ const Payment = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentOrder, loading, confirmRafflesInOrder, showToast, handleCloseModal]);
+  }, [
+    currentOrder, 
+    loading, 
+    confirmRafflesInOrder, 
+    showToast, 
+    handleCloseModal, 
+    clearPersistentSession
+  ]);
 
   // ========== FUNÇÃO DE EMERGÊNCIA PARA ENVIO MANUAL ==========
   const handleEmergencyManualSend = useCallback(async () => {
@@ -909,7 +931,14 @@ const Payment = () => {
       console.error('Erro ao baixar comprovante:', error);
       showToast('error', 'Erro ao baixar comprovante');
     }
-  }, [currentOrder, proofSent, rafflesConfirmed, vendorInfo?.pixKey, getCustomerName, showToast]);
+  }, [
+    currentOrder, 
+    proofSent, 
+    rafflesConfirmed, 
+    vendorInfo?.pixKey, 
+    getCustomerName, 
+    showToast
+  ]);
 
   // ========== FUNÇÃO PARA RESTAURAR SESSÃO ==========
   const handleRestoreSession = useCallback(() => {
@@ -921,14 +950,6 @@ const Payment = () => {
       showToast('info', 'Sessão restaurada! Continue de onde parou.');
     }
   }, [persistentSession, showToast]);
-
-  // ========== FUNÇÃO PARA LIMPAR SESSÃO PERSISTENTE ==========
-  const clearPersistentSession = useCallback(() => {
-    localStorage.removeItem('terceirao_payment_session');
-    setPersistentSession(null);
-    setHasPendingPayment(false);
-    setPaymentTimestamp(null);
-  }, []);
 
   // ========== FUNÇÃO PARA TESTAR CONEXÃO COM FIREBASE ==========
   const testFirebaseConnection = useCallback(async () => {
