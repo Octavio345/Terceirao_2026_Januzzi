@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShoppingBag, Heart, Check, 
   Ticket, Search, AlertCircle, CheckCircle, 
@@ -127,6 +127,41 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
     }
   }, [selectedClass, getAvailableNumbers, soldNumbers, classes]);
 
+// Para:
+  useEffect(() => {
+    const updateNumbers = () => {
+      setIsLoadingNumbers(true);
+      try {
+        let numbers;
+        if (typeof getAvailableNumbers === 'function') {
+          numbers = getAvailableNumbers(selectedClass);
+        } else {
+          numbers = Array.from({ length: 300 }, (_, i) => i + 1);
+        }
+        
+        setAvailableNumbers(numbers);
+        
+        const soldInClass = soldNumbers.filter(s => 
+          s.turma === selectedClass && 
+          s.status !== 'cancelado'
+        );
+        
+        if (classes[selectedClass]) {
+          classes[selectedClass].sold = new Set(soldInClass.map(s => s.numero));
+          classes[selectedClass].availableCount = 300 - soldInClass.length;
+          classes[selectedClass].status = `${classes[selectedClass].availableCount} números disponíveis • ${soldInClass.length} vendidos`;
+        }
+        
+        setIsLoadingNumbers(false);
+      } catch (error) {
+        console.error('Erro ao obter números disponíveis:', error);
+        setAvailableNumbers(Array.from({ length: 300 }, (_, i) => i + 1));
+        setIsLoadingNumbers(false);
+      }
+    };
+    
+    updateNumbers();
+  }, [selectedClass, soldNumbers]);
   // Movido getSaleDetails para dentro do useMemo
   const filteredNumbers = useMemo(() => {
     const allNumbers = Array.from({ length: 300 }, (_, i) => i + 1);

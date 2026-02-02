@@ -11,7 +11,7 @@ import QRCodeGenerator from '../QRCodeGenerator/QRCodeGenerator';
 import './Payment.css';
 
 const Payment = () => {
-  const { 
+    const { 
     currentOrder, 
     vendorInfo, 
     showPayment,
@@ -19,8 +19,7 @@ const Payment = () => {
     closePaymentOnly,
     confirmRafflesInOrder,
     processCashPayment: contextProcessCashPayment,
-    clearCartAfterConfirmation,
-    cart
+    clearCartAfterConfirmation
   } = useCart();
   
   const raffleManager = useRaffleManager();

@@ -663,7 +663,7 @@ export const RaffleManagerProvider = ({ children }) => {
       toast.error('Erro ao atualizar status da venda');
       return false;
     }
-  }, [soldNumbers, pendingReservations, firebase.connected, firebase.db]);
+  }, [soldNumbers, firebase.connected, firebase.db]);
 
   // ========== NOVA FUNÇÃO: Marcar múltiplas vendas como pagas ==========
 
