@@ -503,8 +503,6 @@ const Payment = () => {
     const deliveryOption = currentOrder.deliveryOption || 'retirada';
     const deliveryAddress = currentOrder.deliveryAddress || null;
     const paymentMethod = currentOrder.paymentMethod || 'pix';
-    const cashAmount = currentOrder.cashAmount || null;
-    const cashChange = currentOrder.cashChange || 0;
     
     const customerName = getCustomerName();
     const customerPhone = currentOrder.customer?.phone || currentOrder.customerInfo?.phone || '';
@@ -548,6 +546,9 @@ const Payment = () => {
     }
     
     if (paymentMethod === 'dinheiro') {
+        const cashAmount = currentOrder.cashAmount || null;
+        const cashChange = currentOrder.cashChange || 0;
+        
         message += `*💵 PAGAMENTO EM DINHEIRO*\n`;
         if (cashAmount) {
             message += `• Valor informado: R$ ${cashAmount.toFixed(2)}\n`;
@@ -1004,8 +1005,6 @@ const Payment = () => {
   const deliveryOption = currentOrder.deliveryOption || 'retirada';
   const deliveryAddress = currentOrder.deliveryAddress || null;
   const paymentMethod = currentOrder.paymentMethod || 'pix';
-  const cashAmount = currentOrder.cashAmount || null;
-  const cashChange = currentOrder.cashChange || 0;
 
   const hasRaffles = currentOrder.items?.some(item => item.isRaffle) || false;
   const raffleItems = hasRaffles ? currentOrder.items?.filter(item => item.isRaffle) : [];
