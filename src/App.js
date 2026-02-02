@@ -132,7 +132,6 @@ function ProtectedRoute({ children }) {
 
 function AppContent() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [waitingWorker, setWaitingWorker] = useState(null);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
