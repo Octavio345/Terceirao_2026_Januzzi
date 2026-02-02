@@ -247,7 +247,6 @@ const Payment = () => {
     const phone = vendorInfo.whatsapp.replace(/\D/g, '');
     const deliveryOption = currentOrder.deliveryOption || 'retirada';
     const deliveryAddress = currentOrder.deliveryAddress || null;
-    const deliveryDate = currentOrder.deliveryDate || null;
     const paymentMethod = currentOrder.paymentMethod || 'pix';
     const cashAmount = currentOrder.cashAmount || null;
     const cashChange = currentOrder.cashChange || 0;
@@ -520,7 +519,6 @@ const Payment = () => {
     
     const deliveryOption = currentOrder.deliveryOption || 'retirada';
     const deliveryAddress = currentOrder.deliveryAddress || null;
-    const deliveryDate = currentOrder.deliveryDate || null;
     const paymentMethod = currentOrder.paymentMethod || 'pix';
     const cashAmount = currentOrder.cashAmount || null;
     const cashChange = currentOrder.cashChange || 0;
@@ -688,7 +686,6 @@ const Payment = () => {
   const cashAmount = currentOrder.cashAmount || null;
   const cashChange = currentOrder.cashChange || 0;
 
-  const customerName = getCustomerName();
   
   const hasRaffles = currentOrder.items?.some(item => item.isRaffle) || false;
   const raffleItems = hasRaffles ? currentOrder.items?.filter(item => item.isRaffle) : [];

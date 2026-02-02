@@ -7,7 +7,6 @@ import toast from 'react-hot-toast';
 const AdminHeader = ({ onMenuClick }) => {
   const { isSyncing, lastSync, logoutAdmin } = useRaffleManager();
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const handleLogout = () => {
     logoutAdmin();

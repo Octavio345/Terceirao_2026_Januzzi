@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   Search, XCircle, Clock, 
   Edit, Save, X, DollarSign, User, Phone, Calendar,
-  RefreshCw, Download, Upload
+  RefreshCw, Download
 } from 'lucide-react';
 import { useRaffleManager } from '../../context/RaffleManagerContext';
 import toast from 'react-hot-toast';

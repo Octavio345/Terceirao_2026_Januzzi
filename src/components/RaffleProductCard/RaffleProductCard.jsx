@@ -13,17 +13,12 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   const { addToCart, openCart } = useCart();
   const raffleManager = useRaffleManager();
   
-  const isNumberSold = raffleManager?.isNumberSold || (() => false);
-  const isNumberReserved = raffleManager?.isNumberReserved || (() => false);
   const getAvailableNumbers = raffleManager?.getAvailableNumbers || (() => []);
-  const findSale = raffleManager?.findSale || (() => null);
   const isSyncing = raffleManager?.isSyncing || false;
-  const lastSync = raffleManager?.lastSync || null;
   const firebaseConnected = raffleManager?.firebaseConnected || false;
   const soldNumbers = raffleManager?.soldNumbers || [];
   
   const [isLiked, setIsLiked] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [selectedClass, setSelectedClass] = useState('3A');
   const [selectedNumbers, setSelectedNumbers] = useState([]);
@@ -126,12 +121,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
       setIsLoadingNumbers(false);
     }
   }, [selectedClass, getAvailableNumbers, soldNumbers]);
-
-  const getReservedNumbersForClass = useMemo(() => {
-    return raffleManager?.pendingReservations?.filter(sale => 
-      sale.turma === selectedClass && !sale.expired
-    ).map(sale => sale.numero) || [];
-  }, [selectedClass, raffleManager?.pendingReservations]);
 
   const getSaleDetails = (number) => {
     const sale = soldNumbers.find(s => 

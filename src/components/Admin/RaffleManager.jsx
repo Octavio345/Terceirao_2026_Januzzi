@@ -19,10 +19,8 @@ const RaffleManager = () => {
     isSyncing, 
     lastSync,
     addManualSale,
-    removeSale,
     updateSaleStatus,
     exportToCSV,
-    loadFromGoogleSheet,
     syncAllPending,
     getStats,
     firebaseConnected
@@ -34,7 +32,6 @@ const RaffleManager = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
-  const [showBulkActions, setShowBulkActions] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' });
   
@@ -46,8 +43,6 @@ const RaffleManager = () => {
     status: 'reservado'
   });
 
-  // Estatísticas
-  const stats = getStats();
   
   // 🔥 NOVO: Estatísticas em tempo real
   const getRealTimeStats = () => ({
