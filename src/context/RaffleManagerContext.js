@@ -177,135 +177,176 @@ export const RaffleManagerProvider = ({ children }) => {
 
   // ========== INICIALIZAÇÃO DO FIREBASE ==========
   
-  useEffect(() => {
-    const initializeFirebase = async () => {
-      try {
-        const requiredEnvVars = [
-          'REACT_APP_FIREBASE_API_KEY',
-          'REACT_APP_FIREBASE_AUTH_DOMAIN', 
-          'REACT_APP_FIREBASE_PROJECT_ID',
-          'REACT_APP_FIREBASE_APP_ID'
-        ];
-        
-        const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-        
-        if (missingVars.length > 0) {
-          console.log('⚠️ Firebase não configurado. Variáveis faltando:', missingVars);
-          setFirebase({ connected: false, db: null, error: 'Configuração incompleta' });
-          return;
-        }
-        
-        const firebaseModule = await import('firebase/app');
-        const firestoreModule = await import('firebase/firestore');
-        
-        const { initializeApp } = firebaseModule;
-        const { getFirestore, collection, query, onSnapshot, orderBy, serverTimestamp, addDoc, updateDoc, deleteDoc, doc } = firestoreModule;
-        
-        const firebaseConfig = {
-          apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-          authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-          projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-          storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-          messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-          appId: process.env.REACT_APP_FIREBASE_APP_ID,
-          measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
-        };
-        
-        console.log('🚀 Inicializando Firebase...');
-        
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        
-        const salesRef = collection(db, 'sales');
-        const q = query(salesRef, orderBy('timestamp', 'desc'));
-        
-        const unsubscribe = onSnapshot(q, 
-          (snapshot) => {
-            const firebaseSales = [];
-            snapshot.forEach((doc) => {
-              const data = doc.data();
-              // Garantir que todos os documentos tenham timestamp
-              const saleData = {
-                id: doc.id,
-                firebaseId: doc.id,
-                ...data,
-                timestamp: data.timestamp ? data.timestamp.toDate ? data.timestamp.toDate().toISOString() : data.timestamp : new Date().toISOString()
-              };
-              firebaseSales.push(saleData);
-            });
-            
-            console.log(`📥 Firebase: ${firebaseSales.length} vendas recebidas (todos os status)`);
-            
-            // IMPORTANTE: Atualizar soldNumbers com TODOS os dados do Firebase
-            // Isso inclui vendas pagas (pago), pendentes (pendente) e reservadas (reservado)
-            const merged = mergeSalesWithAllStatus(soldNumbers, firebaseSales);
-            setSoldNumbers(merged);
-            localStorage.setItem('terceirao-sold-numbers', JSON.stringify(merged));
-            
-            // Atualizar pendingReservations também
-            const reservations = firebaseSales.filter(sale => 
-              sale.status === 'pendente' || sale.status === 'reservado'
-            );
-            const mergedReservations = mergeReservations(pendingReservations, reservations);
-            setPendingReservations(mergedReservations);
-            localStorage.setItem('terceirao-pending-reservations', JSON.stringify(mergedReservations));
-            
-            setFirebase({ connected: true, db, error: null });
-            setLastSync(new Date().toISOString());
-            
-            console.log('✅ Conectado ao servidor! Dados sincronizados (todos os status).');
-            
-            // Disparar evento para atualizar dashboard
-            window.dispatchEvent(new CustomEvent('firebase_data_updated', {
-              detail: { count: firebaseSales.length }
-            }));
-          },
-          (error) => {
-            console.error('❌ Erro Firebase:', error.code, error.message);
-            
-            if (error.code === 'permission-denied') {
-              console.log('⚠️ Modo somente leitura ativado');
-              setFirebase({ connected: 'readonly', db, error: error.message });
-              toast.warning('⚠️ Modo somente leitura (sem sincronização)');
-            } else {
-              setFirebase({ connected: false, db: null, error: error.message });
-              toast.error('❌ Erro de conexão');
-            }
-          }
-        );
-        
-        window.firebaseExports = {
-          db,
-          collection,
-          addDoc,
-          updateDoc,
-          deleteDoc,
-          doc,
-          serverTimestamp,
-          salesRef
-        };
-        
-        console.log('✅ Firebase inicializado com sucesso!');
-        
-        return unsubscribe;
-        
-      } catch (error) {
-        console.error('❌ Falha ao inicializar Firebase:', error);
-        setFirebase({ connected: false, db: null, error: error.message });
-        return () => {};
+  // ========== INICIALIZAÇÃO DO FIREBASE ==========
+  
+useEffect(() => {
+  const initializeFirebase = async () => {
+    try {
+      // ========== ADICIONE ESTES LOGS AQUI ==========
+      console.log('🔍 ======= VERIFICAÇÃO FIREBASE =======');
+      console.log('📋 Verificando configuração Firebase:');
+      console.log('- REACT_APP_FIREBASE_API_KEY:', 
+        process.env.REACT_APP_FIREBASE_API_KEY ? 
+        `✅ Definida (${process.env.REACT_APP_FIREBASE_API_KEY.substring(0, 10)}...)` : 
+        '❌ NÃO DEFINIDA'
+      );
+      console.log('- REACT_APP_FIREBASE_PROJECT_ID:', 
+        process.env.REACT_APP_FIREBASE_PROJECT_ID ? 
+        `✅ Definido (${process.env.REACT_APP_FIREBASE_PROJECT_ID})` : 
+        '❌ NÃO DEFINIDO'
+      );
+      console.log('- REACT_APP_FIREBASE_APP_ID:', 
+        process.env.REACT_APP_FIREBASE_APP_ID ? 
+        `✅ Definido (${process.env.REACT_APP_FIREBASE_APP_ID.substring(0, 10)}...)` : 
+        '❌ NÃO DEFINIDO'
+      );
+      console.log('- REACT_APP_FIREBASE_AUTH_DOMAIN:', 
+        process.env.REACT_APP_FIREBASE_AUTH_DOMAIN ? 
+        `✅ Definido (${process.env.REACT_APP_FIREBASE_AUTH_DOMAIN})` : 
+        '❌ NÃO DEFINIDO'
+      );
+      console.log('====================================');
+      // ========== FIM DOS LOGS ADICIONAIS ==========
+      
+      const requiredEnvVars = [
+        'REACT_APP_FIREBASE_API_KEY',
+        'REACT_APP_FIREBASE_AUTH_DOMAIN', 
+        'REACT_APP_FIREBASE_PROJECT_ID',
+        'REACT_APP_FIREBASE_APP_ID'
+      ];
+      
+      const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+      
+      if (missingVars.length > 0) {
+        console.error('❌ Firebase não configurado. Variáveis faltando:', missingVars);
+        setFirebase({ connected: false, db: null, error: 'Configuração incompleta' });
+        return;
       }
-    };
-    
-    const unsubscribePromise = initializeFirebase();
-    
-    return () => {
-      unsubscribePromise.then(unsubscribe => {
-        if (unsubscribe && typeof unsubscribe === 'function') {
-          unsubscribe();
-        }
+      
+      const firebaseModule = await import('firebase/app');
+      const firestoreModule = await import('firebase/firestore');
+      
+      const { initializeApp } = firebaseModule;
+      const { getFirestore, collection, query, onSnapshot, orderBy, serverTimestamp, addDoc, updateDoc, deleteDoc, doc } = firestoreModule;
+      
+      const firebaseConfig = {
+        apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+        authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.REACT_APP_FIREBASE_APP_ID,
+        measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+      };
+      
+      console.log('🚀 Inicializando Firebase com configuração:', {
+        apiKey: firebaseConfig.apiKey?.substring(0, 10) + '...',
+        authDomain: firebaseConfig.authDomain,
+        projectId: firebaseConfig.projectId,
+        appId: firebaseConfig.appId?.substring(0, 10) + '...'
       });
-    };
-  }, [soldNumbers, pendingReservations, mergeSalesWithAllStatus, mergeReservations]);
+      
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      
+      const salesRef = collection(db, 'sales');
+      const q = query(salesRef, orderBy('timestamp', 'desc'));
+      
+      console.log('📡 Firebase listener ativo. Aguardando dados...');
+      
+      const unsubscribe = onSnapshot(q, 
+        (snapshot) => {
+          const firebaseSales = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            // Garantir que todos os documentos tenham timestamp
+            const saleData = {
+              id: doc.id,
+              firebaseId: doc.id,
+              ...data,
+              timestamp: data.timestamp ? data.timestamp.toDate ? data.timestamp.toDate().toISOString() : data.timestamp : new Date().toISOString()
+            };
+            firebaseSales.push(saleData);
+          });
+          
+          console.log(`📥 Firebase: ${firebaseSales.length} vendas recebidas (todos os status)`);
+          if (firebaseSales.length > 0) {
+            console.log('📄 Primeira venda do Firebase:', firebaseSales[0]);
+          }
+          
+          // IMPORTANTE: Atualizar soldNumbers com TODOS os dados do Firebase
+          // Isso inclui vendas pagas (pago), pendentes (pendente) e reservadas (reservado)
+          const merged = mergeSalesWithAllStatus(soldNumbers, firebaseSales);
+          setSoldNumbers(merged);
+          localStorage.setItem('terceirao-sold-numbers', JSON.stringify(merged));
+          
+          // Atualizar pendingReservations também
+          const reservations = firebaseSales.filter(sale => 
+            sale.status === 'pendente' || sale.status === 'reservado'
+          );
+          const mergedReservations = mergeReservations(pendingReservations, reservations);
+          setPendingReservations(mergedReservations);
+          localStorage.setItem('terceirao-pending-reservations', JSON.stringify(mergedReservations));
+          
+          setFirebase({ connected: true, db, error: null });
+          setLastSync(new Date().toISOString());
+          
+          console.log('✅ Conectado ao servidor! Dados sincronizados (todos os status).');
+          
+          // Disparar evento para atualizar dashboard
+          window.dispatchEvent(new CustomEvent('firebase_data_updated', {
+            detail: { count: firebaseSales.length }
+          }));
+        },
+        (error) => {
+          console.error('❌ Erro Firebase:', error.code, error.message);
+          console.error('❌ Detalhes do erro:', error);
+          
+          if (error.code === 'permission-denied') {
+            console.log('⚠️ Modo somente leitura ativado - SEM PERMISSÃO PARA ESCREVER');
+            console.log('🔧 Verifique as regras de segurança do Firebase Firestore');
+            setFirebase({ connected: 'readonly', db, error: error.message });
+            toast.warning('⚠️ Modo somente leitura (sem sincronização)');
+          } else {
+            setFirebase({ connected: false, db: null, error: error.message });
+            toast.error('❌ Erro de conexão com Firebase');
+          }
+        }
+      );
+      
+      window.firebaseExports = {
+        db,
+        collection,
+        addDoc,
+        updateDoc,
+        deleteDoc,
+        doc,
+        serverTimestamp,
+        salesRef
+      };
+      
+      console.log('✅ Firebase inicializado com sucesso! DB:', db);
+      
+      return unsubscribe;
+      
+    } catch (error) {
+      console.error('❌ Falha ao inicializar Firebase:', error);
+      console.error('❌ Stack trace:', error.stack);
+      setFirebase({ connected: false, db: null, error: error.message });
+      return () => {};
+    }
+  };
+  
+  const unsubscribePromise = initializeFirebase();
+  
+  return () => {
+    unsubscribePromise.then(unsubscribe => {
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    });
+  };
+}, [soldNumbers, pendingReservations, mergeSalesWithAllStatus, mergeReservations]);
 
   // ========== VERIFICAÇÕES ==========
 
@@ -686,251 +727,275 @@ export const RaffleManagerProvider = ({ children }) => {
 
   // ========== NOVAS FUNÇÕES: ENVIO DIRETO PARA FIREBASE ==========
 
-  const confirmPaymentAndSendToFirebase = useCallback(async (raffleData, paymentInfo = {}) => {
-    console.log('🚀 CONFIRMANDO PAGAMENTO PIX e enviando para Firebase:', raffleData);
-    
-    const { turma, numero } = raffleData;
-    
-    const alreadySold = isNumberSold(turma, numero);
-    if (alreadySold) {
-      console.error('❌ Número já vendido:', turma, numero);
-      toast.error('Este número já foi vendido!');
-      return null;
-    }
-    
-    const saleId = `${turma}-${numero}-${Date.now()}`;
-    const confirmedSale = {
-      id: saleId,
-      turma,
-      numero,
-      nome: raffleData.nome || paymentInfo.nome || 'Comprador Online',
-      telefone: raffleData.telefone || paymentInfo.telefone || '',
-      status: 'pago',
-      timestamp: new Date().toISOString(),
-      paymentTimestamp: new Date().toISOString(),
-      paymentMethod: paymentInfo.method || 'pix',
-      orderId: paymentInfo.orderId,
-      source: 'online',
-      synced: false,
-      confirmed: true,
-      confirmedAt: new Date().toISOString()
-    };
-    
-    console.log('✅ Criando venda PAGA para enviar ao Firebase:', confirmedSale);
-    
-    // Atualizar estado local IMEDIATAMENTE
-    setSoldNumbers(prev => {
-      const exists = prev.some(item => 
-        item.turma === turma && 
-        item.numero === numero &&
-        item.status === 'pago'
-      );
+      const confirmPaymentAndSendToFirebase = useCallback(async (raffleData, paymentInfo = {}) => {
+      console.log('🚀 ===== CONFIRMANDO PAGAMENTO E ENVIANDO PARA FIREBASE =====');
+      console.log('📦 Dados da rifa:', raffleData);
+      console.log('💰 Informações de pagamento:', paymentInfo);
       
-      if (exists) return prev;
+      const { turma, numero } = raffleData;
       
-      const updated = [...prev, confirmedSale];
-      localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updated));
-      return updated;
-    });
-    
-    // Enviar para Firebase se disponível
-    if (firebase.connected && firebase.db) {
-      console.log('📤 ENVIANDO VENDA PAGA PARA FIREBASE...');
+      const alreadySold = isNumberSold(turma, numero);
+      if (alreadySold) {
+        console.error('❌ Número já vendido:', turma, numero);
+        toast.error('Este número já foi vendido!');
+        return null;
+      }
       
-      try {
-        const { addDoc, collection, serverTimestamp } = window.firebaseExports;
+      const saleId = `${turma}-${numero}-${Date.now()}`;
+      const confirmedSale = {
+        id: saleId,
+        turma,
+        numero,
+        nome: raffleData.nome || paymentInfo.nome || 'Comprador Online',
+        telefone: raffleData.telefone || paymentInfo.telefone || '',
+        status: 'pago',
+        timestamp: new Date().toISOString(),
+        paymentTimestamp: new Date().toISOString(),
+        paymentMethod: paymentInfo.method || 'pix',
+        orderId: paymentInfo.orderId,
+        source: 'online',
+        synced: false,
+        confirmed: true,
+        confirmedAt: new Date().toISOString()
+      };
+      
+      console.log('✅ Criando venda PAGA para enviar ao Firebase:', confirmedSale);
+      
+      // Atualizar estado local IMEDIATAMENTE
+      setSoldNumbers(prev => {
+        const exists = prev.some(item => 
+          item.turma === turma && 
+          item.numero === numero &&
+          item.status === 'pago'
+        );
         
-        const saleData = {
-          turma: confirmedSale.turma,
-          numero: confirmedSale.numero,
-          nome: confirmedSale.nome,
-          telefone: confirmedSale.telefone || '',
-          status: 'pago',
-          timestamp: serverTimestamp(),
-          paymentTimestamp: serverTimestamp(),
-          paymentMethod: confirmedSale.paymentMethod,
-          orderId: confirmedSale.orderId,
-          source: 'online',
-          deviceId: localStorage.getItem('deviceId') || 'unknown',
-          lastSync: serverTimestamp(),
-          confirmedAt: serverTimestamp()
-        };
+        if (exists) return prev;
         
-        console.log('📦 Dados enviando para Firebase (VENDA PAGA):', saleData);
+        const updated = [...prev, confirmedSale];
+        localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updated));
+        return updated;
+      });
+      
+      // Enviar para Firebase se disponível
+      if (firebase.connected && firebase.db) {
+        console.log('📤 ENVIANDO VENDA PAGA PARA FIREBASE...');
         
-        const docRef = await addDoc(collection(firebase.db, 'sales'), saleData);
-        const firebaseId = docRef.id;
-        
-        console.log('✅ ENVIADO para Firebase com ID:', firebaseId);
-        
-        const syncedSale = {
-          ...confirmedSale,
-          firebaseId,
-          synced: true,
-          lastSync: new Date().toISOString()
-        };
-        
-        setSoldNumbers(prev => {
-          const updated = prev.map(item => 
-            item.id === saleId ? { ...item, ...syncedSale } : item
-          );
-          localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updated));
-          return updated;
+        try {
+          const { addDoc, collection, serverTimestamp } = window.firebaseExports;
+          
+          const saleData = {
+            turma: confirmedSale.turma,
+            numero: confirmedSale.numero,
+            nome: confirmedSale.nome,
+            telefone: confirmedSale.telefone || '',
+            status: 'pago',
+            timestamp: serverTimestamp(),
+            paymentTimestamp: serverTimestamp(),
+            paymentMethod: confirmedSale.paymentMethod,
+            orderId: confirmedSale.orderId,
+            source: 'online',
+            deviceId: localStorage.getItem('deviceId') || 'unknown',
+            lastSync: serverTimestamp(),
+            confirmedAt: serverTimestamp()
+          };
+          
+          console.log('🔥 Dados sendo enviados para Firebase:', saleData);
+          console.log('🔧 Configuração Firebase:', {
+            apiKey: process.env.REACT_APP_FIREBASE_API_KEY?.substring(0, 10) + '...',
+            projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+            db: firebase.db
+          });
+          
+          const docRef = await addDoc(collection(firebase.db, 'sales'), saleData);
+          const firebaseId = docRef.id;
+          
+          console.log('✅ ENVIADO para Firebase com ID:', firebaseId);
+          console.log('✅ Documento criado na coleção "sales"');
+          
+          const syncedSale = {
+            ...confirmedSale,
+            firebaseId,
+            synced: true,
+            lastSync: new Date().toISOString()
+          };
+          
+          setSoldNumbers(prev => {
+            const updated = prev.map(item => 
+              item.id === saleId ? { ...item, ...syncedSale } : item
+            );
+            localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updated));
+            return updated;
+          });
+          
+          toast.success(`✅ Rifa PIX CONFIRMADA: ${turma} Nº ${numero}`);
+          
+          // Disparar evento para dashboard
+          window.dispatchEvent(new CustomEvent('new_sale_added', {
+            detail: { turma, numero, status: 'pago', method: 'pix' }
+          }));
+          
+          return syncedSale;
+          
+        } catch (error) {
+          console.error('❌ Erro ao enviar para Firebase:', error);
+          console.error('❌ Código do erro:', error.code);
+          console.error('❌ Mensagem do erro:', error.message);
+          console.error('❌ Stack trace:', error.stack);
+          toast.error(`Erro ao confirmar no servidor: ${error.message}`);
+          
+          return confirmedSale;
+        }
+      } else {
+        console.log('⚠️ Firebase não disponível, mantendo localmente (PAGO)');
+        console.log('🔧 Status Firebase:', {
+          connected: firebase.connected,
+          db: firebase.db ? 'Disponível' : 'Não disponível',
+          error: firebase.error
         });
+        toast.success(`✅ Rifa confirmada localmente: ${turma} Nº ${numero}`);
         
-        toast.success(`✅ Rifa PIX CONFIRMADA: ${turma} Nº ${numero}`);
-        
-        // Disparar evento para dashboard
+        // Disparar evento mesmo sem Firebase
         window.dispatchEvent(new CustomEvent('new_sale_added', {
           detail: { turma, numero, status: 'pago', method: 'pix' }
         }));
         
-        return syncedSale;
-        
-      } catch (error) {
-        console.error('❌ Erro ao enviar para Firebase:', error);
-        toast.error('Erro ao confirmar no servidor');
-        
         return confirmedSale;
       }
-    } else {
-      console.log('⚠️ Firebase não disponível, mantendo localmente (PAGO)');
-      toast.success(`✅ Rifa confirmada localmente: ${turma} Nº ${numero}`);
-      
-      // Disparar evento mesmo sem Firebase
-      window.dispatchEvent(new CustomEvent('new_sale_added', {
-        detail: { turma, numero, status: 'pago', method: 'pix' }
-      }));
-      
-      return confirmedSale;
-    }
-  }, [firebase.connected, firebase.db, isNumberSold]);
+    }, [firebase.connected, firebase.db, isNumberSold]);
+    
 
   const createCashReservationInFirebase = useCallback(async (raffleData, paymentInfo = {}) => {
-    console.log('💰 CRIANDO RESERVA PENDENTE PARA DINHEIRO:', raffleData);
+  console.log('💰 ===== CRIANDO RESERVA PENDENTE PARA DINHEIRO =====');
+  console.log('📦 Dados da rifa:', raffleData);
+  
+  const { turma, numero } = raffleData;
+  
+  const alreadySold = isNumberSold(turma, numero);
+  if (alreadySold) {
+    console.error('❌ Número já vendido:', turma, numero);
+    toast.error('Este número já foi vendido!');
+    return null;
+  }
+  
+  const saleId = `${turma}-${numero}-${Date.now()}`;
+  const cashReservation = {
+    id: saleId,
+    turma,
+    numero,
+    nome: raffleData.nome || paymentInfo.nome || 'Comprador Online',
+    telefone: raffleData.telefone || paymentInfo.telefone || '',
+    status: 'pendente',
+    timestamp: new Date().toISOString(),
+    paymentMethod: 'dinheiro',
+    orderId: paymentInfo.orderId,
+    source: 'online',
+    synced: false,
+    needsPayment: true,
+    expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+  };
+  
+  console.log('💰 Criando reserva PENDENTE:', cashReservation);
+  
+  // Atualizar estado local IMEDIATAMENTE
+  setSoldNumbers(prev => {
+    const exists = prev.some(item => 
+      item.turma === turma && 
+      item.numero === numero
+    );
     
-    const { turma, numero } = raffleData;
-    
-    const alreadySold = isNumberSold(turma, numero);
-    if (alreadySold) {
-      console.error('❌ Número já vendido:', turma, numero);
-      toast.error('Este número já foi vendido!');
-      return null;
+    if (exists) {
+      const updated = prev.map(item => 
+        item.turma === turma && item.numero === numero 
+          ? { ...item, ...cashReservation } 
+          : item
+      );
+      localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updated));
+      return updated;
     }
     
-    const saleId = `${turma}-${numero}-${Date.now()}`;
-    const cashReservation = {
-      id: saleId,
-      turma,
-      numero,
-      nome: raffleData.nome || paymentInfo.nome || 'Comprador Online',
-      telefone: raffleData.telefone || paymentInfo.telefone || '',
-      status: 'pendente',
-      timestamp: new Date().toISOString(),
-      paymentMethod: 'dinheiro',
-      orderId: paymentInfo.orderId,
-      source: 'online',
-      synced: false,
-      needsPayment: true,
-      expiresAt: Date.now() + (24 * 60 * 60 * 1000)
-    };
+    const updated = [...prev, cashReservation];
+    localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updated));
+    return updated;
+  });
+  
+  // Enviar para Firebase se disponível
+  if (firebase.connected && firebase.db) {
+    console.log('📤 ENVIANDO RESERVA PENDENTE PARA FIREBASE...');
     
-    console.log('💰 Criando reserva PENDENTE:', cashReservation);
-    
-    // Atualizar estado local IMEDIATAMENTE
-    setSoldNumbers(prev => {
-      const exists = prev.some(item => 
-        item.turma === turma && 
-        item.numero === numero
-      );
+    try {
+      const { addDoc, collection, serverTimestamp } = window.firebaseExports;
       
-      if (exists) {
+      const saleData = {
+        turma: cashReservation.turma,
+        numero: cashReservation.numero,
+        nome: cashReservation.nome,
+        telefone: cashReservation.telefone || '',
+        status: 'pendente',
+        timestamp: serverTimestamp(),
+        paymentMethod: 'dinheiro',
+        orderId: cashReservation.orderId,
+        source: 'online',
+        deviceId: localStorage.getItem('deviceId') || 'unknown',
+        lastSync: serverTimestamp(),
+        expiresAt: new Date(cashReservation.expiresAt).toISOString(),
+        needsPayment: true
+      };
+      
+      console.log('🔥 Dados sendo enviados para Firebase:', saleData);
+      
+      const docRef = await addDoc(collection(firebase.db, 'sales'), saleData);
+      const firebaseId = docRef.id;
+      
+      console.log('✅ RESERVA PENDENTE enviada para Firebase com ID:', firebaseId);
+      
+      const syncedReservation = {
+        ...cashReservation,
+        firebaseId,
+        synced: true,
+        lastSync: new Date().toISOString()
+      };
+      
+      setSoldNumbers(prev => {
         const updated = prev.map(item => 
-          item.turma === turma && item.numero === numero 
-            ? { ...item, ...cashReservation } 
-            : item
+          item.id === saleId ? { ...item, ...syncedReservation } : item
         );
         localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updated));
         return updated;
-      }
+      });
       
-      const updated = [...prev, cashReservation];
-      localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updated));
-      return updated;
-    });
-    
-    // Enviar para Firebase se disponível
-    if (firebase.connected && firebase.db) {
-      console.log('📤 ENVIANDO RESERVA PENDENTE PARA FIREBASE...');
+      toast.success(`✅ Reserva DINHEIRO enviada: ${turma} Nº ${numero} (Aguardando pagamento)`);
       
-      try {
-        const { addDoc, collection, serverTimestamp } = window.firebaseExports;
-        
-        const saleData = {
-          turma: cashReservation.turma,
-          numero: cashReservation.numero,
-          nome: cashReservation.nome,
-          telefone: cashReservation.telefone || '',
-          status: 'pendente',
-          timestamp: serverTimestamp(),
-          paymentMethod: 'dinheiro',
-          orderId: cashReservation.orderId,
-          source: 'online',
-          deviceId: localStorage.getItem('deviceId') || 'unknown',
-          lastSync: serverTimestamp(),
-          expiresAt: new Date(cashReservation.expiresAt).toISOString(),
-          needsPayment: true
-        };
-        
-        console.log('📦 Dados enviando para Firebase (RESERVA PENDENTE):', saleData);
-        
-        const docRef = await addDoc(collection(firebase.db, 'sales'), saleData);
-        const firebaseId = docRef.id;
-        
-        console.log('✅ RESERVA PENDENTE enviada para Firebase com ID:', firebaseId);
-        
-        const syncedReservation = {
-          ...cashReservation,
-          firebaseId,
-          synced: true,
-          lastSync: new Date().toISOString()
-        };
-        
-        setSoldNumbers(prev => {
-          const updated = prev.map(item => 
-            item.id === saleId ? { ...item, ...syncedReservation } : item
-          );
-          localStorage.setItem('terceirao-sold-numbers', JSON.stringify(updated));
-          return updated;
-        });
-        
-        toast.success(`✅ Reserva DINHEIRO enviada: ${turma} Nº ${numero} (Aguardando pagamento)`);
-        
-        // Disparar evento para dashboard
-        window.dispatchEvent(new CustomEvent('new_sale_added', {
-          detail: { turma, numero, status: 'pendente', method: 'dinheiro' }
-        }));
-        
-        return syncedReservation;
-        
-      } catch (error) {
-        console.error('❌ Erro ao enviar reserva:', error);
-        toast.error('Erro ao enviar reserva');
-        
-        return cashReservation;
-      }
-    } else {
-      console.log('⚠️ Firebase não disponível, mantendo localmente');
-      toast.success(`✅ Reserva local: ${turma} Nº ${numero}`);
-      
-      // Disparar evento mesmo sem Firebase
+      // Disparar evento para dashboard
       window.dispatchEvent(new CustomEvent('new_sale_added', {
         detail: { turma, numero, status: 'pendente', method: 'dinheiro' }
       }));
       
+      return syncedReservation;
+      
+    } catch (error) {
+      console.error('❌ Erro ao enviar reserva:', error);
+      console.error('❌ Código do erro:', error.code);
+      console.error('❌ Mensagem do erro:', error.message);
+      toast.error('Erro ao enviar reserva');
+      
       return cashReservation;
     }
-  }, [firebase.connected, firebase.db, isNumberSold]);
+  } else {
+    console.log('⚠️ Firebase não disponível, mantendo localmente');
+    console.log('🔧 Status Firebase:', {
+      connected: firebase.connected,
+      db: firebase.db ? 'Disponível' : 'Não disponível'
+    });
+    toast.success(`✅ Reserva local: ${turma} Nº ${numero}`);
+    
+    // Disparar evento mesmo sem Firebase
+    window.dispatchEvent(new CustomEvent('new_sale_added', {
+      detail: { turma, numero, status: 'pendente', method: 'dinheiro' }
+    }));
+    
+    return cashReservation;
+  }
+}, [firebase.connected, firebase.db, isNumberSold]);
 
   // ========== CONFIRMAÇÃO PARA FIREBASE ==========
 

@@ -180,179 +180,116 @@ export const CartProvider = ({ children }) => {
 
   // ========== FUNÇÃO PRINCIPAL: ENVIAR RIFAS PARA FIREBASE (APÓS CONFIRMAÇÃO) ==========
   const sendRafflesToFirebase = useCallback(async (orderData, paymentMethod) => {
-    if (!raffleManager) {
-      console.error('❌ RaffleManager não disponível');
-      return { success: false, error: 'Sistema de rifas não disponível' };
-    }
-    
+  console.log(`🚀 ENVIANDO RIFAS PARA O FIREBASE AGORA - Método: ${paymentMethod}...`);
+  
+  if (!raffleManager) {
+    console.error('❌ RaffleManager não disponível');
+    return { success: false, error: 'Sistema de rifas não disponível' };
+  }
+  
+  const raffleItems = cart.filter(item => item.isRaffle);
+  
+  if (raffleItems.length === 0) {
+    console.log('ℹ️ Nenhuma rifa para enviar');
+    return { success: true, results: [], totalSent: 0, totalFailed: 0 };
+  }
+  
+  console.log(`📤 Processando ${raffleItems.length} rifas para envio ao Firebase`);
+  
+  const results = [];
+  let totalSent = 0;
+  let totalFailed = 0;
+  
+  // Para cada rifa, enviar para Firebase
+  for (const raffleItem of raffleItems) {
     try {
-      console.log(`🚀 ENVIANDO RIFAS PARA O FIREBASE AGORA - Método: ${paymentMethod}...`);
-      console.log('📦 Pedido:', orderData.id);
-      console.log('💰 Método de pagamento:', paymentMethod);
+      console.log(`🎯 Enviando para Firebase: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
       
-      const raffleItems = cart.filter(item => item.isRaffle);
-      
-      if (raffleItems.length === 0) {
-        console.log('ℹ️ Nenhuma rifa para enviar');
-        return { success: true, results: [] };
-      }
-      
-      console.log(`📤 Processando ${raffleItems.length} rifas para envio ao Firebase`);
-      
-      let allSuccessful = true;
-      const results = [];
-      
-      // IMPORTANTE: Primeiro atualizar o estado LOCAL
-      console.log('🔄 Primeiro: Atualizando estado LOCAL...');
-      
-      for (const raffleItem of raffleItems) {
-        try {
-          console.log(`📍 Atualizando LOCAL: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
-          
-          // Marcar como reservado localmente (ANTES de enviar para Firebase)
-          if (raffleManager.markNumbersAsReserved) {
-            raffleManager.markNumbersAsReserved(
-              raffleItem.selectedClass,
-              raffleItem.selectedNumber,
-              orderData.customerInfo?.name || 'Comprador',
-              orderData.id
-            );
-          }
-          
-        } catch (localError) {
-          console.error(`❌ Erro ao atualizar localmente:`, localError);
-        }
-      }
-      
-      // Forçar atualização imediata do contexto
-      if (raffleManager.refreshData) {
-        setTimeout(() => {
-          raffleManager.refreshData();
-          console.log('✅ Contexto local atualizado FORÇADAMENTE');
-        }, 100);
-      }
-      
-      // DEPOIS: Enviar para Firebase
-      console.log('📡 Segundo: Enviando para Firebase...');
-      
-      for (const raffleItem of raffleItems) {
-        try {
-          console.log(`🎯 Enviando para Firebase: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
-          
-          const raffleData = {
-            turma: raffleItem.selectedClass,
-            numero: raffleItem.selectedNumber,
-            nome: orderData.customerInfo?.name || 'Comprador',
-            telefone: orderData.customerInfo?.phone || '',
-            method: paymentMethod,
-            orderId: orderData.id
-          };
-          
-          if (paymentMethod === 'pix') {
-            // Para PIX: marca como PAGO e envia para Firebase
-            console.log('💳 Marcando como PAGO no Firebase...');
-            
-            const result = await raffleManager.confirmPaymentAndSendToFirebase(
-              raffleData,
-              {
-                method: 'pix',
-                orderId: orderData.id
-              }
-            );
-            
-            if (result) {
-              console.log(`✅ Rifa enviada como PAGA: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
-              results.push({
-                success: true,
-                turma: raffleItem.selectedClass,
-                numero: raffleItem.selectedNumber,
-                status: 'pago',
-                firebaseId: result.firebaseId || null
-              });
-            } else {
-              console.error(`❌ Falha ao enviar rifa: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
-              allSuccessful = false;
-              results.push({
-                success: false,
-                turma: raffleItem.selectedClass,
-                numero: raffleItem.selectedNumber,
-                error: 'Falha ao confirmar no Firebase'
-              });
-            }
-            
-          } else if (paymentMethod === 'dinheiro') {
-            // Para DINHEIRO: marca como PENDENTE e envia para Firebase
-            console.log('💰 Marcando como PENDENTE no Firebase...');
-            
-            const result = await raffleManager.createCashReservationInFirebase(
-              raffleData,
-              {
-                method: 'dinheiro',
-                orderId: orderData.id
-              }
-            );
-            
-            if (result) {
-              console.log(`✅ Rifa enviada como PENDENTE: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
-              results.push({
-                success: true,
-                turma: raffleItem.selectedClass,
-                numero: raffleItem.selectedNumber,
-                status: 'pendente',
-                firebaseId: result.firebaseId || null
-              });
-            } else {
-              console.error(`❌ Falha ao enviar rifa: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
-              allSuccessful = false;
-              results.push({
-                success: false,
-                turma: raffleItem.selectedClass,
-                numero: raffleItem.selectedNumber,
-                error: 'Falha ao processar no Firebase'
-              });
-            }
-          }
-          
-        } catch (error) {
-          console.error(`❌ Erro ao processar rifa ${raffleItem.selectedNumber}:`, error);
-          allSuccessful = false;
-          results.push({
-            success: false,
-            turma: raffleItem.selectedClass,
-            numero: raffleItem.selectedNumber,
-            error: error.message
-          });
-        }
-      }
-      
-      console.log('📊 Resultado do envio das rifas:');
-      console.log('- Sucessos:', results.filter(r => r.success).length);
-      console.log('- Falhas:', results.filter(r => !r.success).length);
-      
-      // Forçar atualização FINAL do contexto
-      if (raffleManager.refreshData) {
-        setTimeout(() => {
-          raffleManager.refreshData();
-          console.log('✅ Última atualização do contexto');
-        }, 500);
-      }
-      
-      return { 
-        success: allSuccessful, 
-        results,
-        totalSent: results.filter(r => r.success).length,
-        totalFailed: results.filter(r => !r.success).length
+      const raffleData = {
+        turma: raffleItem.selectedClass,
+        numero: raffleItem.selectedNumber,
+        nome: orderData.customerInfo?.name || 'Comprador',
+        telefone: orderData.customerInfo?.phone || '',
+        method: paymentMethod,
+        orderId: orderData.id
       };
+      
+      let result;
+      
+      if (paymentMethod === 'pix') {
+        // Para PIX: marca como PAGO
+        result = await raffleManager.confirmPaymentAndSendToFirebase(
+          raffleData,
+          {
+            method: 'pix',
+            orderId: orderData.id
+          }
+        );
+      } else {
+        // Para DINHEIRO: marca como PENDENTE
+        result = await raffleManager.createCashReservationInFirebase(
+          raffleData,
+          {
+            method: 'dinheiro',
+            orderId: orderData.id
+          }
+        );
+      }
+      
+      if (result) {
+        console.log(`✅ Rifa enviada: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber} - Status: ${paymentMethod === 'pix' ? 'PAGO' : 'PENDENTE'}`);
+        results.push({
+          success: true,
+          turma: raffleItem.selectedClass,
+          numero: raffleItem.selectedNumber,
+          status: paymentMethod === 'pix' ? 'pago' : 'pendente',
+          firebaseId: result.firebaseId || null
+        });
+        totalSent++;
+      } else {
+        console.error(`❌ Falha ao enviar rifa: ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}`);
+        results.push({
+          success: false,
+          turma: raffleItem.selectedClass,
+          numero: raffleItem.selectedNumber,
+          error: 'Falha no envio para Firebase'
+        });
+        totalFailed++;
+      }
       
     } catch (error) {
-      console.error('❌ Erro crítico ao enviar rifas:', error);
-      return { 
-        success: false, 
-        error: error.message,
-        results: []
-      };
+      console.error(`❌ Erro ao processar rifa ${raffleItem.selectedNumber}:`, error);
+      results.push({
+        success: false,
+        turma: raffleItem.selectedClass,
+        numero: raffleItem.selectedNumber,
+        error: error.message
+      });
+      totalFailed++;
     }
-  }, [cart, raffleManager]);
+  }
+  
+  console.log('📊 Resultado do envio das rifas:');
+  console.log('- Sucessos:', totalSent);
+  console.log('- Falhas:', totalFailed);
+  
+  // Forçar atualização FINAL do contexto
+  if (raffleManager.refreshData) {
+    setTimeout(() => {
+      raffleManager.refreshData();
+      console.log('✅ Última atualização do contexto');
+    }, 1000);
+  }
+  
+  return { 
+    success: totalFailed === 0, 
+    results,
+    totalSent,
+    totalFailed,
+    error: totalFailed > 0 ? `${totalFailed} rifa(s) não foram enviadas` : null
+  };
+  
+}, [cart, raffleManager]);
 
   // ========== FUNÇÃO: CONFIRMAR PAGAMENTO PIX ==========
   const confirmRafflesInOrder = useCallback(async (orderId) => {
