@@ -332,6 +332,26 @@ export const RaffleManagerProvider = ({ children }) => {
     }
   }, [db]);
 
+  // ========== REFRESH DATA ==========
+  const refreshData = useCallback(() => {
+    console.log('🔄 Forçando atualização de dados...');
+    
+    if (db) {
+      loadInitialData(db);
+    } else {
+      console.error('❌ Firebase não disponível para refresh');
+      toast.error('Servidor não disponível');
+    }
+    
+    // Disparar evento para outras abas
+    window.dispatchEvent(new CustomEvent('firebase_force_refresh', {
+      detail: { timestamp: new Date().toISOString() }
+    }));
+    
+    toast.success('Dados atualizados');
+    window.dispatchEvent(new CustomEvent('data_refreshed'));
+  }, [db]);
+
   // ========== FUNÇÃO PRINCIPAL: ENVIAR VENDA (CORRIGIDA) ==========
   const sendToFirebase = useCallback(async (saleData) => {
     console.log('🚀 INICIANDO ENVIO PARA FIREBASE:', saleData);
@@ -892,26 +912,6 @@ export const RaffleManagerProvider = ({ children }) => {
     toast.success('✅ Logout realizado');
   }, []);
 
-  // ========== REFRESH DATA ==========
-  const refreshData = useCallback(() => {
-    console.log('🔄 Forçando atualização de dados...');
-    
-    if (db) {
-      loadInitialData(db);
-    } else {
-      console.error('❌ Firebase não disponível para refresh');
-      toast.error('Servidor não disponível');
-    }
-    
-    // Disparar evento para outras abas
-    window.dispatchEvent(new CustomEvent('firebase_force_refresh', {
-      detail: { timestamp: new Date().toISOString() }
-    }));
-    
-    toast.success('Dados atualizados');
-    window.dispatchEvent(new CustomEvent('data_refreshed'));
-  }, [db]);
-
   // ========== SINCRONIZAR VENDAS LOCAIS ==========
   const syncAllLocalSales = useCallback(async () => {
     if (!db) {
@@ -946,7 +946,7 @@ export const RaffleManagerProvider = ({ children }) => {
     setIsSyncing(false);
     
     if (successCount > 0) {
-      toast.success(`✅ ${successCount} vendas sincronizadas`);
+      toast.success('✅ ${successCount} vendas sincronizadas');
     } else if (unsynced.length > 0) {
       toast.error('❌ Falha ao sincronizar vendas locais');
     }
@@ -1005,41 +1005,6 @@ export const RaffleManagerProvider = ({ children }) => {
         synced: sale.synced || false
       }));
   }, [soldNumbers]);
-
-  // ========== FUNÇÃO DE DEBUG PARA PRODUÇÃO ==========
-  const debugFirebaseConnection = useCallback(async () => {
-    console.log('🔍 DEBUG Firebase Connection');
-    console.log('- Firebase inicializado:', firebaseInitialized);
-    console.log('- Firebase db:', db ? 'Disponível' : 'Indisponível');
-    console.log('- Online:', isOnline);
-    console.log('- Última sincronização:', lastSync);
-    console.log('- Total vendas local:', soldNumbers.length);
-    console.log('- Vendas sincronizadas:', soldNumbers.filter(s => s.synced).length);
-    
-    if (db) {
-      try {
-        // Testar número específico que sabemos que existe
-        const testTurma = '3° A';
-        const testNumero = 1; // Testar com número baixo
-        
-        console.log(`🧪 Testando verificação em tempo real: ${testTurma} Nº ${testNumero}`);
-        const realTimeCheck = await checkNumberInRealTime(testTurma, testNumero);
-        console.log('📊 Resultado verificação:', realTimeCheck);
-        
-        if (realTimeCheck.error) {
-          toast.error(`❌ Verificação falhou: ${realTimeCheck.error}`);
-        } else {
-          toast.success(`✅ Verificação OK! Status: ${realTimeCheck.status || 'disponível'}`);
-        }
-        
-      } catch (error) {
-        console.error('❌ Erro no teste:', error);
-        toast.error('❌ Erro no teste Firebase');
-      }
-    } else {
-      toast.error('❌ Firebase não disponível para teste');
-    }
-  }, [db, firebaseInitialized, isOnline, lastSync, soldNumbers, checkNumberInRealTime]);
 
   // ========== SINCRONIZAÇÃO PERIÓDICA ==========
   useEffect(() => {
