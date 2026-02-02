@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { 
   Copy, Check, QrCode, Smartphone, Clock, 
   Download, X, Wallet, Calculator, DollarSign, AlertCircle, RefreshCw,
-  Send, MessageCircle, Loader2, Shield
+  Send, MessageCircle, Loader2, Shield, Plus, Minus
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useRaffleManager } from '../../context/RaffleManagerContext';
@@ -41,6 +41,7 @@ const Payment = () => {
   const [cashSuggestions, setCashSuggestions] = useState([]);
   const [showCashSuggestions, setShowCashSuggestions] = useState(false);
   const cashInputRef = useRef(null);
+  const blurTimeoutRef = useRef(null);
 
   // ========== FUNÇÃO loadPersistentSession ==========
   const loadPersistentSession = useCallback(() => {
@@ -76,31 +77,61 @@ const Payment = () => {
     // Se for vazio, retorna vazio
     if (!numbers) return '';
     
-    // Converte para número inteiro (centavos)
-    let cents = parseInt(numbers, 10);
+    // Converte para número com centavos
+    const numericValue = parseFloat(numbers) / 100;
     
-    // Limita a 6 dígitos (até R$ 9.999,99)
-    if (numbers.length > 6) {
-      numbers = numbers.slice(0, 6);
-      cents = parseInt(numbers, 10);
-    }
+    if (isNaN(numericValue)) return '';
     
-    // Formata como moeda brasileira
-    const formatted = (cents / 100).toLocaleString('pt-BR', {
+    return numericValue.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
-    
-    return formatted;
   };
 
   const generateChangeSuggestions = () => {
     const total = currentOrder?.total || 0;
-    if (!total || !cashInput) return [];
+    if (!total) return [];
     
-    // Pega o valor digitado (remove formatação)
+    // Se não houver input, mostra sugestões baseadas no total
+    if (!cashInput) {
+      const suggestions = [];
+      
+      // Sugere o próximo valor "redondo"
+      const nextRoundUp = Math.ceil(total);
+      if (nextRoundUp > total) {
+        suggestions.push({
+          value: nextRoundUp,
+          label: `R$ ${nextRoundUp.toFixed(2)} (Valor redondo)`,
+          change: nextRoundUp - total
+        });
+      }
+      
+      // Sugere múltiplos de 5
+      const nextMultipleOf5 = Math.ceil(total / 5) * 5;
+      if (nextMultipleOf5 > total && nextMultipleOf5 !== nextRoundUp) {
+        suggestions.push({
+          value: nextMultipleOf5,
+          label: `R$ ${nextMultipleOf5.toFixed(2)} (Múltiplo de 5)`,
+          change: nextMultipleOf5 - total
+        });
+      }
+      
+      // Sugere múltiplos de 10
+      const nextMultipleOf10 = Math.ceil(total / 10) * 10;
+      if (nextMultipleOf10 > total && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
+        suggestions.push({
+          value: nextMultipleOf10,
+          label: `R$ ${nextMultipleOf10.toFixed(2)} (Múltiplo de 10)`,
+          change: nextMultipleOf10 - total
+        });
+      }
+      
+      return suggestions;
+    }
+    
+    // Se houver input, mostra sugestões baseadas no valor digitado
     const inputValue = parseFloat(
       cashInput
         .replace(/R\$/g, '')
@@ -110,24 +141,30 @@ const Payment = () => {
     );
     
     if (isNaN(inputValue) || inputValue < total) return [];
-  
     
-    // Sugestões baseadas no valor do pedido
     const suggestions = [];
+    const change = inputValue - total;
     
-    // Sugere o próximo valor "redondo"
+    // Se já for um valor bom, não precisa sugerir outros
+    if (change === 0) return []; // Valor exato
+    
+    // Se o troco for "bonito" (múltiplo de 5 ou 10), não sugere
+    if (change % 5 === 0 || change % 10 === 0) {
+      return [];
+    }
+    
+    // Senão, sugere valores melhores
     const nextRoundUp = Math.ceil(total);
-    if (nextRoundUp > total && nextRoundUp <= inputValue) {
+    if (nextRoundUp > total && nextRoundUp !== inputValue) {
       suggestions.push({
         value: nextRoundUp,
-        label: `R$ ${nextRoundUp.toFixed(2)} (Redondo)`,
+        label: `R$ ${nextRoundUp.toFixed(2)} (Valor redondo)`,
         change: nextRoundUp - total
       });
     }
     
-    // Sugere múltiplos de 5
     const nextMultipleOf5 = Math.ceil(total / 5) * 5;
-    if (nextMultipleOf5 > total && nextMultipleOf5 <= inputValue && nextMultipleOf5 !== nextRoundUp) {
+    if (nextMultipleOf5 > total && nextMultipleOf5 !== inputValue && nextMultipleOf5 !== nextRoundUp) {
       suggestions.push({
         value: nextMultipleOf5,
         label: `R$ ${nextMultipleOf5.toFixed(2)} (Múltiplo de 5)`,
@@ -135,9 +172,8 @@ const Payment = () => {
       });
     }
     
-    // Sugere múltiplos de 10
     const nextMultipleOf10 = Math.ceil(total / 10) * 10;
-    if (nextMultipleOf10 > total && nextMultipleOf10 <= inputValue && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
+    if (nextMultipleOf10 > total && nextMultipleOf10 !== inputValue && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
       suggestions.push({
         value: nextMultipleOf10,
         label: `R$ ${nextMultipleOf10.toFixed(2)} (Múltiplo de 10)`,
@@ -148,80 +184,63 @@ const Payment = () => {
     return suggestions;
   };
 
-  const handleCashInputChange = (e) => {
+  const handleCashInputChange = useCallback((e) => {
     const rawValue = e.target.value;
-    const formatted = formatCashInput(rawValue);
     
-    // Salvar a posição do cursor antes de atualizar
-    const cursorPosition = e.target.selectionStart;
-    const originalLength = e.target.value.length;
+    // Mantém apenas números
+    const numbers = rawValue.replace(/\D/g, '');
     
+    // Se for vazio, limpa tudo
+    if (!numbers) {
+      setCashInput('');
+      setCashError('');
+      setShowCashSuggestions(false);
+      return;
+    }
+    
+    // Converte para número com centavos
+    const numericValue = parseFloat(numbers) / 100;
+    
+    if (isNaN(numericValue)) {
+      setCashInput('');
+      return;
+    }
+    
+    // Formata como moeda
+    const formatted = numericValue.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    // Atualiza estado
     setCashInput(formatted);
     setCashError('');
     
     // Atualiza no contexto se for válido
-    const numericValue = parseFloat(
-      formatted
-        .replace(/R\$/g, '')
-        .replace(/\./g, '')
-        .replace(/,/g, '.')
-        .trim()
-    );
-    
-    if (!isNaN(numericValue)) {
-      if (currentOrder) {
-        currentOrder.cashAmount = numericValue;
-        // Calcular troco
-        currentOrder.cashChange = Math.max(0, (numericValue - (currentOrder.total || 0)));
-      }
+    if (currentOrder && !isNaN(numericValue)) {
+      currentOrder.cashAmount = numericValue;
+      currentOrder.cashChange = Math.max(0, (numericValue - (currentOrder.total || 0)));
     }
     
     // Gerar sugestões
     const newSuggestions = generateChangeSuggestions();
     setCashSuggestions(newSuggestions);
-    setShowCashSuggestions(newSuggestions.length > 0);
-    
-    // Restaurar posição do cursor após atualização
-    setTimeout(() => {
-      if (cashInputRef.current) {
-        // Calcular diferença de comprimento
-        const newLength = cashInputRef.current.value.length;
-        const lengthDiff = newLength - originalLength;
-        
-        // Ajustar posição do cursor baseado na diferença
-        let newCursorPosition = cursorPosition + lengthDiff;
-        
-        // Garantir que o cursor não vá além do texto
-        newCursorPosition = Math.max(0, Math.min(newCursorPosition, newLength));
-        
-        cashInputRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
-        cashInputRef.current.focus();
-      }
-    }, 0);
-  };
+    if (newSuggestions.length > 0) {
+      setShowCashSuggestions(true);
+    }
+  }, [currentOrder]);
 
-  const handleCashInputKeyDown = (e) => {
-    // Permitir apenas teclas úteis
-    const allowedKeys = [
-      'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
-      'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-      'Numpad0', 'Numpad1', 'Numpad2', 'Numpad3', 'Numpad4', 
-      'Numpad5', 'Numpad6', 'Numpad7', 'Numpad8', 'Numpad9'
-    ];
-    
-    // Permitir combinações de teclas como Ctrl+A, Ctrl+C, Ctrl+V
-    if (e.ctrlKey || e.metaKey) {
-      return; // Permitir todas as combinações de controle
-    }
-    
-    // Permitir navegação com teclas de seta
-    if (e.key.startsWith('Arrow')) {
-      return;
-    }
-    
-    if (!allowedKeys.includes(e.key)) {
+  const handleCashInputKeyDown = useCallback((e) => {
+    // Permite apenas números e teclas de controle
+    if (
+      e.key.length === 1 && // Caractere único
+      !/\d/.test(e.key) && // Não é número
+      e.key !== ',' && e.key !== '.' // Não é separador decimal
+    ) {
       e.preventDefault();
+      return;
     }
     
     // Se for Enter, submeter
@@ -229,9 +248,9 @@ const Payment = () => {
       e.preventDefault();
       handleConfirmCashPayment();
     }
-  };
+  }, []);
 
-  const handleSuggestionSelect = (suggestion) => {
+  const handleSuggestionSelect = useCallback((suggestion) => {
     setCashInput(`R$ ${suggestion.value.toFixed(2)}`);
     setShowCashSuggestions(false);
     
@@ -240,19 +259,17 @@ const Payment = () => {
       currentOrder.cashChange = suggestion.change;
     }
     
-    // Focar no input e colocar cursor no final
+    // Focar no botão de ação
     setTimeout(() => {
-      if (cashInputRef.current) {
-        cashInputRef.current.focus();
-        const length = cashInputRef.current.value.length;
-        cashInputRef.current.setSelectionRange(length, length);
-      }
+      const actionButton = document.querySelector('.main-actions button');
+      if (actionButton) actionButton.focus();
     }, 10);
-  };
+  }, [currentOrder]);
 
-  const validateCashInput = () => {
+  const validateCashInput = useCallback(() => {
     if (!cashInput) {
       setCashError('Por favor, informe o valor em dinheiro que você tem.');
+      cashInputRef.current?.focus();
       return false;
     }
     
@@ -266,18 +283,20 @@ const Payment = () => {
     
     if (isNaN(numericValue)) {
       setCashError('Valor inválido. Use apenas números.');
+      cashInputRef.current?.focus();
       return false;
     }
     
     if (numericValue < (currentOrder?.total || 0)) {
       setCashError(`Valor insuficiente. O total é R$ ${(currentOrder?.total || 0).toFixed(2)}`);
+      cashInputRef.current?.focus();
       return false;
     }
     
     return true;
-  };
+  }, [cashInput, currentOrder]);
 
-  const handleQuickAmount = (amount) => {
+  const handleQuickAmount = useCallback((amount) => {
     setCashInput(`R$ ${amount.toFixed(2)}`);
     setCashError('');
     setShowCashSuggestions(false);
@@ -286,18 +305,47 @@ const Payment = () => {
       currentOrder.cashAmount = amount;
       currentOrder.cashChange = Math.max(0, amount - (currentOrder.total || 0));
     }
-    
-    // Focar no input após selecionar valor rápido
-    setTimeout(() => {
-      if (cashInputRef.current) {
-        cashInputRef.current.focus();
-        const length = cashInputRef.current.value.length;
-        cashInputRef.current.setSelectionRange(length, length);
-      }
-    }, 10);
-  };
+  }, [currentOrder]);
 
-  const handleClearCashInput = () => {
+  const handleAdjustAmount = useCallback((operation) => {
+    const currentValue = parseFloat(
+      cashInput
+        .replace(/R\$/g, '')
+        .replace(/\./g, '')
+        .replace(/,/g, '.')
+        .trim()
+    ) || 0;
+    
+    let newValue = currentValue;
+    
+    if (operation === 'add-1') newValue += 1;
+    else if (operation === 'subtract-1') newValue = Math.max(0, currentValue - 1);
+    else if (operation === 'add-5') newValue += 5;
+    else if (operation === 'subtract-5') newValue = Math.max(0, currentValue - 5);
+    
+    setCashInput(`R$ ${newValue.toFixed(2)}`);
+    setCashError('');
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = newValue;
+      currentOrder.cashChange = Math.max(0, newValue - (currentOrder.total || 0));
+    }
+  }, [cashInput, currentOrder]);
+
+  const handleExactAmount = useCallback(() => {
+    const total = currentOrder?.total || 0;
+    setCashInput(`R$ ${total.toFixed(2)}`);
+    setCashError('');
+    setShowCashSuggestions(false);
+    
+    if (currentOrder) {
+      currentOrder.cashAmount = total;
+      currentOrder.cashChange = 0;
+    }
+  }, [currentOrder]);
+
+  const handleClearCashInput = useCallback(() => {
     setCashInput('');
     setCashError('');
     setShowCashSuggestions(false);
@@ -311,9 +359,19 @@ const Payment = () => {
     setTimeout(() => {
       if (cashInputRef.current) {
         cashInputRef.current.focus();
+        cashInputRef.current.select();
       }
     }, 10);
-  };
+  }, [currentOrder]);
+
+  // Limpar timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // ========== VERIFICAÇÃO DAS RIFAS ==========
   useEffect(() => {
@@ -1285,7 +1343,7 @@ const Payment = () => {
             </div>
           )}
 
-          {/* Seção de Pagamento em Dinheiro (ATUALIZADA) */}
+          {/* Seção de Pagamento em Dinheiro (MELHORADA) */}
           {paymentMethod === 'dinheiro' && (
             <div className="cash-payment-section">
               <div className="cash-header">
@@ -1294,16 +1352,36 @@ const Payment = () => {
               </div>
               
               <div className="cash-details-container">
-                <div className="cash-detail-card">
-                  <div className="cash-detail-header">
+                {/* Cartão de Informações do Pedido */}
+                <div className="order-summary-card">
+                  <div className="order-summary-header">
                     <Calculator size={20} />
-                    <h4>Informe o Valor em Dinheiro</h4>
+                    <h4>Resumo do Pedido</h4>
+                  </div>
+                  
+                  <div className="order-summary-content">
+                    <div className="summary-row">
+                      <span>Total a pagar:</span>
+                      <span className="summary-total">R$ {currentOrder?.total?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="summary-note">
+                      💰 Informe abaixo o valor que você tem em dinheiro para calcularmos o troco
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cartão de Input de Dinheiro */}
+                <div className="cash-input-card">
+                  <div className="cash-input-header">
+                    <DollarSign size={20} />
+                    <h4>Valor Entregue</h4>
+                    <span className="input-hint">(digite apenas números)</span>
                   </div>
                   
                   <div className="cash-input-section">
                     <div className="cash-input-group">
                       <div className="cash-input-wrapper">
-                        <DollarSign size={20} className="cash-input-icon" />
+                        <span className="currency-symbol">R$</span>
                         <input
                           ref={cashInputRef}
                           type="text"
@@ -1311,57 +1389,156 @@ const Payment = () => {
                           value={cashInput}
                           onChange={handleCashInputChange}
                           onKeyDown={handleCashInputKeyDown}
-                          onFocus={() => setShowCashSuggestions(true)}
-                          onBlur={() => setTimeout(() => setShowCashSuggestions(false), 200)}
-                          placeholder="Ex: 50,00"
+                          onFocus={(e) => {
+                            if (blurTimeoutRef.current) {
+                              clearTimeout(blurTimeoutRef.current);
+                            }
+                            e.target.select();
+                            setShowCashSuggestions(true);
+                          }}
+                          onBlur={() => {
+                            blurTimeoutRef.current = setTimeout(() => {
+                              setShowCashSuggestions(false);
+                            }, 200);
+                          }}
+                          placeholder="0,00"
                           inputMode="decimal"
                           autoComplete="off"
                           spellCheck="false"
+                          autoFocus
                         />
-                        <button
-                          type="button"
-                          className="clear-cash-btn"
-                          onClick={handleClearCashInput}
-                          aria-label="Limpar valor"
-                        >
-                          <X size={16} />
-                        </button>
+                        {cashInput && (
+                          <button
+                            type="button"
+                            className="clear-cash-btn"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleClearCashInput();
+                            }}
+                            aria-label="Limpar valor"
+                          >
+                            <X size={16} />
+                          </button>
+                        )}
                       </div>
                       
-                      {/* Botões de valor rápido */}
-                      <div className="quick-amount-buttons">
-                        {[10, 20, 50, 100].map(amount => (
+                      {/* Controles de Ajuste Rápido */}
+                      <div className="adjustment-controls">
+                        <div className="adjustment-row">
                           <button
-                            key={amount}
+                            type="button"
+                            className="adjust-btn subtract"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleAdjustAmount('subtract-1');
+                            }}
+                            aria-label="Diminuir R$ 1"
+                          >
+                            <Minus size={14} />
+                            <span>R$ 1</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="adjust-btn add"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleAdjustAmount('add-1');
+                            }}
+                            aria-label="Aumentar R$ 1"
+                          >
+                            <Plus size={14} />
+                            <span>R$ 1</span>
+                          </button>
+                        </div>
+                        
+                        <div className="adjustment-row">
+                          <button
+                            type="button"
+                            className="adjust-btn subtract"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleAdjustAmount('subtract-5');
+                            }}
+                            aria-label="Diminuir R$ 5"
+                          >
+                            <Minus size={14} />
+                            <span>R$ 5</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="adjust-btn add"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleAdjustAmount('add-5');
+                            }}
+                            aria-label="Aumentar R$ 5"
+                          >
+                            <Plus size={14} />
+                            <span>R$ 5</span>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Botões de Valor Rápido */}
+                      <div className="quick-amount-section">
+                        <div className="quick-amount-header">
+                          <span>Valores comuns:</span>
+                        </div>
+                        <div className="quick-amount-buttons">
+                          <button
                             type="button"
                             className="quick-amount-btn"
-                            onClick={() => handleQuickAmount(amount)}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleExactAmount();
+                            }}
                           >
-                            R$ {amount}
+                            <Check size={14} />
+                            <span>Valor exato</span>
                           </button>
-                        ))}
+                          
+                          {[10, 20, 50, 100].map(amount => (
+                            <button
+                              key={amount}
+                              type="button"
+                              className="quick-amount-btn"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleQuickAmount(amount);
+                              }}
+                            >
+                              <span>R$ {amount}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       
-                      {/* Sugestões de troco */}
+                      {/* Sugestões Inteligentes */}
                       {showCashSuggestions && cashSuggestions.length > 0 && (
                         <div className="cash-suggestions">
                           <div className="suggestions-header">
                             <span>💡 Sugestões para facilitar o troco:</span>
                           </div>
                           <div className="suggestions-list">
-                            {cashSuggestions.map((suggestion, index) => (
+                            {cashSuggestions.slice(0, 3).map((suggestion, index) => (
                               <button
                                 key={index}
                                 type="button"
                                 className="suggestion-item"
-                                onClick={() => handleSuggestionSelect(suggestion)}
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  handleSuggestionSelect(suggestion);
+                                }}
                               >
-                                <div className="suggestion-label">
-                                  {suggestion.label}
+                                <div className="suggestion-content">
+                                  <div className="suggestion-label">
+                                    {suggestion.label}
+                                  </div>
+                                  <div className="suggestion-change">
+                                    Troco: R$ {suggestion.change.toFixed(2)}
+                                  </div>
                                 </div>
-                                <div className="suggestion-change">
-                                  Troco: R$ {suggestion.change.toFixed(2)}
-                                </div>
+                                <div className="suggestion-arrow">→</div>
                               </button>
                             ))}
                           </div>
@@ -1377,11 +1554,15 @@ const Payment = () => {
                       )}
                     </div>
                     
-                    {/* Resumo do cálculo */}
-                    <div className="cash-summary">
-                      <div className="summary-item">
-                        <span>Total do Pedido:</span>
-                        <span className="summary-value">R$ {currentOrder?.total?.toFixed(2) || '0.00'}</span>
+                    {/* Resumo do Cálculo */}
+                    <div className="calculation-summary">
+                      <div className="calculation-row">
+                        <div className="calculation-label">
+                          <span>Total do pedido:</span>
+                        </div>
+                        <div className="calculation-value">
+                          R$ {currentOrder?.total?.toFixed(2) || '0.00'}
+                        </div>
                       </div>
                       
                       {cashInput && !isNaN(parseFloat(
@@ -1392,50 +1573,76 @@ const Payment = () => {
                           .trim()
                       )) && (
                         <>
-                          <div className="summary-item">
-                            <span>Valor Informado:</span>
-                            <span className="summary-value cash-amount">{cashInput}</span>
+                          <div className="calculation-row">
+                            <div className="calculation-label">
+                              <span>Valor entregue:</span>
+                            </div>
+                            <div className="calculation-value delivered">
+                              {cashInput}
+                            </div>
                           </div>
                           
-                          <div className="summary-item change-item">
-                            <span>Troco Necessário:</span>
-                            <span className={`summary-value change ${currentOrder?.cashChange > 0 ? 'needs-change' : 'exact'}`}>
+                          <div className="calculation-row change-row">
+                            <div className="calculation-label">
+                              <span>Troco necessário:</span>
+                            </div>
+                            <div className={`calculation-value change ${currentOrder?.cashChange > 0 ? 'needs-change' : 'exact'}`}>
                               {currentOrder?.cashChange > 0 
                                 ? `R$ ${currentOrder.cashChange.toFixed(2)}`
-                                : '✅ Valor exato'}
-                            </span>
+                                : <><Check size={14} /> <span>Valor exato!</span></>}
+                            </div>
                           </div>
                         </>
                       )}
                     </div>
                   </div>
                 </div>
-                
+
+                {/* Instruções */}
                 <div className="cash-instructions">
-                  <h4>📋 COMO PROCEDER (LEIA COM ATENÇÃO):</h4>
-                  <ol>
-                    <li><strong>Informe o valor em dinheiro</strong> que você tem (use o campo acima)</li>
-                    <li>Veja automaticamente o <strong>troco necessário</strong></li>
-                    <li><strong>Clique em "Enviar para WhatsApp"</strong> abaixo</li>
-                    <li><strong>IMPORTANTE:</strong> As rifas serão enviadas para o sistema como <strong>RESERVADAS PENDENTES</strong></li>
-                    <li>O administrador já verá sua reserva (aguardando pagamento)</li>
-                    <li>WhatsApp abrirá com mensagem pronta para enviar</li>
-                    <li>Após pagamento físico, o administrador marcará como PAGAS</li>
-                  </ol>
+                  <div className="instructions-header">
+                    <AlertCircle size={20} />
+                    <h4>Como proceder</h4>
+                  </div>
                   
-                  {!proofSent && (
-                    <div className="cash-warning">
-                      <AlertCircle size={16} />
-                      <p><strong>Atenção:</strong> Rifas só serão reservadas no sistema após clicar no botão abaixo!</p>
+                  <div className="instructions-steps">
+                    <div className="instruction-step">
+                      <div className="step-number">1</div>
+                      <div className="step-content">
+                        <strong>Informe o valor acima</strong> que você tem em dinheiro
+                      </div>
                     </div>
-                  )}
+                    
+                    <div className="instruction-step">
+                      <div className="step-number">2</div>
+                      <div className="step-content">
+                        <strong>Verifique o troco necessário</strong> que será calculado automaticamente
+                      </div>
+                    </div>
+                    
+                    <div className="instruction-step">
+                      <div className="step-number">3</div>
+                      <div className="step-content">
+                        <strong>Clique no botão abaixo</strong> para reservar as rifas no sistema
+                      </div>
+                    </div>
+                    
+                    <div className="instruction-step">
+                      <div className="step-number">4</div>
+                      <div className="step-content">
+                        <strong>Aguarde a confirmação</strong> após o pagamento físico
+                      </div>
+                    </div>
+                  </div>
                   
-                  {proofSent && (
-                    <div className="cash-success">
-                      <Check size={16} />
-                      <p><strong>✅ Sucesso!</strong> Rifas já foram enviadas para o sistema como RESERVADAS PENDENTES.</p>
-                    </div>
-                  )}
+                  <div className="instructions-note">
+                    <AlertCircle size={16} />
+                    <p>
+                      <strong>Importante:</strong> As rifas serão enviadas para o sistema como 
+                      <strong> RESERVADAS PENDENTES</strong> e só serão marcadas como PAGAS após 
+                      a confirmação do administrador.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1450,7 +1657,6 @@ const Payment = () => {
                   onClick={handleSendProof}
                   disabled={loading}
                 >
-                  <Send size={20} />
                   <span>1. Enviar Comprovante pelo WhatsApp</span>
                 </button>
               ) : !rafflesConfirmed ? (
@@ -1467,7 +1673,6 @@ const Payment = () => {
                       </>
                     ) : (
                       <>
-                        <Check size={20} />
                         <span>2. JÁ ENVIEI O COMPROVANTE - CONFIRMAR RIFAS</span>
                       </>
                     )}

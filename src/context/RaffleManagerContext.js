@@ -48,7 +48,7 @@ export const RaffleManagerProvider = ({ children }) => {
     const handleOnline = () => {
       console.log('✅ Conexão restaurada');
       setIsOnline(true);
-      toast.success('✅ Conexão restaurada');
+      console.log('✅ Conexão restaurada');
     };
     
     const handleOffline = () => {
@@ -170,7 +170,6 @@ export const RaffleManagerProvider = ({ children }) => {
         await loadInitialData(firestoreDb);
         
         setFirebaseError(null);
-        toast.success('✅ Conectado ao servidor!');
         
       } catch (error) {
         console.error('❌ ERRO CRÍTICO NO FIREBASE:', error);
@@ -460,7 +459,7 @@ export const RaffleManagerProvider = ({ children }) => {
         }
       }));
       
-      toast.success('✅ Venda registrada no sistema!');
+      console.log('✅ Venda registrada no sistema!');
       
       return {
         success: true,
