@@ -69,23 +69,74 @@ const Payment = () => {
   }, [currentOrder?.id]);
 
   // ========== FUNÇÕES PARA INPUT DE DINHEIRO ==========
-  
 
-  // ========== FUNÇÕES PARA INPUT DE DINHEIRO ==========
-
-// ========== FUNÇÕES PARA INPUT DE DINHEIRO ==========
-
-const generateChangeSuggestions = useCallback(() => {
-  const total = currentOrder?.total || 0;
-  if (!total) return [];
-  
-  // Se não houver input, mostra sugestões baseadas no total
-  if (!cashInput) {
-    const suggestions = [];
+  // ========== FUNÇÃO PARA GERAR SUGESTÕES DE TROCO ==========
+  const generateChangeSuggestions = useCallback(() => {
+    const total = currentOrder?.total || 0;
+    if (!total) return [];
     
-    // Sugere o próximo valor "redondo"
+    // Se não houver input, mostra sugestões baseadas no total
+    if (!cashInput) {
+      const suggestions = [];
+      
+      // Sugere o próximo valor "redondo"
+      const nextRoundUp = Math.ceil(total);
+      if (nextRoundUp > total) {
+        suggestions.push({
+          value: nextRoundUp,
+          label: `R$ ${nextRoundUp.toFixed(2)} (Valor redondo)`,
+          change: nextRoundUp - total
+        });
+      }
+      
+      // Sugere múltiplos de 5
+      const nextMultipleOf5 = Math.ceil(total / 5) * 5;
+      if (nextMultipleOf5 > total && nextMultipleOf5 !== nextRoundUp) {
+        suggestions.push({
+          value: nextMultipleOf5,
+          label: `R$ ${nextMultipleOf5.toFixed(2)} (Múltiplo de 5)`,
+          change: nextMultipleOf5 - total
+        });
+      }
+      
+      // Sugere múltiplos de 10
+      const nextMultipleOf10 = Math.ceil(total / 10) * 10;
+      if (nextMultipleOf10 > total && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
+        suggestions.push({
+          value: nextMultipleOf10,
+          label: `R$ ${nextMultipleOf10.toFixed(2)} (Múltiplo de 10)`,
+          change: nextMultipleOf10 - total
+        });
+      }
+      
+      return suggestions;
+    }
+    
+    // Se houver input, mostra sugestões baseadas no valor digitado
+    const inputValue = parseFloat(
+      cashInput
+        .replace(/R\$/g, '')
+        .replace(/\./g, '')
+        .replace(/,/g, '.')
+        .trim()
+    );
+    
+    if (isNaN(inputValue) || inputValue < total) return [];
+    
+    const suggestions = [];
+    const change = inputValue - total;
+    
+    // Se já for um valor bom, não precisa sugerir outros
+    if (change === 0) return []; // Valor exato
+    
+    // Se o troco for "bonito" (múltiplo de 5 ou 10), não sugere
+    if (change % 5 === 0 || change % 10 === 0) {
+      return [];
+    }
+    
+    // Senão, sugere valores melhores
     const nextRoundUp = Math.ceil(total);
-    if (nextRoundUp > total) {
+    if (nextRoundUp > total && nextRoundUp !== inputValue) {
       suggestions.push({
         value: nextRoundUp,
         label: `R$ ${nextRoundUp.toFixed(2)} (Valor redondo)`,
@@ -93,9 +144,8 @@ const generateChangeSuggestions = useCallback(() => {
       });
     }
     
-    // Sugere múltiplos de 5
     const nextMultipleOf5 = Math.ceil(total / 5) * 5;
-    if (nextMultipleOf5 > total && nextMultipleOf5 !== nextRoundUp) {
+    if (nextMultipleOf5 > total && nextMultipleOf5 !== inputValue && nextMultipleOf5 !== nextRoundUp) {
       suggestions.push({
         value: nextMultipleOf5,
         label: `R$ ${nextMultipleOf5.toFixed(2)} (Múltiplo de 5)`,
@@ -103,9 +153,8 @@ const generateChangeSuggestions = useCallback(() => {
       });
     }
     
-    // Sugere múltiplos de 10
     const nextMultipleOf10 = Math.ceil(total / 10) * 10;
-    if (nextMultipleOf10 > total && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
+    if (nextMultipleOf10 > total && nextMultipleOf10 !== inputValue && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
       suggestions.push({
         value: nextMultipleOf10,
         label: `R$ ${nextMultipleOf10.toFixed(2)} (Múltiplo de 10)`,
@@ -114,109 +163,10 @@ const generateChangeSuggestions = useCallback(() => {
     }
     
     return suggestions;
-  }
-  
-  // Se houver input, mostra sugestões baseadas no valor digitado
-  const inputValue = parseFloat(
-    cashInput
-      .replace(/R\$/g, '')
-      .replace(/\./g, '')
-      .replace(/,/g, '.')
-      .trim()
-  );
-  
-  if (isNaN(inputValue) || inputValue < total) return [];
-  
-  const suggestions = [];
-  const change = inputValue - total;
-  
-  // Se já for um valor bom, não precisa sugerir outros
-  if (change === 0) return []; // Valor exato
-  
-  // Se o troco for "bonito" (múltiplo de 5 ou 10), não sugere
-  if (change % 5 === 0 || change % 10 === 0) {
-    return [];
-  }
-  
-  // Senão, sugere valores melhores
-  const nextRoundUp = Math.ceil(total);
-  if (nextRoundUp > total && nextRoundUp !== inputValue) {
-    suggestions.push({
-      value: nextRoundUp,
-      label: `R$ ${nextRoundUp.toFixed(2)} (Valor redondo)`,
-      change: nextRoundUp - total
-    });
-  }
-  
-  const nextMultipleOf5 = Math.ceil(total / 5) * 5;
-  if (nextMultipleOf5 > total && nextMultipleOf5 !== inputValue && nextMultipleOf5 !== nextRoundUp) {
-    suggestions.push({
-      value: nextMultipleOf5,
-      label: `R$ ${nextMultipleOf5.toFixed(2)} (Múltiplo de 5)`,
-      change: nextMultipleOf5 - total
-    });
-  }
-  
-  const nextMultipleOf10 = Math.ceil(total / 10) * 10;
-  if (nextMultipleOf10 > total && nextMultipleOf10 !== inputValue && nextMultipleOf10 !== nextMultipleOf5 && nextMultipleOf10 !== nextRoundUp) {
-    suggestions.push({
-      value: nextMultipleOf10,
-      label: `R$ ${nextMultipleOf10.toFixed(2)} (Múltiplo de 10)`,
-      change: nextMultipleOf10 - total
-    });
-  }
-  
-  return suggestions;
-}, [currentOrder?.total, cashInput]);
+  }, [currentOrder?.total, cashInput]);
 
-const handleCashInputChange = useCallback((e) => {
-  const rawValue = e.target.value;
-  
-  // Mantém apenas números
-  const numbers = rawValue.replace(/\D/g, '');
-  
-  // Se for vazio, limpa tudo
-  if (!numbers) {
-    setCashInput('');
-    setCashError('');
-    setShowCashSuggestions(false);
-    return;
-  }
-  
-  // Converte para número com centavos
-  const numericValue = parseFloat(numbers) / 100;
-  
-  if (isNaN(numericValue)) {
-    setCashInput('');
-    return;
-  }
-  
-  // Formata como moeda
-  const formatted = numericValue.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-  
-  // Atualiza estado
-  setCashInput(formatted);
-  setCashError('');
-  
-  // Atualiza no contexto se for válido
-  if (currentOrder && !isNaN(numericValue)) {
-    currentOrder.cashAmount = numericValue;
-    currentOrder.cashChange = Math.max(0, (numericValue - (currentOrder.total || 0)));
-  }
-  
-  // Gerar sugestões
-  const newSuggestions = generateChangeSuggestions();
-  setCashSuggestions(newSuggestions);
-  if (newSuggestions.length > 0) {
-    setShowCashSuggestions(true);
-  }
-}, [currentOrder, generateChangeSuggestions]);
-const handleConfirmCashPayment = async () => {
+  // ========== FUNÇÃO PARA CONFIRMAR PAGAMENTO EM DINHEIRO ==========
+  const handleConfirmCashPayment = useCallback(async () => {
     if (!currentOrder) {
       showToast('error', 'Pedido não encontrado');
       return;
@@ -287,26 +237,77 @@ const handleConfirmCashPayment = async () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrder, validateCashInput, confirmRafflesInOrder, generateWhatsAppMessage, clearCartAfterConfirmation, handleCloseModal]);
 
-const handleCashInputKeyDown = useCallback((e) => {
-  // Permite apenas números e teclas de controle
-  if (
-    e.key.length === 1 && // Caractere único
-    !/\d/.test(e.key) && // Não é número
-    e.key !== ',' && e.key !== '.' // Não é separador decimal
-  ) {
-    e.preventDefault();
-    return;
-  }
-  
-  // Se for Enter, submeter
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    handleConfirmCashPayment();
-  }
-}, [handleConfirmCashPayment]); // Dependência: função de confirmação
+  // ========== FUNÇÃO PARA ALTERAÇÃO DO INPUT DE DINHEIRO ==========
+  const handleCashInputChange = useCallback((e) => {
+    const rawValue = e.target.value;
+    
+    // Mantém apenas números
+    const numbers = rawValue.replace(/\D/g, '');
+    
+    // Se for vazio, limpa tudo
+    if (!numbers) {
+      setCashInput('');
+      setCashError('');
+      setShowCashSuggestions(false);
+      return;
+    }
+    
+    // Converte para número com centavos
+    const numericValue = parseFloat(numbers) / 100;
+    
+    if (isNaN(numericValue)) {
+      setCashInput('');
+      return;
+    }
+    
+    // Formata como moeda
+    const formatted = numericValue.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    // Atualiza estado
+    setCashInput(formatted);
+    setCashError('');
+    
+    // Atualiza no contexto se for válido
+    if (currentOrder && !isNaN(numericValue)) {
+      currentOrder.cashAmount = numericValue;
+      currentOrder.cashChange = Math.max(0, (numericValue - (currentOrder.total || 0)));
+    }
+    
+    // Gerar sugestões
+    const newSuggestions = generateChangeSuggestions();
+    setCashSuggestions(newSuggestions);
+    if (newSuggestions.length > 0) {
+      setShowCashSuggestions(true);
+    }
+  }, [currentOrder, generateChangeSuggestions]);
 
+  // ========== FUNÇÃO PARA TECLAS NO INPUT DE DINHEIRO ==========
+  const handleCashInputKeyDown = useCallback((e) => {
+    // Permite apenas números e teclas de controle
+    if (
+      e.key.length === 1 && // Caractere único
+      !/\d/.test(e.key) && // Não é número
+      e.key !== ',' && e.key !== '.' // Não é separador decimal
+    ) {
+      e.preventDefault();
+      return;
+    }
+    
+    // Se for Enter, submeter
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleConfirmCashPayment();
+    }
+  }, [handleConfirmCashPayment]);
+
+  // ========== FUNÇÃO PARA SELECIONAR SUGESTÃO ==========
   const handleSuggestionSelect = useCallback((suggestion) => {
     setCashInput(`R$ ${suggestion.value.toFixed(2)}`);
     setShowCashSuggestions(false);
@@ -321,8 +322,9 @@ const handleCashInputKeyDown = useCallback((e) => {
       const actionButton = document.querySelector('.main-actions button');
       if (actionButton) actionButton.focus();
     }, 10);
-  }, [currentOrder, handleConfirmCashPayment]);
+  }, [currentOrder]);
 
+  // ========== FUNÇÃO PARA VALIDAR INPUT DE DINHEIRO ==========
   const validateCashInput = useCallback(() => {
     if (!cashInput) {
       setCashError('Por favor, informe o valor em dinheiro que você tem.');
@@ -353,6 +355,7 @@ const handleCashInputKeyDown = useCallback((e) => {
     return true;
   }, [cashInput, currentOrder]);
 
+  // ========== FUNÇÃO PARA VALOR RÁPIDO ==========
   const handleQuickAmount = useCallback((amount) => {
     setCashInput(`R$ ${amount.toFixed(2)}`);
     setCashError('');
@@ -364,6 +367,7 @@ const handleCashInputKeyDown = useCallback((e) => {
     }
   }, [currentOrder]);
 
+  // ========== FUNÇÃO PARA AJUSTAR VALOR ==========
   const handleAdjustAmount = useCallback((operation) => {
     const currentValue = parseFloat(
       cashInput
@@ -390,6 +394,7 @@ const handleCashInputKeyDown = useCallback((e) => {
     }
   }, [cashInput, currentOrder]);
 
+  // ========== FUNÇÃO PARA VALOR EXATO ==========
   const handleExactAmount = useCallback(() => {
     const total = currentOrder?.total || 0;
     setCashInput(`R$ ${total.toFixed(2)}`);
@@ -402,6 +407,7 @@ const handleCashInputKeyDown = useCallback((e) => {
     }
   }, [currentOrder]);
 
+  // ========== FUNÇÃO PARA LIMPAR INPUT ==========
   const handleClearCashInput = useCallback(() => {
     setCashInput('');
     setCashError('');
@@ -421,83 +427,8 @@ const handleCashInputKeyDown = useCallback((e) => {
     }, 10);
   }, [currentOrder]);
 
-  // Limpar timeout ao desmontar
-  useEffect(() => {
-    return () => {
-      if (blurTimeoutRef.current) {
-        clearTimeout(blurTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // ========== VERIFICAÇÃO DAS RIFAS ==========
-  useEffect(() => {
-    if (showPayment && currentOrder) {
-      console.log('🔄 Payment - Estado atual das rifas:');
-      
-      const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
-      raffleItems.forEach(item => {
-        if (item.selectedClass && item.selectedNumber) {
-          const isSold = raffleManager?.isNumberSold?.(item.selectedClass, item.selectedNumber);
-          const isReserved = raffleManager?.isNumberReserved?.(item.selectedClass, item.selectedNumber);
-          
-          console.log(`🎟️ ${item.selectedClass} Nº ${item.selectedNumber}:`, {
-            vendido: isSold,
-            reservado: isReserved,
-            status: isSold ? 'VENDIDO' : isReserved ? 'RESERVADO' : 'DISPONÍVEL'
-          });
-        }
-      });
-    }
-  }, [showPayment, currentOrder, raffleManager]);
-
-  // ========== FUNÇÕES DE GERENCIAMENTO DE MODAL ==========
-
-  const handleCloseModal = useCallback(() => {
-    console.log('🔒 Fechando modal de pagamento');
-    
-    if (typeof closePaymentOnly === 'function') {
-      closePaymentOnly();
-    } else if (typeof setShowPayment === 'function') {
-      setShowPayment(false);
-    }
-  }, [closePaymentOnly, setShowPayment]);
-
-  useEffect(() => {
-    if (showPayment && currentOrder) {
-      loadPersistentSession();
-      
-      // Inicializar input de dinheiro se houver valor salvo
-      if (currentOrder.paymentMethod === 'dinheiro' && currentOrder.cashAmount) {
-        setCashInput(`R$ ${currentOrder.cashAmount.toFixed(2)}`);
-      }
-      
-      // Verificar se já confirmou as rifas
-      const savedOrder = JSON.parse(localStorage.getItem('terceirao_last_order') || '{}');
-      
-      if (savedOrder.rafflesConfirmed) {
-        setRafflesConfirmed(true);
-        setProofSent(true);
-      }
-      
-      // Para dinheiro: verificar se já enviou WhatsApp
-      if (currentOrder.paymentMethod === 'dinheiro') {
-        if (savedOrder.whatsappSent || savedOrder.status === 'pending_cash') {
-          setProofSent(true);
-        } else {
-          setProofSent(false);
-        }
-      }
-      
-      // Verificar debug mode pela URL
-      if (window.location.search.includes('debug=true')) {
-        setDebugMode(true);
-        console.log('🔍 Modo debug ativado');
-      }
-    }
-  }, [showPayment, currentOrder, loadPersistentSession]);
-
-  const savePersistentSession = () => {
+  // ========== FUNÇÃO SALVAR SESSÃO PERSISTENTE ==========
+  const savePersistentSession = useCallback(() => {
     if (!currentOrder) return;
     
     const sessionData = {
@@ -509,92 +440,21 @@ const handleCashInputKeyDown = useCallback((e) => {
     };
     
     localStorage.setItem('terceirao_payment_session', JSON.stringify(sessionData));
-  };
+  }, [currentOrder, proofSent, paymentTimestamp]);
 
-  // Fechar modal com ESC
-  useEffect(() => {
-    const handleEscKey = (event) => {
-      if (event.key === 'Escape' && showPayment) {
-        handleCloseModal();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscKey);
-    return () => document.removeEventListener('keydown', handleEscKey);
-  }, [showPayment, handleCloseModal]);
-
-  // Focar no modal quando abrir
-  useEffect(() => {
-    if (showPayment) {
-      document.body.style.overflow = 'hidden';
-      if (modalRef.current) {
-        modalRef.current.focus();
-      }
-    }
+  // ========== FUNÇÃO PARA FECHAR MODAL ==========
+  const handleCloseModal = useCallback(() => {
+    console.log('🔒 Fechando modal de pagamento');
     
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [showPayment]);
-
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget || e.target.classList.contains('payment-overlay')) {
-      handleCloseModal();
+    if (typeof closePaymentOnly === 'function') {
+      closePaymentOnly();
+    } else if (typeof setShowPayment === 'function') {
+      setShowPayment(false);
     }
-  };
-
-  // ========== FUNÇÕES DE DADOS ==========
-
-  const getCustomerName = () => {
-    if (!currentOrder) return 'Não informado';
-    
-    if (currentOrder.customer?.name) {
-      return currentOrder.customer.name;
-    }
-    
-    if (currentOrder.customerName) {
-      return currentOrder.customerName;
-    }
-    
-    if (currentOrder.customerInfo?.name) {
-      return currentOrder.customerInfo.name;
-    }
-    
-    try {
-      const savedInfo = JSON.parse(localStorage.getItem('terceirao_customer_info') || '{}');
-      if (savedInfo.name) {
-        return savedInfo.name;
-      }
-    } catch (error) {
-      console.error('Erro ao ler do localStorage:', error);
-    }
-    
-    return 'Não informado';
-  };
-
-  // ========== FUNÇÕES DE PAGAMENTO ==========
-
-  const handleCopyPixKey = () => {
-    if (!vendorInfo?.pixKey) {
-      console.error('Chave PIX não disponível');
-      showToast('error', 'Chave PIX não disponível');
-      return;
-    }
-    
-    navigator.clipboard.writeText(vendorInfo.pixKey)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-        showToast('success', 'Chave PIX copiada!');
-      })
-      .catch(err => {
-        console.error('Erro ao copiar:', err);
-        showToast('error', 'Erro ao copiar chave PIX');
-      });
-  };
+  }, [closePaymentOnly, setShowPayment]);
 
   // ========== FUNÇÃO TOAST ==========
-  const showToast = (type, message) => {
+  const showToast = useCallback((type, message) => {
     window.dispatchEvent(new CustomEvent('showToast', {
       detail: { 
         type, 
@@ -602,11 +462,10 @@ const handleCashInputKeyDown = useCallback((e) => {
         duration: type === 'error' ? 5000 : 4000 
       }
     }));
-  };
+  }, []);
 
-  // ========== WHATSAPP MESSAGE ==========
-
-  const generateWhatsAppMessage = () => {
+  // ========== FUNÇÃO PARA MENSAGEM DO WHATSAPP ==========
+  const generateWhatsAppMessage = useCallback(() => {
     if (!vendorInfo?.whatsapp) {
         console.error('WhatsApp não configurado');
         showToast('error', 'WhatsApp não configurado');
@@ -698,10 +557,58 @@ const handleCashInputKeyDown = useCallback((e) => {
     message += `📞 WhatsApp: ${vendorInfo.whatsapp}\n`;
 
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-  };
+  }, [currentOrder, vendorInfo, rafflesConfirmed, showToast]);
 
-  // ========== FUNÇÃO PARA ENVIAR COMPROVANTE PIX (ABRIR WHATSAPP) ==========
-  const handleSendProof = () => {
+  // ========== FUNÇÃO PARA OBTER NOME DO CLIENTE ==========
+  const getCustomerName = useCallback(() => {
+    if (!currentOrder) return 'Não informado';
+    
+    if (currentOrder.customer?.name) {
+      return currentOrder.customer.name;
+    }
+    
+    if (currentOrder.customerName) {
+      return currentOrder.customerName;
+    }
+    
+    if (currentOrder.customerInfo?.name) {
+      return currentOrder.customerInfo.name;
+    }
+    
+    try {
+      const savedInfo = JSON.parse(localStorage.getItem('terceirao_customer_info') || '{}');
+      if (savedInfo.name) {
+        return savedInfo.name;
+      }
+    } catch (error) {
+      console.error('Erro ao ler do localStorage:', error);
+    }
+    
+    return 'Não informado';
+  }, [currentOrder]);
+
+  // ========== FUNÇÃO PARA COPIAR CHAVE PIX ==========
+  const handleCopyPixKey = useCallback(() => {
+    if (!vendorInfo?.pixKey) {
+      console.error('Chave PIX não disponível');
+      showToast('error', 'Chave PIX não disponível');
+      return;
+    }
+    
+    navigator.clipboard.writeText(vendorInfo.pixKey)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        showToast('success', 'Chave PIX copiada!');
+      })
+      .catch(err => {
+        console.error('Erro ao copiar:', err);
+        showToast('error', 'Erro ao copiar chave PIX');
+      });
+  }, [vendorInfo?.pixKey, showToast]);
+
+  // ========== FUNÇÃO PARA ENVIAR COMPROVANTE PIX ==========
+  const handleSendProof = useCallback(() => {
     const url = generateWhatsAppMessage();
     if (url !== '#') {
       window.open(url, '_blank');
@@ -709,10 +616,10 @@ const handleCashInputKeyDown = useCallback((e) => {
       savePersistentSession();
       showToast('info', 'WhatsApp aberto! Envie o comprovante e DEPOIS VOLTE AQUI para clicar em "Já enviei o comprovante".');
     }
-  };
+  }, [generateWhatsAppMessage, savePersistentSession, showToast]);
 
-  // ========== FUNÇÃO PARA CONFIRMAR PAGAMENTO PIX (CORRIGIDA) ==========
-  const handleConfirmPixPayment = async () => {
+  // ========== FUNÇÃO PARA CONFIRMAR PAGAMENTO PIX ==========
+  const handleConfirmPixPayment = useCallback(async () => {
     if (!currentOrder) {
       showToast('error', 'Pedido não encontrado');
       return;
@@ -754,13 +661,10 @@ const handleCashInputKeyDown = useCallback((e) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // ========== FUNÇÃO PRINCIPAL PARA CONFIRMAR PAGAMENTO (DINHEIRO) ==========
-  
+  }, [currentOrder, loading, confirmRafflesInOrder, showToast, handleCloseModal]);
 
   // ========== FUNÇÃO DE EMERGÊNCIA PARA ENVIO MANUAL ==========
-  const handleEmergencyManualSend = async () => {
+  const handleEmergencyManualSend = useCallback(async () => {
     if (!currentOrder || !raffleManager) return;
     
     setLoading(true);
@@ -855,11 +759,10 @@ const handleCashInputKeyDown = useCallback((e) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrder, raffleManager, getCustomerName, showToast, clearCartAfterConfirmation]);
 
-  // ========== FUNÇÕES AUXILIARES ==========
-
-  const handleDownloadReceipt = () => {
+  // ========== FUNÇÃO PARA BAIXAR COMPROVANTE ==========
+  const handleDownloadReceipt = useCallback(() => {
     if (!currentOrder) return;
     
     const deliveryOption = currentOrder.deliveryOption || 'retirada';
@@ -1006,9 +909,10 @@ const handleCashInputKeyDown = useCallback((e) => {
       console.error('Erro ao baixar comprovante:', error);
       showToast('error', 'Erro ao baixar comprovante');
     }
-  };
+  }, [currentOrder, proofSent, rafflesConfirmed, vendorInfo?.pixKey, getCustomerName, showToast]);
 
-  const handleRestoreSession = () => {
+  // ========== FUNÇÃO PARA RESTAURAR SESSÃO ==========
+  const handleRestoreSession = useCallback(() => {
     if (persistentSession) {
       setHasPendingPayment(true);
       setPaymentTimestamp(persistentSession.paymentTimestamp);
@@ -1016,17 +920,18 @@ const handleCashInputKeyDown = useCallback((e) => {
       
       showToast('info', 'Sessão restaurada! Continue de onde parou.');
     }
-  };
+  }, [persistentSession, showToast]);
 
-  const clearPersistentSession = () => {
+  // ========== FUNÇÃO PARA LIMPAR SESSÃO PERSISTENTE ==========
+  const clearPersistentSession = useCallback(() => {
     localStorage.removeItem('terceirao_payment_session');
     setPersistentSession(null);
     setHasPendingPayment(false);
     setPaymentTimestamp(null);
-  };
+  }, []);
 
-  // ========== DEBUG FUNCTIONS ==========
-  const testFirebaseConnection = async () => {
+  // ========== FUNÇÃO PARA TESTAR CONEXÃO COM FIREBASE ==========
+  const testFirebaseConnection = useCallback(async () => {
     setLoading(true);
     try {
       if (raffleManager.debugFirebaseConnection) {
@@ -1036,6 +941,104 @@ const handleCashInputKeyDown = useCallback((e) => {
       }
     } finally {
       setLoading(false);
+    }
+  }, [raffleManager, showToast]);
+
+  // ========== VERIFICAÇÃO DAS RIFAS ==========
+  useEffect(() => {
+    if (showPayment && currentOrder) {
+      console.log('🔄 Payment - Estado atual das rifas:');
+      
+      const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
+      raffleItems.forEach(item => {
+        if (item.selectedClass && item.selectedNumber) {
+          const isSold = raffleManager?.isNumberSold?.(item.selectedClass, item.selectedNumber);
+          const isReserved = raffleManager?.isNumberReserved?.(item.selectedClass, item.selectedNumber);
+          
+          console.log(`🎟️ ${item.selectedClass} Nº ${item.selectedNumber}:`, {
+            vendido: isSold,
+            reservado: isReserved,
+            status: isSold ? 'VENDIDO' : isReserved ? 'RESERVADO' : 'DISPONÍVEL'
+          });
+        }
+      });
+    }
+  }, [showPayment, currentOrder, raffleManager]);
+
+  // ========== CARREGAR SESSÃO PERSISTENTE AO ABRIR ==========
+  useEffect(() => {
+    if (showPayment && currentOrder) {
+      loadPersistentSession();
+      
+      // Inicializar input de dinheiro se houver valor salvo
+      if (currentOrder.paymentMethod === 'dinheiro' && currentOrder.cashAmount) {
+        setCashInput(`R$ ${currentOrder.cashAmount.toFixed(2)}`);
+      }
+      
+      // Verificar se já confirmou as rifas
+      const savedOrder = JSON.parse(localStorage.getItem('terceirao_last_order') || '{}');
+      
+      if (savedOrder.rafflesConfirmed) {
+        setRafflesConfirmed(true);
+        setProofSent(true);
+      }
+      
+      // Para dinheiro: verificar se já enviou WhatsApp
+      if (currentOrder.paymentMethod === 'dinheiro') {
+        if (savedOrder.whatsappSent || savedOrder.status === 'pending_cash') {
+          setProofSent(true);
+        } else {
+          setProofSent(false);
+        }
+      }
+      
+      // Verificar debug mode pela URL
+      if (window.location.search.includes('debug=true')) {
+        setDebugMode(true);
+        console.log('🔍 Modo debug ativado');
+      }
+    }
+  }, [showPayment, currentOrder, loadPersistentSession]);
+
+  // ========== FECHAR MODAL COM ESC ==========
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape' && showPayment) {
+        handleCloseModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
+  }, [showPayment, handleCloseModal]);
+
+  // ========== FOCAR NO MODAL QUANDO ABRIR ==========
+  useEffect(() => {
+    if (showPayment) {
+      document.body.style.overflow = 'hidden';
+      if (modalRef.current) {
+        modalRef.current.focus();
+      }
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [showPayment]);
+
+  // ========== LIMPAR TIMEOUT AO DESMONTAR ==========
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // ========== CLIQUE NO OVERLAY PARA FECHAR ==========
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget || e.target.classList.contains('payment-overlay')) {
+      handleCloseModal();
     }
   };
 
