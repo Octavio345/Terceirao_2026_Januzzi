@@ -329,7 +329,6 @@ export const RaffleManagerProvider = ({ children }) => {
 
     try {
       await loadInitialData(db);
-      toast.success('Dados atualizados!');
     } catch (error) {
       console.error('❌ Erro ao atualizar dados:', error);
       toast.error('Erro ao atualizar dados');
