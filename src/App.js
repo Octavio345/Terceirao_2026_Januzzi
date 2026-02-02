@@ -18,7 +18,6 @@ import Contact from './components/Contact/Contact';
 import PaymentInfo from './components/PaymentInfo/PaymentInfo';
 import Cart from './components/Cart/Cart';
 import Payment from './components/Payment/Payment';
-import UpdateNotification from './components/UpdateNotification/UpdateNotification';
 import Toast from './components/Toast/Toast';
 
 // Importar componentes do admin
@@ -463,14 +462,6 @@ function AppContent() {
         <ScrollManager />
         <ScrollToTop />
         
-        {/* NOTIFICAÇÕES GLOBAIS - Fora das rotas mas dentro do Router */}
-        {/* Notificação de ATUALIZAÇÃO */}
-        {updateAvailable && (
-          <UpdateNotification 
-            onUpdate={handleUpdate}
-            onDismiss={handleDismiss}
-          />
-        )}
         
         <Routes>
           {/* Rotas públicas (com Header e Footer) */}

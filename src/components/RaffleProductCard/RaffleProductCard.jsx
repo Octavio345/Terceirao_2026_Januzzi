@@ -1621,7 +1621,12 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         /* Selected Numbers */
         .selected-numbers {
           padding: 0 24px 24px;
+          color: black !important;
         }
+          .selected-numbers,
+          .selected-numbers span {
+            color: black !important;
+          }
 
         .selected-header {
           display: flex;
@@ -1750,6 +1755,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         /* Quick Selection */
         .quick-selection {
           padding: 0 24px 24px;
+          color: black !important;
         }
 
         .quick-grid {

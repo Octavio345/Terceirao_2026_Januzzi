@@ -231,88 +231,98 @@ const Payment = () => {
 
   // ========== WHATSAPP MESSAGE ==========
 
-  const generateWhatsAppMessage = () => {
-    if (!vendorInfo?.whatsapp) {
-      console.error('WhatsApp não configurado');
-      showToast('error', 'WhatsApp não configurado');
-      return '#';
-    }
-    
-    const phone = vendorInfo.whatsapp.replace(/\D/g, '');
-    const deliveryOption = currentOrder.deliveryOption || 'retirada';
-    const deliveryAddress = currentOrder.deliveryAddress || null;
-    const paymentMethod = currentOrder.paymentMethod || 'pix';
-    const cashAmount = currentOrder.cashAmount || null;
-    const cashChange = currentOrder.cashChange || 0;
-    
-    const customerName = getCustomerName();
-    
-    const hasRaffles = currentOrder.items?.some(item => item.isRaffle) || false;
-    
-    let message = `*${paymentMethod === 'pix' ? '📋 COMPROVANTE PIX ENVIADO' : '💵 PAGAMENTO EM DINHEIRO'}*\n\n`;
-    
-    message += `*🧾 PEDIDO:* ${currentOrder.id}\n`;
-    message += `*👤 CLIENTE:* ${customerName}\n`;
-    message += `*💰 VALOR:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
-    
-    if (hasRaffles) {
-      const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
-      message += `*🎟️ RIFAS:*\n`;
-      raffleItems.forEach((item, index) => {
-        if (index < 5) {
-          message += `• ${item.selectedClass || ''} Nº ${item.selectedNumber?.toString().padStart(3, '0') || ''}\n`;
-        }
-      });
-      if (raffleItems.length > 5) {
-        message += `• ... e mais ${raffleItems.length - 5} rifa(s)\n`;
+    const generateWhatsAppMessage = () => {
+      if (!vendorInfo?.whatsapp) {
+          console.error('WhatsApp não configurado');
+          showToast('error', 'WhatsApp não configurado');
+          return '#';
       }
-      message += `\n`;
       
-      if (paymentMethod === 'pix') {
-        if (!rafflesConfirmed) {
-          message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
-          message += `As rifas estão APENAS NO CARRINHO e NÃO foram reservadas no sistema ainda.\n`;
-          message += `Elas só serão enviadas para o sistema quando você clicar em "Já enviei o comprovante".\n\n`;
-        } else {
-          message += `*✅ CONFIRMADO:*\n`;
-          message += `Rifas já foram enviadas para o sistema como PAGAS.\n\n`;
-        }
-      } else {
-        message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
-        message += `As rifas foram enviadas para o sistema como RESERVADAS PENDENTES.\n`;
-        message += `Status: Aguardando pagamento em dinheiro.\n\n`;
+      const phone = vendorInfo.whatsapp.replace(/\D/g, '');
+      const deliveryOption = currentOrder.deliveryOption || 'retirada';
+      const deliveryAddress = currentOrder.deliveryAddress || null;
+      const paymentMethod = currentOrder.paymentMethod || 'pix';
+      const cashAmount = currentOrder.cashAmount || null;
+      const cashChange = currentOrder.cashChange || 0;
+      
+      const customerName = getCustomerName();
+      const customerPhone = currentOrder.customer?.phone || currentOrder.customerInfo?.phone || '';
+      
+      const hasRaffles = currentOrder.items?.some(item => item.isRaffle) || false;
+      
+      let message = `*${paymentMethod === 'pix' ? '📋 COMPROVANTE PIX ENVIADO' : '💵 PAGAMENTO EM DINHEIRO'}*\n\n`;
+      
+      message += `*🧾 PEDIDO:* ${currentOrder.id}\n`;
+      message += `*👤 CLIENTE:* ${customerName}\n`;
+      message += `*📞 TELEFONE:* ${customerPhone}\n`;
+      message += `*💰 VALOR:* R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
+      
+      if (hasRaffles) {
+          const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
+          message += `*🎟️ RIFAS:*\n`;
+          raffleItems.forEach((item, index) => {
+              if (index < 5) {
+                  message += `• ${item.selectedClass || ''} Nº ${item.selectedNumber?.toString().padStart(3, '0') || ''}\n`;
+              }
+          });
+          if (raffleItems.length > 5) {
+              message += `• ... e mais ${raffleItems.length - 5} rifa(s)\n`;
+          }
+          message += `\n`;
+          
+          if (paymentMethod === 'pix') {
+              if (!rafflesConfirmed) {
+                  message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
+                  message += `As rifas estão APENAS NO CARRINHO e NÃO foram reservadas no sistema ainda.\n`;
+                  message += `Elas só serão enviadas para o sistema quando você clicar em "Já enviei o comprovante".\n\n`;
+              } else {
+                  message += `*✅ CONFIRMADO:*\n`;
+                  message += `Rifas já foram enviadas para o sistema como PAGAS.\n\n`;
+              }
+          } else {
+              message += `*⚠️ ATENÇÃO IMPORTANTE:*\n`;
+              message += `As rifas foram enviadas para o sistema como RESERVADAS PENDENTES.\n`;
+              message += `Status: Aguardando pagamento em dinheiro.\n\n`;
+          }
       }
-    }
-    
-    if (paymentMethod === 'dinheiro') {
-      message += `*💵 PAGAMENTO EM DINHEIRO*\n`;
-      if (cashAmount) {
-        message += `• Valor informado: R$ ${cashAmount.toFixed(2)}\n`;
-        if (cashChange > 0) {
-          message += `• Troco necessário: R$ ${cashChange.toFixed(2)}\n`;
-        }
+      
+      if (paymentMethod === 'dinheiro') {
+          message += `*💵 PAGAMENTO EM DINHEIRO*\n`;
+          if (cashAmount) {
+              message += `• Valor informado: R$ ${cashAmount.toFixed(2)}\n`;
+              if (cashChange > 0) {
+                  message += `• Troco necessário: R$ ${cashChange.toFixed(2)}\n`;
+              }
+          }
+          message += `\n`;
       }
+      
+      message += `*📦 ENTREGA:* ${deliveryOption === 'retirada' ? '🏫 Retirada na Escola' : '🚚 Entrega a Domicílio'}\n`;
+      
+      if (deliveryOption === 'entrega' && deliveryAddress) {
+          message += `📍 ${deliveryAddress.street || ''}, ${deliveryAddress.number || ''}\n`;
+          if (deliveryAddress.complement) {
+              message += `🏠 Complemento: ${deliveryAddress.complement}\n`;
+          }
+          message += `🏘️ Bairro: ${deliveryAddress.neighborhood || ''}\n`;
+      }
+      
       message += `\n`;
-    }
-    
-    message += `*📦 ENTREGA:* ${deliveryOption === 'retirada' ? 'Retirada na Escola' : 'Entrega a Domicílio'}\n`;
-    
-    if (deliveryOption === 'entrega' && deliveryAddress) {
-      message += `• ${deliveryAddress.street || ''}, ${deliveryAddress.number || ''}\n`;
-      if (deliveryAddress.complement) {
-        message += `• Complemento: ${deliveryAddress.complement}\n`;
-      }
-      message += `• Bairro: ${deliveryAddress.neighborhood || ''}\n`;
-    }
-    
-    message += `\n`;
-    message += `*📞 CONTATO:*\n`;
-    message += `WhatsApp: ${vendorInfo.whatsapp}\n`;
-    message += `Pedido: ${currentOrder.id}\n`;
+      message += `*📞 CONTATO DO CLIENTE:*\n`;
+      message += `👤 ${customerName}\n`;
+      message += `📱 ${customerPhone}\n\n`;
+      
+      message += `*📋 INFORMAÇÕES DO PEDIDO:*\n`;
+      message += `🔢 Pedido: ${currentOrder.id}\n`;
+      message += `⏰ Data: ${currentOrder.date || new Date().toLocaleDateString('pt-BR')}\n`;
+      message += `💳 Forma: ${paymentMethod === 'pix' ? 'PIX' : 'Dinheiro'}\n`;
+      message += `💰 Total: R$ ${currentOrder.total?.toFixed(2) || '0.00'}\n\n`;
+      
+      message += `*📱 CONTATO DA LOJA:*\n`;
+      message += `📞 WhatsApp: ${vendorInfo.whatsapp}\n`;
 
-    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
-
   // ========== FUNÇÃO PARA ENVIAR COMPROVANTE PIX (ABRIR WHATSAPP) ==========
   const handleSendProof = () => {
     const url = generateWhatsAppMessage();
