@@ -176,6 +176,7 @@ export const CartProvider = ({ children }) => {
       try {
         console.log(`🎯 Processando ${raffleItem.selectedClass} Nº ${raffleItem.selectedNumber}...`);
         
+        // Verificar em tempo real usando turma normalizada
         const realTimeCheck = await raffleManager.checkNumberInRealTime(
           raffleItem.selectedClass, 
           raffleItem.selectedNumber
@@ -292,66 +293,80 @@ export const CartProvider = ({ children }) => {
   }, [cart, raffleManager]);
 
   const confirmRafflesInOrder = useCallback(async (orderId) => {
-  if (!raffleManager) {
-    console.error('❌ RaffleManager não disponível');
-    return false;
-  }
-  
-  try {
-    console.log('🚀 CONFIRMANDO PAGAMENTO PIX');
-    
-    const order = currentOrder;
-    if (!order || order.id !== orderId) {
-      console.error('❌ Pedido não encontrado:', orderId);
+    if (!raffleManager) {
+      console.error('❌ RaffleManager não disponível');
       return false;
     }
     
-    if (order.rafflesConfirmed) {
-      console.log('ℹ️ Rifas já confirmadas');
-      return true;
-    }
-    
-    // Esta função envia as rifas para o Firebase
-    const result = await sendRafflesToFirebase(order, 'pix');
-    
-    if (result.success) {
-      console.log('✅ Rifas enviadas para Firebase!');
+    try {
+      console.log('🚀 CONFIRMANDO PAGAMENTO PIX');
       
-      const updatedOrder = {
-        ...order,
-        status: 'confirmed',
-        proofSent: true,
-        proofConfirmedAt: new Date().toISOString(),
-        rafflesConfirmed: true,
-        rafflesSentToFirebase: true,
-        rafflesFirebaseResults: result.results,
-        confirmationTimestamp: new Date().toISOString()
-      };
+      const order = currentOrder;
+      if (!order || order.id !== orderId) {
+        console.error('❌ Pedido não encontrado:', orderId);
+        return false;
+      }
       
-      setCurrentOrder(updatedOrder);
-      localStorage.setItem('terceirao_last_order', JSON.stringify(updatedOrder));
+      if (order.rafflesConfirmed) {
+        console.log('ℹ️ Rifas já confirmadas');
+        return true;
+      }
       
-      clearCart();
+      // Esta função envia as rifas para o Firebase
+      const result = await sendRafflesToFirebase(order, 'pix');
       
+      if (result.success) {
+        console.log('✅ Rifas enviadas para Firebase!');
+        
+        const updatedOrder = {
+          ...order,
+          status: 'confirmed',
+          proofSent: true,
+          proofConfirmedAt: new Date().toISOString(),
+          rafflesConfirmed: true,
+          rafflesSentToFirebase: true,
+          rafflesFirebaseResults: result.results,
+          confirmationTimestamp: new Date().toISOString()
+        };
+        
+        setCurrentOrder(updatedOrder);
+        localStorage.setItem('terceirao_last_order', JSON.stringify(updatedOrder));
+        
+        clearCart();
+        
+        window.dispatchEvent(new CustomEvent('showToast', {
+          detail: { 
+            type: 'success', 
+            message: '✅ Rifas confirmadas e enviadas para o sistema!',
+            duration: 5000 
+          }
+        }));
+        
+        return true;
+      } else {
+        console.error('❌ Erro ao enviar rifas:', result.error);
+        window.dispatchEvent(new CustomEvent('showToast', {
+          detail: { 
+            type: 'error', 
+            message: `❌ Erro ao enviar rifas: ${result.error}`,
+            duration: 5000 
+          }
+        }));
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro ao confirmar rifas:', error);
       window.dispatchEvent(new CustomEvent('showToast', {
         detail: { 
-          type: 'success', 
-          message: '✅ Rifas confirmadas e enviadas para o sistema!',
+          type: 'error', 
+          message: '❌ Erro ao confirmar pagamento',
           duration: 5000 
         }
       }));
-      
-      return true;
-    } else {
-      // ... tratamento de erro
       return false;
     }
-    
-  } catch (error) {
-    console.error('❌ Erro ao confirmar rifas:', error);
-    return false;
-  }
-}, [raffleManager, currentOrder, sendRafflesToFirebase, clearCart]);
+  }, [raffleManager, currentOrder, sendRafflesToFirebase, clearCart]);
 
   const processCashPayment = useCallback(async (orderId) => {
     if (!raffleManager) {

@@ -66,6 +66,37 @@ export const RaffleManagerProvider = ({ children }) => {
     };
   }, []);
 
+  // ========== FUNÇÃO AUXILIAR PARA NORMALIZAR TURMA ==========
+  const normalizeTurma = useCallback((turma) => {
+    if (!turma) return '3° A';
+    
+    const turmaStr = turma.toString().trim();
+    
+    // Mapear diferentes formatos para o formato padrão do Firebase
+    const mapping = {
+      '3A': '3° A',
+      '3B': '3° B', 
+      '3TECH': '3° TECH',
+      '3 A': '3° A',
+      '3 B': '3° B',
+      '3 TECH': '3° TECH',
+      '3°A': '3° A',
+      '3°B': '3° B',
+      '3°TECH': '3° TECH',
+      '3A ': '3° A',
+      '3B ': '3° B',
+      '3TECH ': '3° TECH',
+    };
+    
+    // Se já estiver no formato correto, retorna como está
+    if (['3° A', '3° B', '3° TECH'].includes(turmaStr)) {
+      return turmaStr;
+    }
+    
+    // Tenta mapear ou retorna o padrão
+    return mapping[turmaStr] || '3° A';
+  }, []);
+
   // ========== CARREGAR DADOS INICIAIS ==========
   const loadInitialData = useCallback(async (firestoreDb) => {
     try {
@@ -306,7 +337,7 @@ export const RaffleManagerProvider = ({ children }) => {
     }
   }, [db, loadInitialData]);
 
-  // ========== ENVIAR VENDA PARA FIREBASE ==========
+  // ========== ENVIAR VENDA PARA FIREBASE (CORRIGIDO) ==========
   const sendToFirebase = useCallback(async (saleData) => {
     console.log('🚀 ENVIANDO PARA FIREBASE:', saleData);
     
@@ -337,8 +368,13 @@ export const RaffleManagerProvider = ({ children }) => {
     try {
       // Validações
       const validTurmas = ['3° A', '3° B', '3° TECH'];
-      if (!saleData.turma || !validTurmas.includes(saleData.turma)) {
-        throw new Error(`Turma inválida: "${saleData.turma}"`);
+      
+      // NORMALIZAR a turma antes de validar
+      const normalizedTurma = normalizeTurma(saleData.turma);
+      console.log(`📝 Turma normalizada: "${saleData.turma}" -> "${normalizedTurma}"`);
+      
+      if (!normalizedTurma || !validTurmas.includes(normalizedTurma)) {
+        throw new Error(`Turma inválida: "${saleData.turma}" -> "${normalizedTurma}". Válidas: ${validTurmas.join(', ')}`);
       }
       
       const numero = parseInt(saleData.numero);
@@ -360,7 +396,7 @@ export const RaffleManagerProvider = ({ children }) => {
       
       // Verificação em tempo real ANTES de enviar
       console.log('⏱️ Verificando disponibilidade em tempo real...');
-      const realTimeCheck = await checkNumberInRealTime(saleData.turma, numero);
+      const realTimeCheck = await checkNumberInRealTime(normalizedTurma, numero);
       
       if (realTimeCheck.sold) {
         throw new Error('Número já vendido (verificação em tempo real)');
@@ -372,7 +408,7 @@ export const RaffleManagerProvider = ({ children }) => {
       
       // Preparar dados para Firebase
       const firebaseData = {
-        turma: saleData.turma,
+        turma: normalizedTurma,
         numero: numero,
         nome: (saleData.nome || 'Comprador Online').toString().substring(0, 100),
         status: status,
@@ -399,6 +435,7 @@ export const RaffleManagerProvider = ({ children }) => {
         ...saleData,
         id: firebaseId,
         firebaseId,
+        turma: normalizedTurma,
         synced: true,
         timestamp: new Date().toISOString(),
         status: status,
@@ -416,7 +453,7 @@ export const RaffleManagerProvider = ({ children }) => {
       
       window.dispatchEvent(new CustomEvent('firebase_new_sale', {
         detail: {
-          turma: saleData.turma,
+          turma: normalizedTurma,
           numero: numero,
           status: status,
           timestamp: new Date().toISOString()
@@ -437,6 +474,7 @@ export const RaffleManagerProvider = ({ children }) => {
       // Salvar localmente
       const localSale = {
         ...saleData,
+        turma: normalizeTurma(saleData.turma),
         id: `local-error-${Date.now()}`,
         synced: false,
         syncError: error.message,
@@ -456,9 +494,9 @@ export const RaffleManagerProvider = ({ children }) => {
         data: localSale
       };
     }
-  }, [db, soldNumbers, checkNumberInRealTime]);
+  }, [db, soldNumbers, checkNumberInRealTime, normalizeTurma]);
 
-  // ========== ENVIO DE EMERGÊNCIA ==========
+  // ========== ENVIO DE EMERGÊNCIA (CORRIGIDO) ==========
   const forceSendToFirebase = useCallback(async (saleData) => {
     console.log('🚀 FORÇANDO ENVIO PARA FIREBASE:', saleData);
     
@@ -468,8 +506,13 @@ export const RaffleManagerProvider = ({ children }) => {
 
     try {
       const validTurmas = ['3° A', '3° B', '3° TECH'];
-      if (!saleData.turma || !validTurmas.includes(saleData.turma)) {
-        throw new Error(`Turma inválida: ${saleData.turma}`);
+      
+      // NORMALIZAR a turma antes de validar
+      const normalizedTurma = normalizeTurma(saleData.turma);
+      console.log(`📝 [FORCE] Turma normalizada: "${saleData.turma}" -> "${normalizedTurma}"`);
+      
+      if (!normalizedTurma || !validTurmas.includes(normalizedTurma)) {
+        throw new Error(`Turma inválida: ${saleData.turma} -> ${normalizedTurma}`);
       }
       
       const numero = parseInt(saleData.numero);
@@ -477,7 +520,7 @@ export const RaffleManagerProvider = ({ children }) => {
         throw new Error(`Número inválido: ${saleData.numero}`);
       }
       
-      const realTimeCheck = await checkNumberInRealTime(saleData.turma, numero);
+      const realTimeCheck = await checkNumberInRealTime(normalizedTurma, numero);
       
       if (realTimeCheck.sold) {
         return {
@@ -496,7 +539,7 @@ export const RaffleManagerProvider = ({ children }) => {
       }
       
       const firebaseData = {
-        turma: saleData.turma,
+        turma: normalizedTurma,
         numero: numero,
         nome: (saleData.nome || 'Comprador').toString().substring(0, 100),
         telefone: (saleData.telefone || '').toString().substring(0, 20),
@@ -550,14 +593,17 @@ export const RaffleManagerProvider = ({ children }) => {
         error: error.message
       };
     }
-  }, [db, checkNumberInRealTime]);
+  }, [db, checkNumberInRealTime, normalizeTurma]);
 
-  // ========== FUNÇÕES ESPECÍFICAS ==========
+  // ========== FUNÇÕES ESPECÍFICAS (CORRIGIDAS) ==========
   const confirmPaymentAndSendToFirebase = useCallback(async (raffleData, paymentInfo = {}) => {
     console.log('🚀 Confirmando pagamento PIX...');
     
+    // Normalizar a turma antes de enviar
+    const normalizedTurma = normalizeTurma(raffleData.turma);
+    
     const saleData = {
-      turma: raffleData.turma,
+      turma: normalizedTurma,
       numero: raffleData.numero,
       nome: raffleData.nome || paymentInfo.nome || 'Comprador Online',
       telefone: raffleData.telefone || paymentInfo.telefone || '',
@@ -572,17 +618,20 @@ export const RaffleManagerProvider = ({ children }) => {
     const result = await sendToFirebase(saleData);
     
     if (result.success) {
-      toast.success(`✅ Rifa PIX CONFIRMADA: ${raffleData.turma} Nº ${raffleData.numero}`);
+      toast.success(`✅ Rifa PIX CONFIRMADA: ${normalizedTurma} Nº ${raffleData.numero}`);
     }
     
     return result;
-  }, [sendToFirebase]);
+  }, [sendToFirebase, normalizeTurma]);
 
   const createCashReservationInFirebase = useCallback(async (raffleData, paymentInfo = {}) => {
     console.log('💰 Criando reserva para dinheiro...');
     
+    // Normalizar a turma antes de enviar
+    const normalizedTurma = normalizeTurma(raffleData.turma);
+    
     const saleData = {
-      turma: raffleData.turma,
+      turma: normalizedTurma,
       numero: raffleData.numero,
       nome: raffleData.nome || paymentInfo.nome || 'Comprador Online',
       telefone: raffleData.telefone || paymentInfo.telefone || '',
@@ -597,39 +646,42 @@ export const RaffleManagerProvider = ({ children }) => {
     const result = await sendToFirebase(saleData);
     
     if (result.success) {
-      toast.success(`✅ Reserva DINHEIRO: ${raffleData.turma} Nº ${raffleData.numero}`);
+      toast.success(`✅ Reserva DINHEIRO: ${normalizedTurma} Nº ${raffleData.numero}`);
     }
     
     return result;
-  }, [sendToFirebase]);
+  }, [sendToFirebase, normalizeTurma]);
 
   // ========== FUNÇÕES DE VERIFICAÇÃO ==========
   const isNumberSold = useCallback((turma, numero) => {
+    const normalizedTurma = normalizeTurma(turma);
     return soldNumbers.some(sale => 
-      sale.turma === turma && 
+      normalizeTurma(sale.turma) === normalizedTurma && 
       sale.numero === parseInt(numero) && 
       sale.status === 'pago'
     );
-  }, [soldNumbers]);
+  }, [soldNumbers, normalizeTurma]);
 
   const isNumberReserved = useCallback((turma, numero) => {
+    const normalizedTurma = normalizeTurma(turma);
     return soldNumbers.some(sale => 
-      sale.turma === turma && 
+      normalizeTurma(sale.turma) === normalizedTurma && 
       sale.numero === parseInt(numero) && 
       (sale.status === 'pendente' || sale.status === 'reservado')
     );
-  }, [soldNumbers]);
+  }, [soldNumbers, normalizeTurma]);
 
   const getAvailableNumbers = useCallback((turma) => {
+    const normalizedTurma = normalizeTurma(turma);
     const usedNumbers = soldNumbers
-      .filter(sale => sale.turma === turma)
+      .filter(sale => normalizeTurma(sale.turma) === normalizedTurma)
       .map(sale => parseInt(sale.numero));
     
     const available = Array.from({ length: 300 }, (_, i) => i + 1)
       .filter(num => !usedNumbers.includes(num));
     
     return available;
-  }, [soldNumbers]);
+  }, [soldNumbers, normalizeTurma]);
 
   // ========== ATUALIZAR STATUS ==========
   const updateSaleStatus = useCallback(async (saleId, newStatus, paymentMethod = null) => {
@@ -765,13 +817,13 @@ export const RaffleManagerProvider = ({ children }) => {
     const totalPending = soldNumbers.filter(n => n.status === 'pendente').length;
     const arrecadado = totalSold * 15;
     
-    const turma3A = soldNumbers.filter(n => n.turma === '3° A' && n.status === 'pago').length;
-    const turma3B = soldNumbers.filter(n => n.turma === '3° B' && n.status === 'pago').length;
-    const turma3TECH = soldNumbers.filter(n => n.turma === '3° TECH' && n.status === 'pago').length;
+    const turma3A = soldNumbers.filter(n => normalizeTurma(n.turma) === '3° A' && n.status === 'pago').length;
+    const turma3B = soldNumbers.filter(n => normalizeTurma(n.turma) === '3° B' && n.status === 'pago').length;
+    const turma3TECH = soldNumbers.filter(n => normalizeTurma(n.turma) === '3° TECH' && n.status === 'pago').length;
     
-    const pending3A = soldNumbers.filter(n => n.turma === '3° A' && n.status === 'pendente').length;
-    const pending3B = soldNumbers.filter(n => n.turma === '3° B' && n.status === 'pendente').length;
-    const pending3TECH = soldNumbers.filter(n => n.turma === '3° TECH' && n.status === 'pendente').length;
+    const pending3A = soldNumbers.filter(n => normalizeTurma(n.turma) === '3° A' && n.status === 'pendente').length;
+    const pending3B = soldNumbers.filter(n => normalizeTurma(n.turma) === '3° B' && n.status === 'pendente').length;
+    const pending3TECH = soldNumbers.filter(n => normalizeTurma(n.turma) === '3° TECH' && n.status === 'pendente').length;
     
     return {
       total: totalSold,
@@ -792,7 +844,7 @@ export const RaffleManagerProvider = ({ children }) => {
       isOnline,
       lastSync
     };
-  }, [soldNumbers, db, firebaseInitialized, isOnline, lastSync]);
+  }, [soldNumbers, db, firebaseInitialized, isOnline, lastSync, normalizeTurma]);
 
   // ========== GET RECENT SALES ==========
   const getRecentSales = useCallback((limit = 10) => {
@@ -884,6 +936,9 @@ export const RaffleManagerProvider = ({ children }) => {
       firebaseInitialized,
       firebaseError,
       isOnline,
+      
+      // Funções auxiliares
+      normalizeTurma,
       
       // Login/Logout
       loginAdmin,
