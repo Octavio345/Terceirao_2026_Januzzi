@@ -394,28 +394,7 @@ function AppContent() {
   }, [updateAvailable]);
 
   // ===== 4. FUNÇÕES DE ATUALIZAÇÃO =====
-  const handleUpdate = () => {
-    if (waitingWorker) {
-      console.log('🔄 Aplicando atualização...');
-      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-      setUpdateAvailable(false);
-      localStorage.removeItem('appUpdatePending');
-    }
-  };
 
-  const handleDismiss = () => {
-    setUpdateAvailable(false);
-    localStorage.setItem('appUpdatePending', 'true');
-    
-    const event = new CustomEvent('showToast', {
-      detail: {
-        type: 'info',
-        message: '⚠️ Atualização adiada. Você pode atualizar a qualquer momento.',
-        duration: 3000
-      }
-    });
-    window.dispatchEvent(event);
-  };
 
   // ===== 5. VERIFICAR CONEXÃO =====
   useEffect(() => {
