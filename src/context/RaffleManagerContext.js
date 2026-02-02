@@ -10,8 +10,7 @@ import {
   addDoc, 
   updateDoc,
   doc,
-  getDocs,
-  where
+  getDocs
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
@@ -19,7 +18,6 @@ const RaffleManagerContext = createContext();
 
 export const RaffleManagerProvider = ({ children }) => {
   // ========== ESTADOS PRINCIPAIS ==========
-  const [firebaseApp, setFirebaseApp] = useState(null);
   const [db, setDb] = useState(null);
   const [soldNumbers, setSoldNumbers] = useState(() => {
     try {
@@ -94,7 +92,6 @@ export const RaffleManagerProvider = ({ children }) => {
         const app = initializeApp(firebaseConfig);
         const firestoreDb = getFirestore(app);
         
-        setFirebaseApp(app);
         setDb(firestoreDb);
         
         console.log('✅ Firebase inicializado! Projeto:', firebaseConfig.projectId);
