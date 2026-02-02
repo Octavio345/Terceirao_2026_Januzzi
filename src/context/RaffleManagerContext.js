@@ -35,13 +35,71 @@ export const RaffleManagerProvider = ({ children }) => {
       return false;
     }
   });
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(() => {
     return localStorage.getItem('terceirao-last-sync') || null;
   });
   const [firebaseError, setFirebaseError] = useState(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [firebaseInitialized, setFirebaseInitialized] = useState(false);
+
+  // ========== MONITORAR CONEXÃO ==========
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('✅ Conexão restaurada');
+      setIsOnline(true);
+      toast.success('✅ Conexão restaurada');
+    };
+    
+    const handleOffline = () => {
+      console.log('⚠️ Sem conexão');
+      setIsOnline(false);
+      toast.warning('⚠️ Modo offline');
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // ========== CARREGAR DADOS INICIAIS ==========
+  const loadInitialData = useCallback(async (firestoreDb) => {
+    try {
+      console.log('🔄 Carregando dados iniciais...');
+      setIsSyncing(true);
+      
+      const salesRef = collection(firestoreDb, 'sales');
+      const snapshot = await getDocs(salesRef);
+      
+      const sales = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        sales.push({
+          id: doc.id,
+          firebaseId: doc.id,
+          ...data,
+          timestamp: data.timestamp?.toDate ? 
+                    data.timestamp.toDate().toISOString() : 
+                    data.timestamp,
+          synced: true
+        });
+      });
+      
+      console.log(`📊 ${sales.length} vendas carregadas inicialmente`);
+      
+      setSoldNumbers(sales);
+      localStorage.setItem('terceirao-sold-numbers', JSON.stringify(sales));
+      
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados iniciais:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
 
   // ========== INICIALIZAÇÃO DO FIREBASE ==========
   useEffect(() => {
@@ -97,7 +155,7 @@ export const RaffleManagerProvider = ({ children }) => {
         unsubscribe();
       }
     };
-  }, []);
+  }, [loadInitialData]);
 
   // ========== LISTENER EM TEMPO REAL ==========
   const setupRealtimeListener = (firestoreDb) => {
@@ -182,41 +240,6 @@ export const RaffleManagerProvider = ({ children }) => {
       return () => {};
     }
   };
-
-  // ========== CARREGAR DADOS INICIAIS ==========
-  const loadInitialData = useCallback(async (firestoreDb) => {
-    try {
-      console.log('🔄 Carregando dados iniciais...');
-      setIsSyncing(true);
-      
-      const salesRef = collection(firestoreDb, 'sales');
-      const snapshot = await getDocs(salesRef);
-      
-      const sales = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        sales.push({
-          id: doc.id,
-          firebaseId: doc.id,
-          ...data,
-          timestamp: data.timestamp?.toDate ? 
-                    data.timestamp.toDate().toISOString() : 
-                    data.timestamp,
-          synced: true
-        });
-      });
-      
-      console.log(`📊 ${sales.length} vendas carregadas inicialmente`);
-      
-      setSoldNumbers(sales);
-      localStorage.setItem('terceirao-sold-numbers', JSON.stringify(sales));
-      
-    } catch (error) {
-      console.error('❌ Erro ao carregar dados iniciais:', error);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, []);
 
   // ========== VERIFICAÇÃO EM TEMPO REAL ==========
   const checkNumberInRealTime = useCallback(async (turma, numero) => {

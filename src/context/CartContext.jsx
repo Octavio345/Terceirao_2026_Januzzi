@@ -546,7 +546,6 @@ export const CartProvider = ({ children }) => {
     sendRafflesToFirebase,
     setShowPayment,
     closePaymentOnly,
-    confirmRafflesInOrder ,
     vendorInfo: VENDOR_INFO
   };
 
