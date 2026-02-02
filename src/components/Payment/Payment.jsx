@@ -17,7 +17,6 @@ const Payment = () => {
     showPayment,
     setShowPayment,
     closePaymentOnly,
-    processCashPayment: contextProcessCashPayment,
     clearCartAfterConfirmation,
     sendRafflesToFirebase
   } = useCart();
@@ -301,23 +300,25 @@ const Payment = () => {
   // ========== FUNÇÃO PRINCIPAL PARA CONFIRMAR PAGAMENTO (DINHEIRO) - CORRIGIDA ==========
 
   const handleConfirmCashPayment = async () => {
-    if (!currentOrder) {
-      showToast('error', 'Pedido não encontrado');
-      return;
-    }
+  if (!currentOrder) {
+    showToast('error', 'Pedido não encontrado');
+    return;
+  }
 
-    setLoading(true);
-    console.log('💵 INICIANDO PAGAMENTO DINHEIRO - ENVIANDO PARA FIREBASE...');
+  setLoading(true);
+  console.log('💵 INICIANDO PAGAMENTO DINHEIRO - ENVIANDO PARA FIREBASE...');
+  
+  try {
+    console.log('📤 1. Preparando dados para envio ao Firebase...');
     
-    try {
-      console.log('📤 1. Preparando dados para envio ao Firebase...');
-      
-      // VARIÁVEIS MOVIDAS PARA DENTRO DA FUNÇÃO ONDE SÃO USADAS
-      const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
-      const customerName = getCustomerName();
-      
-      // PASSO 1: Chamar a função que envia para Firebase
-      const result = await sendRafflesToFirebase(currentOrder, 'dinheiro');
+    // VARIÁVEIS NÃO UTILIZADAS - COMENTAR OU REMOVER
+    // eslint-disable-next-line no-unused-vars
+    // const raffleItems = currentOrder.items?.filter(item => item.isRaffle) || [];
+    // eslint-disable-next-line no-unused-vars
+    // const customerName = getCustomerName();
+    
+    // PASSO 1: Chamar a função que envia para Firebase
+    const result = await sendRafflesToFirebase(currentOrder, 'dinheiro');
       
       if (!result.success) {
         console.error('❌ Falha ao enviar para Firebase:', result.error);
