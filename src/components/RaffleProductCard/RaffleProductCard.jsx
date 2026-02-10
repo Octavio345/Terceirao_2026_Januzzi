@@ -57,8 +57,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   const [showSoldNumbers, setShowSoldNumbers] = useState(true);
   const [filterMode, setFilterMode] = useState('all');
   const [isLoadingNumbers, setIsLoadingNumbers] = useState(true);
-  const [bannerLoaded, setBannerLoaded] = useState(true);
-  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   
   const numbersPerPage = 36;
 
@@ -151,18 +149,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   const getClassStats = useCallback(() => {
     return getClassStatsForTurma(selectedClass);
   }, [selectedClass, getClassStatsForTurma]);
-
-  useEffect(() => {
-    // Verificar dimensões da imagem
-    const img = new Image();
-    img.onload = function() {
-      setImageDimensions({
-        width: this.width,
-        height: this.height
-      });
-    };
-    img.src = '/imagens/redmi-a5.jpg';
-  }, []);
 
   useEffect(() => {
     const updateNumbers = () => {
@@ -678,11 +664,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
             borderRadius: '6px',
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
             objectFit: 'contain'
-          }}
-          onError={(e) => {
-            console.error('Erro ao carregar imagem:', e);
-            e.target.style.display = 'none';
-            setBannerLoaded(false);
           }}
           onLoad={() => {
             console.log('✅ Imagem carregada com sucesso');
