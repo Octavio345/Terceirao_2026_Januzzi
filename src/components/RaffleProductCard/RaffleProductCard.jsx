@@ -3,7 +3,7 @@ import {
   ShoppingBag, Heart, Check, 
   Ticket, Search, AlertCircle, CheckCircle, 
   Users, X, RefreshCw, Eye, EyeOff,
-  Tag, Shield, Clock, Award, Grid
+  Shield, Clock, Award, Grid
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useRaffleManager } from '../../context/RaffleManagerContext';
@@ -364,8 +364,8 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         originalClass: selectedClass, // Manter original para exibição
         classInfo: classes[selectedClass],
         quantity: 1,
-        price: selectedNumbers.length >= 5 ? 10.00 : 15.00,
-        unitPrice: selectedNumbers.length >= 5 ? 10.00 : 15.00,
+        price: 15.00, // PREÇO FIXO SEM PROMOÇÃO
+        unitPrice: 15.00, // PREÇO FIXO SEM PROMOÇÃO
         raffleType: 'formatura',
         isRaffle: true,
         emoji: '🎟️',
@@ -420,21 +420,10 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
       const combined = [...prev, ...newNumbers].slice(0, 20);
       return Array.from(new Set(combined)).sort((a, b) => a - b);
     });
-    
-    if (count === 3) {
-      window.dispatchEvent(new CustomEvent('showToast', {
-        detail: { 
-          type: 'success', 
-          message: '🎉 Promoção aplicada! 3+ números selecionados por R$ 10,00 cada',
-          duration: 3000 
-        }
-      }));
-    }
   };
 
   const calculateTotal = () => {
-    const price = selectedNumbers.length >= 3 ? 10.00 : 15.00;
-    return (selectedNumbers.length * price).toFixed(2);
+    return (selectedNumbers.length * 15.00).toFixed(2); // PREÇO FIXO
   };
 
   const renderSyncStatus = () => {
@@ -608,7 +597,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           
           <div className="list-price">
             <span className="price">R$ {calculateTotal()}</span>
-            <span className="promo">🎯 5 por R$ 10,00 cada</span>
+            <span className="promo">R$ 15,00 por número</span>
           </div>
           
           <button className="list-select-btn" onClick={() => handleQuickSelect(5)}>
@@ -684,14 +673,11 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           
           <div className="price-section">
             <div className="price-main">
-              <span className="price-label">A partir de</span>
+              <span className="price-label">Preço</span>
               <span className="price-amount">R$ 15,00</span>
               <span className="price-unit">por número</span>
             </div>
-            <div className="price-promo">
-              <Tag size={16} />
-              <span>3 por R$ 10,00 cada</span>
-            </div>
+            {/* REMOVIDA SEÇÃO DE PROMOÇÃO */}
           </div>
         </div>
         
@@ -811,10 +797,8 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
               <span className="stat-value highlight">{getClassStats().available}</span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">Preço atual:</span>
-              <span className="stat-value">
-                {selectedNumbers.length >= 3 ? 'R$ 10,00' : 'R$ 15,00'}/número
-              </span>
+              <span className="stat-label">Preço:</span>
+              <span className="stat-value">R$ 15,00/número</span>
             </div>
             <div className="stat-item">
               <span className="stat-label">Prêmio:</span>
@@ -858,17 +842,11 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
               <span className="summary-label">{selectedNumbers.length} número{selectedNumbers.length > 1 ? 's' : ''}</span>
               <span className="summary-price">R$ {calculateTotal()}</span>
             </div>
-            {selectedNumbers.length >= 3 && (
-              <div className="summary-promo">
-                <Tag size={14} />
-                <span>🎯 PROMOÇÃO ATIVA • R$ 10,00 cada</span>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* Quick Selection */}
+      {/* Quick Selection - MODIFICADO SEM PROMOÇÕES */}
       <div className="quick-selection">
         <h4 className="section-title">
           <Ticket size={18} />
@@ -881,18 +859,14 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
             <span className="quick-price">R$ 15,00</span>
           </button>
           <button className="quick-card" onClick={() => handleQuickSelect(3)}>
-            <div className="promo-badge">PROMO</div>
             <span className="quick-number">3</span>
             <span className="quick-label">números</span>
-            <span className="quick-price">R$ 30,00</span>
-            <span className="promo-text">R$ 10,00 cada</span>
+            <span className="quick-price">R$ 45,00</span>
           </button>
-          <button className="quick-card promo" onClick={() => handleQuickSelect(5)}>
-            <div className="promo-badge">PROMO</div>
+          <button className="quick-card" onClick={() => handleQuickSelect(5)}>
             <span className="quick-number">5</span>
             <span className="quick-label">números</span>
-            <span className="quick-price">R$ 50,00</span>
-            <span className="promo-text">R$ 10,00 cada</span>
+            <span className="quick-price">R$ 75,00</span>
           </button>
         </div>
       </div>
@@ -1023,12 +997,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           <div className="total-section">
             <div className="total-label">Total a pagar</div>
             <div className="total-amount">R$ {calculateTotal()}</div>
-            {selectedNumbers.length >= 5 && (
-              <div className="promo-badge">
-                <Tag size={12} />
-                <span>Promoção aplicada</span>
-              </div>
-            )}
           </div>
           <button 
             className={`cta-button ${selectedNumbers.length === 0 ? 'disabled' : ''} ${isAdded ? 'added' : ''}`}
@@ -1389,18 +1357,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           font-weight: 500;
         }
 
-        .price-promo {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 16px;
-          background: linear-gradient(135deg, #FFD166 0%, #FFE082 100%);
-          border-radius: 12px;
-          color: #92400E;
-          font-weight: 700;
-          font-size: 14px;
-          box-shadow: 0 4px 12px rgba(255, 209, 102, 0.25);
-        }
+        /* REMOVIDA SEÇÃO DE PROMOÇÃO */
 
         /* Stats Grid */
         .stats-grid {
@@ -1917,18 +1874,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           color: #1A1C2E;
         }
 
-        .summary-promo {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px 16px;
-          background: linear-gradient(135deg, #FFD166 0%, #FFE082 100%);
-          color: #92400E;
-          border-radius: 12px;
-          font-weight: 700;
-          font-size: 14px;
-          box-shadow: 0 4px 12px rgba(255, 209, 102, 0.25);
-        }
+        /* REMOVIDA SEÇÃO DE PROMOÇÃO NO SUMMARY */
 
         /* Quick Selection */
         .quick-selection {
@@ -1958,33 +1904,11 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           border-radius: 16px;
           cursor: pointer;
           transition: all 0.3s ease;
-          position: relative;
         }
 
         .quick-card:hover {
           transform: translateY(-4px);
           box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-        }
-
-        .quick-card.promo {
-          background: linear-gradient(135deg, #FFD166 0%, #FFE082 100%);
-          border-color: #FFD166;
-          color: #92400E;
-        }
-
-        .quick-card.promo .promo-badge {
-          position: absolute;
-          top: -10px;
-          right: -10px;
-          background: #EF4444;
-          color: white;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
         }
 
         .quick-number {
@@ -1995,10 +1919,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           color: #1A1C2E;
         }
 
-        .quick-card.promo .quick-number {
-          color: #92400E;
-        }
-
         .quick-label {
           font-size: 14px;
           color: #64748B;
@@ -2006,26 +1926,10 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           margin-bottom: 8px;
         }
 
-        .quick-card.promo .quick-label {
-          color: #92400E;
-        }
-
         .quick-price {
           font-size: 20px;
           font-weight: 800;
           color: #1A1C2E;
-        }
-
-        .quick-card.promo .quick-price {
-          color: #92400E;
-        }
-
-        .promo-text {
-          font-size: 12px;
-          color: #92400E;
-          opacity: 0.8;
-          margin-top: 8px;
-          font-weight: 600;
         }
 
         /* Number Selector */
@@ -2457,18 +2361,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           background-clip: text;
         }
 
-        .promo-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 14px;
-          background: linear-gradient(135deg, #FFD166, #FFE082);
-          color: #92400E;
-          border-radius: 20px;
-          font-size: 13px;
-          font-weight: 700;
-          max-width: fit-content;
-        }
+        /* REMOVIDO PROMO-BADGE NO FOOTER */
 
         .cta-button {
           display: flex;
@@ -2594,11 +2487,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           
           .price-amount {
             font-size: 28px;
-          }
-          
-          .price-promo {
-            font-size: 13px;
-            padding: 8px 12px;
           }
           
           .stats-grid {
@@ -2741,11 +2629,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           
           .summary-price {
             font-size: 28px;
-          }
-          
-          .summary-promo {
-            padding: 10px 12px;
-            font-size: 13px;
           }
           
           .quick-grid {
