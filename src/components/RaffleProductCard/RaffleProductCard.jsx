@@ -690,7 +690,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
             </div>
             <div className="price-promo">
               <Tag size={16} />
-              <span>5 por R$ 10,00 cada</span>
+              <span>3 por R$ 10,00 cada</span>
             </div>
           </div>
         </div>
