@@ -107,7 +107,7 @@ const Products = () => {
                 <h1 className="main-title">Catálogo de Produtos</h1>
                 <p className="subtitle">
                   {selectedCategory === 'rifas' 
-                    ? '🎟️ Participe da nossa Rifa Especial!' 
+                    ? '🎟️ Participe da nossa Rifa Especial - Cada turma sorteia um Redmi A5!' 
                     : '⚠️ APENAS RIFAS DISPONÍVEIS - Demais produtos serão liberados em breve'}
                 </p>
               </div>
@@ -128,17 +128,17 @@ const Products = () => {
           {/* BANNER DE AVISO GRANDE */}
           <div className="availability-banner">
             <div className="banner-content">
-              <div className="banner-icon">🚨</div>
+              <div className="banner-icon">🎯</div>
               <div className="banner-text">
-                <h3>ATENÇÃO: APENAS A RIFA ESTÁ DISPONÍVEL</h3>
-                <p>Os produtos de doces, salgados, bebidas e combos NÃO podem ser comprados no momento. 
-                Serão liberados em breve. <strong>Apenas a Rifa da Formatura está disponível para compra!</strong></p>
+                <h3>🏆 RIFA DA FORMATURA - SORTEIO DE 3 REDMI A5</h3>
+                <p>Cada turma (3°A, 3°B e 3°TECH) vai sortear um <strong>Redmi A5</strong> independentemente!
+                <br />🎟️ 300 números por turma • 📱 3 smartphones serão sorteados</p>
                 <div className="banner-actions">
                   <button 
                     className="btn btn-primary"
                     onClick={() => setSelectedCategory('rifas')}
                   >
-                    🎟️ Ir para Rifa
+                    🎟️ Participar da Rifa
                   </button>
                   <button 
                     className="btn btn-outline"
@@ -174,11 +174,11 @@ const Products = () => {
 
             {/* AVISO VISÍVEL */}
             <div className="availability-notice-sidebar">
-              <AlertCircle size={24} color="#dc3545" />
+              <AlertCircle size={24} color="#28a745" />
               <div className="notice-content-sidebar">
-                <h4>Status de Disponibilidade</h4>
+                <h4>Rifa Disponível!</h4>
                 <div className="availability-status">
-                  <span className="status-item available">✅ Rifas: DISPONÍVEL</span>
+                  <span className="status-item available">✅ Rifas: ATIVA</span>
                   <span className="status-item unavailable">❌ Outros: INDISPONÍVEL</span>
                 </div>
               </div>
@@ -233,7 +233,7 @@ const Products = () => {
                       <span className="category-emoji">{category.emoji}</span>
                       <span className="category-name">
                         {category.name}
-                        {isRaffle && <span className="availability-badge available">DISPONÍVEL</span>}
+                        {isRaffle && <span className="availability-badge available">ATIVA</span>}
                         {isDisabled && <span className="availability-badge unavailable">INDISPONÍVEL</span>}
                       </span>
                       <span className="category-count">{categoryCounts[category.id]}</span>
@@ -295,8 +295,15 @@ const Products = () => {
                 <div className="raffle-prize">
                   <div className="prize-icon">🏆</div>
                   <div className="prize-text">
-                    <strong>Prêmio:</strong> 1 ingresso Hot Planet + 2 acompanhantes
+                    <strong>Prêmio por turma:</strong> 
+                    <span style={{color: '#28a745', fontWeight: '700'}}> 1 Redmi A5</span>
                   </div>
+                </div>
+                <div className="raffle-details">
+                  <p><strong>📱 3 smartphones no total</strong></p>
+                  <p>• 3°A: Sorteia 1 Redmi A5</p>
+                  <p>• 3°B: Sorteia 1 Redmi A5</p>
+                  <p>• 3°TECH: Sorteia 1 Redmi A5</p>
                 </div>
               </div>
             ) : (
@@ -476,19 +483,21 @@ const Products = () => {
             {/* Seção informativa */}
             <div className="availability-info-section">
               <div className="info-header">
-                <h3>📋 Informações Importantes</h3>
-                <p>Entenda a disponibilidade dos produtos</p>
+                <h3>📋 Informações da Rifa</h3>
+                <p>Detalhes sobre o sorteio e prêmios</p>
               </div>
               <div className="info-grid">
                 <div className="info-card available-card">
-                  <div className="card-icon">✅</div>
+                  <div className="card-icon">🏆</div>
                   <div className="card-content">
-                    <h4>DISPONÍVEL AGORA</h4>
-                    <p><strong>Rifa da Formatura 2026</strong></p>
+                    <h4>SORTEIO DE SMARTPHONES</h4>
+                    <p><strong>3 Redmi A5 serão sorteados!</strong></p>
                     <ul>
-                      <li>🎟️ Preço: R$ 15,00 por número</li>
-                      <li>🏆 Prêmio: 1 ingresso Hot Planet + 2 acompanhantes</li>
-                      <li>📅 Sorteio: 15/03/2026 na escola</li>
+                      <li>📱 <strong>Prêmio por turma:</strong> 1 Redmi A5</li>
+                      <li>👥 <strong>Turmas participantes:</strong> 3°A, 3°B e 3°TECH</li>
+                      <li>🎟️ <strong>Números por turma:</strong> 300 (total: 900)</li>
+                      <li>💰 <strong>Preço:</strong> R$ 15,00 por número</li>
+                      <li>🎯 <strong>Promoção:</strong> 5 números por R$ 10,00 cada</li>
                     </ul>
                     <button 
                       className="btn btn-small btn-primary"
@@ -606,14 +615,15 @@ const Products = () => {
 
         /* Banner de disponibilidade */
         .availability-banner {
-          background: linear-gradient(135deg, #FFF3CD 0%, #FFECB5 100%);
-          border: 2px solid #FFC107;
+          background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+          border: 2px solid #388E3C;
           border-radius: var(--radius-xl);
           padding: var(--space-xl);
           position: relative;
           overflow: hidden;
-          color: #856404;
+          color: white;
           margin-bottom: var(--space-lg);
+          box-shadow: 0 8px 30px rgba(76, 175, 80, 0.3);
         }
 
         .banner-content {
@@ -643,13 +653,21 @@ const Products = () => {
 
         .banner-text h3 {
           font-size: clamp(1.25rem, 2.5vw, 1.5rem);
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
           font-weight: 700;
+          color: white;
         }
 
         .banner-text p {
           opacity: 0.9;
-          font-size: clamp(0.875rem, 1.5vw, 1rem);
+          font-size: clamp(0.875rem, 1.5vw, 1.1rem);
+          margin-bottom: 1.5rem;
+          line-height: 1.5;
+        }
+
+        .banner-text p strong {
+          color: #FFD166;
+          font-weight: 700;
         }
 
         .catalog-content {
@@ -695,11 +713,11 @@ const Products = () => {
 
         /* Aviso de disponibilidade na sidebar */
         .availability-notice-sidebar {
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
           border-radius: var(--radius-lg);
           padding: var(--space-md);
           margin-bottom: var(--space-lg);
-          border: 1px solid #dee2e6;
+          border: 1px solid #A5D6A7;
           display: flex;
           align-items: flex-start;
           gap: var(--space-sm);
@@ -708,7 +726,7 @@ const Products = () => {
         .notice-content-sidebar h4 {
           font-size: 0.875rem;
           font-weight: 600;
-          color: #495057;
+          color: #2E7D32;
           margin-bottom: 0.25rem;
         }
 
@@ -728,13 +746,13 @@ const Products = () => {
         }
 
         .status-item.available {
-          background: #d4edda;
-          color: #155724;
+          background: #C8E6C9;
+          color: #1B5E20;
         }
 
         .status-item.unavailable {
-          background: #f8d7da;
-          color: #721c24;
+          background: #FFCDD2;
+          color: #C62828;
         }
 
         /* Categorias indisponíveis */
@@ -770,22 +788,22 @@ const Products = () => {
         }
 
         .availability-badge.available {
-          background: #28a745;
+          background: #4CAF50;
           color: white;
         }
 
         .availability-badge.unavailable {
-          background: #6c757d;
+          background: #9E9E9E;
           color: white;
         }
 
         /* Instruções para rifas na sidebar */
         .raffle-instructions-sidebar {
-          background: linear-gradient(135deg, #fff9db 0%, #ffec99 100%);
+          background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
           border-radius: var(--radius-lg);
           padding: var(--space-md);
           margin-bottom: var(--space-lg);
-          border: 2px solid var(--color-yellow);
+          border: 2px solid #4CAF50;
         }
 
         .instructions-header {
@@ -793,14 +811,15 @@ const Products = () => {
           align-items: center;
           gap: 0.5rem;
           margin-bottom: var(--space-md);
-          color: var(--color-dark);
-          font-weight: 600;
+          color: #2E7D32;
+          font-weight: 700;
         }
 
         .instructions-content {
           display: flex;
           flex-direction: column;
           gap: var(--space-sm);
+          margin-bottom: var(--space-md);
         }
 
         .instruction-step {
@@ -808,14 +827,14 @@ const Products = () => {
           align-items: center;
           gap: var(--space-sm);
           font-size: 0.875rem;
-          color: #666;
+          color: #388E3C;
         }
 
         .instruction-step .step-number {
           width: 24px;
           height: 24px;
-          background: var(--color-yellow);
-          color: var(--color-dark);
+          background: #4CAF50;
+          color: white;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -823,6 +842,40 @@ const Products = () => {
           font-weight: 700;
           font-size: 0.75rem;
           flex-shrink: 0;
+        }
+
+        .raffle-prize {
+          background: white;
+          padding: 12px;
+          border-radius: 8px;
+          margin-bottom: 12px;
+          border: 1px solid #4CAF50;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .prize-icon {
+          font-size: 1.5rem;
+        }
+
+        .prize-text {
+          flex: 1;
+          font-size: 0.9rem;
+          color: #2E7D32;
+        }
+
+        .raffle-details {
+          background: rgba(76, 175, 80, 0.1);
+          padding: 12px;
+          border-radius: 8px;
+          font-size: 0.85rem;
+          color: #1B5E20;
+          border: 1px dashed #4CAF50;
+        }
+
+        .raffle-details p {
+          margin: 5px 0;
         }
 
         .sidebar-header {
@@ -1097,8 +1150,8 @@ const Products = () => {
         }
 
         .available-count {
-          background: rgba(40, 167, 69, 0.1);
-          color: #28a745;
+          background: rgba(76, 175, 80, 0.1);
+          color: #4CAF50;
         }
 
         .unavailable-count {
@@ -1336,11 +1389,11 @@ const Products = () => {
 
         /* Seção informativa */
         .availability-info-section {
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
           border-radius: 15px;
           padding: 25px;
           margin-top: 30px;
-          border: 2px solid #dee2e6;
+          border: 2px solid #4CAF50;
         }
 
         .info-header {
@@ -1350,8 +1403,13 @@ const Products = () => {
 
         .info-header h3 {
           font-size: 1.8rem;
-          color: #333;
+          color: #2E7D32;
           margin-bottom: 8px;
+        }
+
+        .info-header p {
+          color: #388E3C;
+          font-size: 1.1rem;
         }
 
         .info-grid {
@@ -1365,6 +1423,7 @@ const Products = () => {
           border-radius: 12px;
           box-shadow: 0 4px 15px rgba(0,0,0,0.1);
           transition: transform 0.3s ease;
+          background: white;
         }
 
         .info-card:hover {
@@ -1372,18 +1431,24 @@ const Products = () => {
         }
 
         .available-card {
-          background: white;
-          border-top: 4px solid #28a745;
+          border-top: 4px solid #4CAF50;
         }
 
         .unavailable-card {
-          background: white;
-          border-top: 4px solid #6c757d;
+          border-top: 4px solid #9E9E9E;
         }
 
         .card-icon {
           font-size: 2.5rem;
           margin-bottom: 15px;
+        }
+
+        .available-card .card-icon {
+          color: #4CAF50;
+        }
+
+        .unavailable-card .card-icon {
+          color: #9E9E9E;
         }
 
         .card-content h4 {
@@ -1393,76 +1458,33 @@ const Products = () => {
         }
 
         .available-card .card-content h4 {
-          color: #28a745;
+          color: #2E7D32;
         }
 
         .unavailable-card .card-content h4 {
-          color: #6c757d;
+          color: #616161;
         }
 
         .card-content ul {
           padding-left: 20px;
-          margin: 10px 0;
+          margin: 15px 0;
         }
 
         .card-content li {
-          margin-bottom: 5px;
-          color: #666;
+          margin-bottom: 8px;
+          color: #555;
+          line-height: 1.4;
+        }
+
+        .available-card .card-content li strong {
+          color: #2E7D32;
         }
 
         .coming-soon {
           font-style: italic;
-          color: #999;
+          color: #9E9E9E;
           margin-top: 10px;
-        }
-
-        /* BANNER DE AVISO */
-        .availability-banner {
-          background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-          border-radius: 15px;
-          padding: 25px;
-          margin: 20px 0;
-          color: white;
-          position: relative;
-          overflow: hidden;
-          box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3);
-          animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-          0% { box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3); }
-          50% { box-shadow: 0 8px 40px rgba(220, 53, 69, 0.5); }
-          100% { box-shadow: 0 8px 30px rgba(220, 53, 69, 0.3); }
-        }
-
-        .banner-icon {
-          font-size: 3rem;
-          margin-bottom: 15px;
-          animation: bounce 1s infinite;
-        }
-
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-
-        .banner-text h3 {
-          font-size: 1.5rem;
-          margin-bottom: 10px;
-          font-weight: 700;
-        }
-
-        .banner-text p {
-          opacity: 0.9;
-          margin-bottom: 20px;
-          font-size: 1.1rem;
-          line-height: 1.5;
-        }
-
-        .banner-actions {
-          display: flex;
-          gap: 15px;
-          flex-wrap: wrap;
+          font-size: 0.9rem;
         }
 
         /* Variables fallback */

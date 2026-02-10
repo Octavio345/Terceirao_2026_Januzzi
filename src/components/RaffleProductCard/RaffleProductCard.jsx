@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   ShoppingBag, Heart, Check, 
   Ticket, Search, AlertCircle, CheckCircle, 
@@ -49,7 +49,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   
   const [isLiked, setIsLiked] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
-  const [selectedClass, setSelectedClass] = useState('3A');
+  const [selectedClass, setSelectedClass] = useState('3° A');
   const [selectedNumbers, setSelectedNumbers] = useState([]);
   const [searchNumber, setSearchNumber] = useState('');
   const [page, setPage] = useState(1);
@@ -58,23 +58,24 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   const [filterMode, setFilterMode] = useState('all');
   const [isLoadingNumbers, setIsLoadingNumbers] = useState(true);
   const [bannerLoaded, setBannerLoaded] = useState(true);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   
   const numbersPerPage = 36;
 
   const classColors = useMemo(() => ({
-    '3A': {
+    '3° A': {
       primary: '#FF6B6B',
       secondary: '#FFF5F5',
       gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%)',
       light: '#FFF0F0'
     },
-    '3B': {
+    '3° B': {
       primary: '#4ECDC4',
       secondary: '#F0FFFF',
       gradient: 'linear-gradient(135deg, #4ECDC4 0%, #6EDBD6 100%)',
       light: '#E8FFFF'
     },
-    '3TECH': {
+    '3° TECH': {
       primary: '#FFD166',
       secondary: '#FFFDF5',
       gradient: 'linear-gradient(135deg, #FFD166 0%, #FFE082 100%)',
@@ -83,43 +84,85 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   }), []);
 
   const classes = useMemo(() => ({
-    '3A': {
+    '3° A': {
       name: '3º ANO A',
       description: 'Turma do Ensino Médio Regular',
       range: { start: 1, end: 300 },
-      color: classColors['3A'].primary,
-      gradient: classColors['3A'].gradient,
-      light: classColors['3A'].light,
+      color: classColors['3° A'].primary,
+      gradient: classColors['3° A'].gradient,
+      light: classColors['3° A'].light,
       emoji: '👨‍🎓',
       sold: new Set(),
       availableCount: 300,
-      status: '300 números disponíveis'
+      status: '300 números disponíveis',
+      prize: 'Redmi A5'
     },
-    '3B': {
+    '3° B': {
       name: '3º ANO B',
       description: 'Turma do Ensino Médio Regular',
       range: { start: 1, end: 300},
-      color: classColors['3B'].primary,
-      gradient: classColors['3B'].gradient,
-      light: classColors['3B'].light,
+      color: classColors['3° B'].primary,
+      gradient: classColors['3° B'].gradient,
+      light: classColors['3° B'].light,
       emoji: '👩‍🎓',
       sold: new Set(),
       availableCount: 300,
-      status: '300 números disponíveis'
+      status: '300 números disponíveis',
+      prize: 'Redmi A5'
     },
-    '3TECH': {
+    '3° TECH': {
       name: '3º TECH',
       description: 'Turma do Ensino Técnico',
       range: { start: 1, end: 300 },
-      color: classColors['3TECH'].primary,
-      gradient: classColors['3TECH'].gradient,
-      light: classColors['3TECH'].light,
+      color: classColors['3° TECH'].primary,
+      gradient: classColors['3° TECH'].gradient,
+      light: classColors['3° TECH'].light,
       emoji: '💻',
       sold: new Set(),
       availableCount: 300,
-      status: '300 números disponíveis'
+      status: '300 números disponíveis',
+      prize: 'Redmi A5'
     }
-  }), [classColors]); 
+  }), [classColors]);
+
+  // FUNÇÃO CRÍTICA: Calcular estatísticas para QUALQUER turma
+  const getClassStatsForTurma = useCallback((turmaKey) => {
+    if (!turmaKey) return { totalSold: 0, paid: 0, reserved: 0, available: 300 };
+    
+    const normalizedTurma = normalizeTurma(turmaKey);
+    
+    const soldInClass = soldNumbers.filter(s => {
+      const saleTurma = normalizeTurma(s.turma);
+      return saleTurma === normalizedTurma && s.status !== 'cancelado';
+    });
+    
+    const paidCount = soldInClass.filter(s => s.status === 'pago').length;
+    const reservedCount = soldInClass.filter(s => s.status === 'pendente' || s.status === 'reservado').length;
+    
+    return {
+      totalSold: soldInClass.length,
+      paid: paidCount,
+      reserved: reservedCount,
+      available: 300 - soldInClass.length
+    };
+  }, [soldNumbers, normalizeTurma]);
+
+  // Função para a turma selecionada (usada em filtros, etc.)
+  const getClassStats = useCallback(() => {
+    return getClassStatsForTurma(selectedClass);
+  }, [selectedClass, getClassStatsForTurma]);
+
+  useEffect(() => {
+    // Verificar dimensões da imagem
+    const img = new Image();
+    img.onload = function() {
+      setImageDimensions({
+        width: this.width,
+        height: this.height
+      });
+    };
+    img.src = '/imagens/redmi-a5.jpg';
+  }, []);
 
   useEffect(() => {
     const updateNumbers = () => {
@@ -337,7 +380,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         quantity: 1,
         price: selectedNumbers.length >= 5 ? 10.00 : 15.00,
         unitPrice: selectedNumbers.length >= 5 ? 10.00 : 15.00,
-        raffleType: 'hotplanet',
+        raffleType: 'formatura',
         isRaffle: true,
         emoji: '🎟️',
         purchaseTime: new Date().toISOString(),
@@ -406,24 +449,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   const calculateTotal = () => {
     const price = selectedNumbers.length >= 5 ? 10.00 : 15.00;
     return (selectedNumbers.length * price).toFixed(2);
-  };
-
-  const getClassStats = () => {
-    const normalizedSelectedClass = normalizeTurma(selectedClass);
-    const soldInClass = soldNumbers.filter(s => 
-      normalizeTurma(s.turma) === normalizedSelectedClass && 
-      s.status !== 'cancelado'
-    );
-    
-    const paidCount = soldInClass.filter(s => s.status === 'pago').length;
-    const reservedCount = soldInClass.filter(s => s.status === 'pendente' || s.status === 'reservado').length;
-    
-    return {
-      totalSold: soldInClass.length,
-      paid: paidCount,
-      reserved: reservedCount,
-      available: 300 - soldInClass.length
-    };
   };
 
   const renderSyncStatus = () => {
@@ -534,7 +559,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
     <div className="important-flow-notice">
       <div className="notice-header">
         <AlertCircle size={18} />
-        <h4>🎯 COMO FUNCIONA A COMPRA</h4>
+        <h4>🎯 RIFA DA FORMATURA 2026 - COMO FUNCIONA</h4>
       </div>
       <div className="notice-content">
         <div className="flow-steps">
@@ -542,14 +567,14 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
             <div className="step-number">1</div>
             <div className="step-content">
               <strong>Selecione números</strong>
-              <p>Reserva local no seu navegador</p>
+              <p>Escolha números disponíveis da sua turma</p>
             </div>
           </div>
           <div className="flow-step">
             <div className="step-number">2</div>
             <div className="step-content">
               <strong>Adicione ao carrinho</strong>
-              <p>Ainda não vai para o sistema</p>
+              <p>Reserva local no seu navegador</p>
             </div>
           </div>
           <div className="flow-step">
@@ -570,7 +595,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         </div>
         <div className="critical-note">
           <Shield size={16} />
-          <span><strong>Importante:</strong> O administrador só vê suas rifas após a etapa 4!</span>
+          <span><strong>Formatura 2026:</strong> Toda renda será investida na nossa festa de formatura!</span>
         </div>
       </div>
     </div>
@@ -582,7 +607,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         <div className="list-header">
           <div className="list-badge">
             <Ticket size={16} />
-            <span>RIFA OFICIAL</span>
+            <span>RIFA DA FORMATURA</span>
           </div>
           <div className="list-actions">
             <button className="action-btn" onClick={() => setIsLiked(!isLiked)}>
@@ -592,8 +617,8 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         </div>
         
         <div className="list-content">
-          <h3>{product.name}</h3>
-          <p className="list-description">{product.description}</p>
+          <h3>RIFA DA FORMATURA 2026</h3>
+          <p className="list-description">Concorra a 3 smartphones Redmi A5 (1 para cada turma)! Toda renda será investida na nossa formatura inesquecível!</p>
           
           <div className="list-price">
             <span className="price">R$ {calculateTotal()}</span>
@@ -614,52 +639,66 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
 
   return (
     <div className="raffle-card">
-      {/* Card Header with Promo Badges */}
+      {/* Card Header with Promo Badges - ATUALIZADO */}
       <div className="card-header">
         <div className="badge-group">
           <div className="badge hot">
             <Award size={14} />
-            <span>PROMOÇÃO ESPECIAL</span>
+            <span>SMARTPHONE REDMI A5</span>
           </div>
           <div className="badge raffle">
             <Ticket size={14} />
-            <span>RIFA OFICIAL</span>
+            <span>RIFA DA FORMATURA</span>
           </div>
         </div>
       </div>
 
-      {/* Main Banner */}
-      <div className="main-banner">
-        <div className="banner-container">
-          <img 
-            src="" 
-            alt="Hot Planet Araçatuba - 1 ingresso + 2 acompanhantes - Prêmio: R$ 117,00 - RIFA DA FORMATURA 2026" 
-            className="banner-image"
-            onError={(e) => {
-              setBannerLoaded(false);
-              e.target.style.display = 'none';
-            }}
-          />
-          {!bannerLoaded && (
-            <div className="banner-fallback">
-              <div className="prize-icon">🏆</div>
-              <div className="prize-details">
-                <h3>Hot Planet Araçatuba</h3>
-                <p>1 ingresso + 2 acompanhantes</p>
-                <div className="prize-value">Prêmio: R$ 117,00</div>
-                <div className="rifa-info">RIFA DA FORMATURA 2026</div>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Main Banner - CORRIGIDO, PROPORCIONAL E CENTRALIZADO */}
+      <div style={{ 
+        padding: '15px',
+        margin: '20px',
+        borderRadius: '12px',
+        backgroundColor: 'white',
+        textAlign: 'center',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '120px'
+      }}>
+        <img 
+          src="/imagens/redmi-a5.jpg" 
+          alt="Redmi A5 - Prêmio da Rifa da Formatura" 
+          style={{
+            maxWidth: '100%',
+            maxHeight: '150px',
+            height: 'auto',
+            width: 'auto',
+            borderRadius: '6px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            objectFit: 'contain'
+          }}
+          onError={(e) => {
+            console.error('Erro ao carregar imagem:', e);
+            e.target.style.display = 'none';
+            setBannerLoaded(false);
+          }}
+          onLoad={() => {
+            console.log('✅ Imagem carregada com sucesso');
+          }}
+        />
       </div>
 
       {/* Card Body */}
       <div className="card-body">
         <div className="product-header">
           <div className="title-section">
-            <h2>{product.name}</h2>
-            <p className="product-description">{product.description}</p>
+            <h2>RIFA DA FORMATURA 2026</h2>
+            <p className="product-description">
+              Concorra a 3 smartphones Redmi A5 (1 para cada turma)! 
+              Toda renda será investida na nossa formatura inesquecível!
+            </p>
           </div>
           
           <div className="price-section">
@@ -671,6 +710,22 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
             <div className="price-promo">
               <Tag size={16} />
               <span>5 por R$ 10,00 cada</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Prize Display Section - ATUALIZADO */}
+        <div className="prize-display-section">
+          <div className="prize-display-container">
+            <div className="prize-info-card">
+              <div className="prize-badge-large">🏆 PRÊMIO DA FORMATURA</div>
+              <div className="prize-title">Redmi A5</div>
+              <div className="prize-specs-grid">
+              </div>
+              <div className="prize-note">
+                <span className="note-icon">🎯</span>
+                <span>3 smartphones • 1 para cada turma vencedora</span>
+              </div>
             </div>
           </div>
         </div>
@@ -692,10 +747,10 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon">💰</div>
+            <div className="stat-icon">📱</div>
             <div className="stat-content">
-              <span className="stat-value">R$ 117</span>
-              <span className="stat-label">Prêmio</span>
+              <span className="stat-value">3x</span>
+              <span className="stat-label">Redmi A5</span>
             </div>
           </div>
         </div>
@@ -704,7 +759,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
       {/* Sync Status */}
       {renderSyncStatus()}
 
-      {/* Important Notice */}
+      {/* Important Notice - ATUALIZADO */}
       {renderImportantNotice()}
 
       {/* Class Selector */}
@@ -716,7 +771,8 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         
         <div className="class-grid">
           {Object.entries(classes).map(([key, classInfo]) => {
-            const stats = getClassStats();
+            // USAR A NOVA FUNÇÃO PARA CADA TURMA INDIVIDUALMENTE
+            const stats = getClassStatsForTurma(key);
             const isActive = selectedClass === key;
             
             return (
@@ -763,6 +819,9 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
             <div className="class-details">
               <h5>{formattedClassName}</h5>
               <p>{currentClass.description}</p>
+              <div className="prize-info">
+                <span className="prize-badge">🏆 Prêmio: {currentClass.prize}</span>
+              </div>
             </div>
           </div>
           <div className="class-stats-details">
@@ -777,10 +836,8 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
               </span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">Vendidos:</span>
-              <span className="stat-value">
-                {getClassStats().paid} pagos + {getClassStats().reserved} reservados
-              </span>
+              <span className="stat-label">Prêmio:</span>
+              <span className="stat-value prize">📱 {currentClass.prize}</span>
             </div>
           </div>
         </div>
@@ -1063,45 +1120,71 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
         }
 
-        /* Main Banner */
+        /* Main Banner - CORRIGIDO SEM ZOOM */
         .main-banner {
           position: relative;
           margin: 20px;
           border-radius: 16px;
           overflow: hidden;
-          height: 160px;
+          height: auto;
+          min-height: 120px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #1A1C2E 0%, #2D3047 100%);
+          padding: 15px;
         }
 
         @media (max-width: 768px) {
           .main-banner {
-            height: 140px;
+            height: auto;
             margin: 16px;
+            min-height: 100px;
+            padding: 12px;
           }
         }
 
         @media (max-width: 480px) {
           .main-banner {
-            height: 120px;
+            height: auto;
             margin: 12px;
+            min-height: 80px;
             border-radius: 14px;
+            padding: 10px;
           }
         }
 
         .banner-container {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
+          position: relative;
           width: 100%;
-          height: 100%;
+          max-width: 800px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .banner-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+          max-width: 100%;
+          max-height: 200px;
+          height: auto;
+          width: auto;
+          object-fit: contain;
+          border-radius: 8px;
           display: block;
+          margin: 0 auto;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+          .banner-image {
+            max-height: 160px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .banner-image {
+            max-height: 120px;
+          }
         }
 
         .banner-fallback {
@@ -1122,42 +1205,132 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           padding: 20px;
         }
 
-        @media (max-width: 480px) {
-          .banner-fallback {
-            padding: 16px;
+        .prize-icon {
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+
+        .prize-info h3 {
+          font-size: 24px;
+          margin: 0 0 8px 0;
+          font-weight: 800;
+        }
+
+        .prize-info p {
+          font-size: 16px;
+          opacity: 0.9;
+          margin-bottom: 16px;
+        }
+
+        .prize-specs {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        /* Prize Display Section */
+        .prize-display-section {
+          margin: 24px 0;
+        }
+
+        .prize-display-container {
+          background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+          border-radius: 16px;
+          padding: 24px;
+          border: 1px solid #E2E8F0;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+        }
+
+        .prize-info-card {
+          text-align: center;
+        }
+
+        .prize-badge-large {
+          background: linear-gradient(135deg, #FFD166 0%, #FFA500 100%);
+          color: #92400E;
+          padding: 8px 20px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          display: inline-block;
+          margin-bottom: 16px;
+        }
+
+        .prize-title {
+          font-size: 28px;
+          font-weight: 800;
+          margin: 0 0 20px 0;
+          color: #1A1C2E;
+        }
+
+        .prize-specs-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        @media (max-width: 640px) {
+          .prize-specs-grid {
+            grid-template-columns: 1fr;
           }
-          
-          .prize-icon {
-            font-size: 32px;
-            margin-bottom: 8px;
-          }
-          
-          .prize-details h3 {
-            font-size: 18px;
-            margin-bottom: 4px;
-          }
-          
-          .prize-details p {
-            font-size: 14px;
-            margin-bottom: 8px;
-            opacity: 0.9;
-          }
-          
-          .prize-value {
-            font-size: 20px;
-            margin-bottom: 12px;
-            font-weight: 700;
-            color: #FFD166;
-          }
-          
-          .rifa-info {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            color: #FFD166;
-            font-weight: 600;
-          }
+        }
+
+        .spec-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E2E8F0;
+          transition: all 0.3s ease;
+        }
+
+        .spec-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .spec-icon {
+          font-size: 20px;
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #667EEA, #764BA2);
+          color: white;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .spec-text {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1A1C2E;
+          text-align: left;
+          flex: 1;
+        }
+
+        .prize-note {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 16px;
+          background: linear-gradient(135deg, #FFD166, #FFE082);
+          color: #92400E;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 14px;
+        }
+
+        .note-icon {
+          font-size: 18px;
         }
 
         /* Card Body */
@@ -1561,6 +1734,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           align-items: center;
           gap: 16px;
           min-width: 200px;
+          position: relative;
         }
 
         .class-emoji-large {
@@ -1575,9 +1749,24 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
         }
 
         .class-details p {
-          margin: 0;
+          margin: 0 0 8px 0;
           font-size: 14px;
           opacity: 0.9;
+        }
+
+        .prize-info {
+          margin-top: 8px;
+        }
+
+        .prize-badge {
+          display: inline-block;
+          background: rgba(255, 255, 255, 0.2);
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 700;
+          color: white;
+          border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .class-stats-details {
@@ -1618,15 +1807,21 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           font-weight: 800;
         }
 
+        .stat-item .stat-value.prize {
+          color: #3B82F6;
+          font-size: 16px;
+          font-weight: 800;
+        }
+
         /* Selected Numbers */
         .selected-numbers {
           padding: 0 24px 24px;
           color: black !important;
         }
-          .selected-numbers,
-          .selected-numbers span {
-            color: black !important;
-          }
+        
+        .selected-numbers span {
+          color: black !important;
+        }
 
         .selected-header {
           display: flex;
@@ -2110,11 +2305,10 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
 
         .number-card.selected {
           background: linear-gradient(135deg, #667EEA, #764BA2);
-          color: black;
+          color: white;
           border-color: #667EEA;
           box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
           font-weight: 900;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
         }
 
         .number-card.sold {
@@ -2147,7 +2341,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           position: absolute;
           bottom: 6px;
           right: 6px;
-          color: black;
+          color: white;
           font-size: 12px;
         }
 
@@ -2368,9 +2562,31 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           }
           
           .main-banner {
-            height: 100px;
             margin: 10px;
+            min-height: 70px;
+            padding: 10px;
             border-radius: 12px;
+          }
+          
+          .banner-image {
+            max-height: 100px;
+          }
+          
+          .prize-display-container {
+            padding: 16px;
+            border-radius: 14px;
+          }
+          
+          .prize-title {
+            font-size: 22px;
+          }
+          
+          .prize-specs-grid {
+            gap: 12px;
+          }
+          
+          .spec-item {
+            padding: 12px;
           }
           
           .banner-fallback {
@@ -2379,27 +2595,6 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           
           .prize-icon {
             font-size: 28px;
-            margin-bottom: 6px;
-          }
-          
-          .prize-details h3 {
-            font-size: 16px;
-            margin-bottom: 4px;
-          }
-          
-          .prize-details p {
-            font-size: 12px;
-            margin-bottom: 6px;
-          }
-          
-          .prize-value {
-            font-size: 18px;
-            margin-bottom: 8px;
-          }
-          
-          .rifa-info {
-            font-size: 10px;
-            padding: 4px 10px;
           }
           
           .card-body {
@@ -2681,6 +2876,23 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
           
           .flow-steps {
             grid-template-columns: 1fr;
+          }
+          
+          .prize-title {
+            font-size: 18px;
+          }
+          
+          .prize-specs-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .main-banner {
+            min-height: 60px;
+            padding: 8px;
+          }
+          
+          .banner-image {
+            max-height: 80px;
           }
         }
       `}</style>
