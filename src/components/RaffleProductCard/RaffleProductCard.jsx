@@ -421,11 +421,11 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
       return Array.from(new Set(combined)).sort((a, b) => a - b);
     });
     
-    if (count === 5) {
+    if (count === 3) {
       window.dispatchEvent(new CustomEvent('showToast', {
         detail: { 
           type: 'success', 
-          message: '🎉 Promoção aplicada! 5 números selecionados por R$ 10,00 cada',
+          message: '🎉 Promoção aplicada! 3+ números selecionados por R$ 10,00 cada',
           duration: 3000 
         }
       }));
@@ -433,7 +433,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
   };
 
   const calculateTotal = () => {
-    const price = selectedNumbers.length >= 5 ? 10.00 : 15.00;
+    const price = selectedNumbers.length >= 3 ? 10.00 : 15.00;
     return (selectedNumbers.length * price).toFixed(2);
   };
 
@@ -813,7 +813,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
             <div className="stat-item">
               <span className="stat-label">Preço atual:</span>
               <span className="stat-value">
-                {selectedNumbers.length >= 5 ? 'R$ 10,00' : 'R$ 15,00'}/número
+                {selectedNumbers.length >= 3 ? 'R$ 10,00' : 'R$ 15,00'}/número
               </span>
             </div>
             <div className="stat-item">
@@ -858,7 +858,7 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
               <span className="summary-label">{selectedNumbers.length} número{selectedNumbers.length > 1 ? 's' : ''}</span>
               <span className="summary-price">R$ {calculateTotal()}</span>
             </div>
-            {selectedNumbers.length >= 5 && (
+            {selectedNumbers.length >= 3 && (
               <div className="summary-promo">
                 <Tag size={14} />
                 <span>🎯 PROMOÇÃO ATIVA • R$ 10,00 cada</span>
@@ -881,9 +881,11 @@ const RaffleProductCard = ({ product, index, viewMode = 'grid' }) => {
             <span className="quick-price">R$ 15,00</span>
           </button>
           <button className="quick-card" onClick={() => handleQuickSelect(3)}>
+            <div className="promo-badge">PROMO</div>
             <span className="quick-number">3</span>
             <span className="quick-label">números</span>
-            <span className="quick-price">R$ 45,00</span>
+            <span className="quick-price">R$ 30,00</span>
+            <span className="promo-text">R$ 10,00 cada</span>
           </button>
           <button className="quick-card promo" onClick={() => handleQuickSelect(5)}>
             <div className="promo-badge">PROMO</div>
